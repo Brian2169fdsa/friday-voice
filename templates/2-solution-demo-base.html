@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- INJECT: page_title — "{Solution Name} | Powered by ManageAI" -->
+<title><!-- INJECT: page_title --></title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ═══════════════════════════════════════════════════
+     MANAGEAI SOLUTION DEMO — v1.0 LOCKED
+     CLIENT-FACING. NO EDITOR. NO INTERNAL DATA.
+     Agent 3 fills getD() only. Never touch structure.
+  ═══════════════════════════════════════════════════ */
+  *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:#F8F9FB; }
+  ::-webkit-scrollbar-thumb { background:#E2E5EA; border-radius:2px; }
+  body { font-family:'DM Sans','Helvetica Neue',sans-serif; background:#FFFFFF; color:#1A1A2E; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)} }
+  @keyframes floatUp { 0%{opacity:0;transform:translateY(0)}8%{opacity:.12}92%{opacity:0}100%{opacity:0;transform:translateY(-700px)} }
+  @keyframes pulseDot { 0%,100%{transform:scale(1);opacity:.65}50%{transform:scale(1.5);opacity:1} }
+  @keyframes shimmer { 0%{background-position:200% center}100%{background-position:-200% center} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const e = React.createElement;
+const { useState, useEffect } = React;
+
+/* ═══════════════════════════════════════
+   DESIGN TOKENS — FROZEN (light theme)
+═══════════════════════════════════════ */
+const C = {
+  accent:"#4A8FD6", accentDim:"rgba(74,143,214,0.08)", accentMid:"rgba(74,143,214,0.16)",
+  bg:"#FFFFFF", surface:"#F8F9FB", surface2:"#F0F2F5", border:"#E2E5EA",
+  text:"#1A1A2E", textDim:"#8890A0", textMid:"#5A6070",
+  success:"#22A860", warning:"#E5A200", danger:"#E04848",
+  logo:"#2A2A3E", purple:"#7C5CFC", orange:"#E8723A", teal:"#1AA8A8",
+};
+const mono = "'JetBrains Mono',monospace";
+
+/* ═══════════════════════════════════════
+   DATA — AGENT 3 FILLS THIS ENTIRELY
+   
+   INJECT POINTS:
+     solutionName      — "Volume Monitoring" / "Call-Ahead System"
+     clientName        — client company
+     tagline           — 1-line description
+     stack             — "Make.com + GPT-4.1 + Google Sheets"
+     
+     stats[]           — {label, value, sub, color}
+     flow[]            — {icon, label, sub, clr}
+     
+     scopeIn[]         — strings
+     scopeOut[]        — strings
+     
+     howSteps[]        — {num, title, color, desc, detail}
+     cadences[]        — {icon, title, color, desc}
+     
+     protoTabs[]       — {id, label, badge, color, src, desc}
+     
+     techStack[]       — {icon, name, role, color, isMono}
+     scenarios[]       — {id, name, color, desc, modules[], descs[]}
+     tiers[]           — {tier, criteria, ex, color}
+     limits[]          — strings
+     
+     poweredByUrl      — manageai.io or specific landing page
+═══════════════════════════════════════ */
+function getD() {
+  return {
+    solutionName: "/* INJECT: solutionName */",
+    clientName:   "/* INJECT: clientName */",
+    tagline:      "/* INJECT: tagline */",
+    stack:        "/* INJECT: stack */",
+    poweredByUrl: "https://manageai.io",
+
+    stats: [ /* INJECT: stats[] */ ],
+    flow:  [ /* INJECT: flow[] */ ],
+
+    scopeIn:  [ /* INJECT: scopeIn[] */ ],
+    scopeOut: [ /* INJECT: scopeOut[] */ ],
+
+    howSteps:  [ /* INJECT: howSteps[] */ ],
+    cadences:  [ /* INJECT: cadences[] */ ],
+
+    protoTabs: [ /* INJECT: protoTabs[] */ ],
+
+    techStack: [ /* INJECT: techStack[] */ ],
+    scenarios: [ /* INJECT: scenarios[] */ ],
+    tiers:     [ /* INJECT: tiers[] */ ],
+    limits:    [ /* INJECT: limits[] */ ],
+  };
+}
+
+/* ═══════════════════════════════════════
+   VIEWS — FROZEN
+═══════════════════════════════════════ */
+function OverviewView({d}) {
+  return e("div",{style:{animation:"slideIn 0.5s ease"}},
+    /* Tagline + stack */
+    e("div",{style:{marginBottom:28}},
+      e("h2",{style:{fontSize:24,fontWeight:700,margin:"0 0 6px",letterSpacing:"-0.02em"}}, d.solutionName),
+      e("p",{style:{fontSize:14,color:C.textDim,marginBottom:10}}, d.tagline),
+      e("div",{style:{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:20,border:"1px solid "+C.border,background:C.surface,fontSize:11,color:C.textMid}},
+        e("span",{style:{width:7,height:7,borderRadius:"50%",background:C.success,display:"inline-block",animation:"pulseDot 2s ease infinite"}}),
+        d.stack
+      )
+    ),
+    /* Stats */
+    d.stats.length ? e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14,marginBottom:24}},
+      d.stats.map((s,i)=>e("div",{key:i,style:{padding:20,borderRadius:12,background:C.surface,border:"1px solid "+C.border,borderTop:"3px solid "+(s.color||C.accent)}},
+        e("div",{style:{fontSize:10,fontWeight:600,color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}},s.label),
+        e("div",{style:{fontSize:28,fontWeight:700,fontFamily:mono,color:C.text,letterSpacing:"-0.02em"}},s.value),
+        e("div",{style:{fontSize:11,color:C.textDim,marginTop:4}},s.sub)
+      ))
+    ) : null,
+    /* Execution Flow */
+    d.flow.length ? e("div",{style:{padding:24,borderRadius:12,background:C.surface,border:"1px solid "+C.border,marginBottom:24}},
+      e("div",{style:{fontSize:11,fontWeight:600,color:C.accent,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:18}}, "Execution Flow"),
+      e("div",{style:{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",justifyContent:"center"}},
+        d.flow.map((item,i)=>[
+          e("div",{key:"n"+i,style:{padding:"12px 14px",borderRadius:10,background:C.bg,border:"2px solid "+(item.clr||C.accent),textAlign:"center",minWidth:90,transition:"transform 0.2s",cursor:"default"}},
+            e("div",{style:{fontSize:20,marginBottom:4}},item.icon),
+            e("div",{style:{fontSize:10,fontWeight:700,fontFamily:mono,color:item.clr||C.accent,letterSpacing:"0.02em"}},item.label),
+            e("div",{style:{fontSize:9,color:C.textDim,marginTop:2}},item.sub)
+          ),
+          i<d.flow.length-1?e("span",{key:"a"+i,style:{color:C.textDim,fontSize:16,flexShrink:0}},"→"):null
+        ]).flat().filter(Boolean)
+      )
+    ) : null,
+    /* Scope */
+    e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}},
+      e("div",{style:{padding:20,borderRadius:12,background:C.success+"06",border:"1px solid "+C.success+"25"}},
+        e("div",{style:{fontSize:11,fontWeight:600,color:C.success,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:12}}, "What's Included"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          d.scopeIn.map((s,i)=>e("div",{key:i,style:{display:"flex",gap:8,fontSize:12,color:C.textMid,lineHeight:1.5,alignItems:"flex-start"}},
+            e("span",{style:{color:C.success,fontWeight:700,flexShrink:0,marginTop:1}},"✓"),s
+          ))
+        )
+      ),
+      e("div",{style:{padding:20,borderRadius:12,background:C.danger+"06",border:"1px solid "+C.danger+"25"}},
+        e("div",{style:{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:12}}, "Not Included (Phase 1)"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          d.scopeOut.map((s,i)=>e("div",{key:i,style:{display:"flex",gap:8,fontSize:12,color:C.textMid,lineHeight:1.5,alignItems:"flex-start"}},
+            e("span",{style:{color:C.danger,fontWeight:700,flexShrink:0,marginTop:1}},"×"),s
+          ))
+        )
+      )
+    )
+  );
+}
+
+function HowItWorksView({d}) {
+  return e("div",{style:{animation:"slideIn 0.5s ease"}},
+    e("div",{style:{marginBottom:28}},
+      e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"How It Works"),
+      e("p",{style:{fontSize:13,color:C.textDim,lineHeight:1.6}}, "Step-by-step walkthrough of how data moves through the system, from trigger to final delivery.")
+    ),
+    e("div",{style:{marginBottom:32}},
+      d.howSteps.map((step,i)=>e("div",{key:i,style:{display:"flex",gap:20,marginBottom:8}},
+        e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0,width:40}},
+          e("div",{style:{width:36,height:36,borderRadius:"50%",background:step.color||C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,color:"#fff",flexShrink:0}},step.num),
+          i<d.howSteps.length-1?e("div",{style:{flex:1,width:2,background:C.border,margin:"6px 0"}}):null
+        ),
+        e("div",{style:{flex:1,paddingBottom:24}},
+          e("div",{style:{fontSize:14,fontWeight:700,color:C.text,marginBottom:6}},step.title),
+          e("div",{style:{fontSize:13,color:C.textMid,lineHeight:1.7}},step.desc),
+          step.detail?e("div",{style:{marginTop:10,fontFamily:mono,fontSize:11,color:C.textDim,background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"12px 16px",lineHeight:1.8,whiteSpace:"pre-line"}},step.detail):null
+        )
+      ))
+    ),
+    d.cadences.length ? e("div",null,
+      e("div",{style:{fontSize:12,fontWeight:600,color:C.accent,letterSpacing:"0.04em",textTransform:"uppercase",marginBottom:14}}, "Analysis Cadences"),
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}},
+        d.cadences.map((c,i)=>e("div",{key:i,style:{padding:20,borderRadius:12,background:C.surface,border:"1px solid "+C.border}},
+          e("div",{style:{fontSize:15,fontWeight:600,color:c.color||C.accent,marginBottom:8}},c.icon+" "+c.title),
+          e("div",{style:{fontSize:12,color:C.textMid,lineHeight:1.6}},c.desc)
+        ))
+      )
+    ):null
+  );
+}
+
+function PrototypeView({d}) {
+  const [activeTab, setActiveTab] = useState(d.protoTabs[0]?.id||null);
+  const active = d.protoTabs.find(t=>t.id===activeTab)||d.protoTabs[0];
+  if (!active) return e("div",{style:{padding:40,textAlign:"center",color:C.textDim}},"No prototypes configured.");
+  return e("div",{style:{animation:"slideIn 0.5s ease"}},
+    e("div",{style:{marginBottom:20}},
+      e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Report Outputs"),
+      e("p",{style:{fontSize:13,color:C.textDim,lineHeight:1.6}}, "The actual outputs the system delivers — as they appear in your inbox.")
+    ),
+    e("div",{style:{display:"flex",gap:0,border:"1px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:16}},
+      d.protoTabs.map(t=>{
+        const isA=activeTab===t.id;
+        return e("div",{key:t.id,onClick:()=>setActiveTab(t.id),style:{flex:1,padding:"12px 16px",fontSize:12,fontWeight:600,color:isA?t.color:C.textDim,cursor:"pointer",textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:8,borderRight:"1px solid "+C.border,background:isA?C.bg:C.surface,transition:"all 0.2s"}},
+          e("div",{style:{width:6,height:6,borderRadius:"50%",background:isA?t.color:C.textDim,opacity:isA?1:0.3,animation:isA?"pulseDot 2s ease infinite":"none"}}),
+          t.label
+        );
+      })
+    ),
+    e("div",{style:{background:C.surface,border:"1px solid "+C.border,borderRadius:8,padding:"14px 18px",marginBottom:16,fontSize:13,color:C.textMid,lineHeight:1.7}},
+      e("span",{style:{display:"inline-block",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,marginRight:8,textTransform:"uppercase",background:active.color+"14",color:active.color}},active.badge),
+      active.desc
+    ),
+    e("div",{style:{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}},
+      e("iframe",{key:active.id,src:active.src,style:{width:"100%",height:820,border:"none",display:"block"},loading:"lazy"})
+    )
+  );
+}
+
+function BuildSpecView({d}) {
+  const [expanded, setExpanded] = useState(null);
+  return e("div",{style:{animation:"slideIn 0.5s ease"}},
+    e("div",{style:{marginBottom:28}},
+      e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Technical Overview"),
+      e("p",{style:{fontSize:13,color:C.textDim,lineHeight:1.6}},"System components, scenario descriptions, and platform architecture.")
+    ),
+    d.techStack.length ? e("div",{style:{marginBottom:28}},
+      e("div",{style:{fontSize:11,fontWeight:600,color:C.accent,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:12}}, "Technology Stack"),
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10}},
+        d.techStack.map((t,i)=>e("div",{key:i,style:{display:"flex",alignItems:"center",gap:12,padding:16,borderRadius:8,background:C.surface,border:"1px solid "+C.border}},
+          e("div",{style:{width:40,height:40,borderRadius:8,background:t.color+"12",display:"flex",alignItems:"center",justifyContent:"center",fontSize:t.isMono?13:18,fontWeight:t.isMono?700:400,fontFamily:t.isMono?mono:"inherit",color:t.color,flexShrink:0}},t.icon),
+          e("div",null,e("div",{style:{fontSize:13,fontWeight:600}},t.name),e("div",{style:{fontSize:11,color:C.textDim,marginTop:2}},t.role))
+        ))
+      )
+    ) : null,
+    d.scenarios.length ? e("div",{style:{marginBottom:28}},
+      e("div",{style:{fontSize:11,fontWeight:600,color:C.accent,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:12}}, "Automation Scenarios"),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+        d.scenarios.map((sc,i)=>{
+          const isExp=expanded===sc.id;
+          return e("div",{key:i,style:{borderRadius:10,border:"1px solid "+(isExp?sc.color+"44":C.border),overflow:"hidden",transition:"border 0.2s"}},
+            e("div",{onClick:()=>setExpanded(isExp?null:sc.id),style:{padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:12,background:isExp?sc.color+"06":C.surface,transition:"background 0.2s"}},
+              e("span",{style:{fontFamily:mono,fontSize:11,fontWeight:700,padding:"3px 8px",borderRadius:4,background:sc.color+"15",color:sc.color}},sc.id),
+              e("span",{style:{fontSize:13,fontWeight:600,flex:1}},sc.name),
+              e("div",{style:{textAlign:"right",marginRight:8}},
+                e("div",{style:{fontFamily:mono,fontSize:18,fontWeight:700,color:sc.color}},sc.modules.length),
+                e("div",{style:{fontSize:9,color:C.textDim,letterSpacing:"0.04em"}},"MODULES")
+              ),
+              e("span",{style:{fontSize:13,color:isExp?sc.color:C.textDim,transition:"transform 0.2s",display:"inline-block",transform:isExp?"rotate(180deg)":"rotate(0deg)"}},"▼")
+            ),
+            isExp?e("div",{style:{padding:"0 18px 18px",borderTop:"1px solid "+C.border,animation:"slideIn 0.25s ease"}},
+              e("p",{style:{fontSize:12,color:C.textMid,lineHeight:1.6,margin:"12px 0"}}),sc.desc,
+              e("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+                sc.modules.map((m,j)=>e("div",{key:j,style:{display:"flex",alignItems:"flex-start",gap:10,padding:"6px 0"}},
+                  e("div",{style:{width:22,height:22,borderRadius:"50%",background:C.surface2,border:"1px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:mono,fontSize:10,fontWeight:700,color:C.textDim,flexShrink:0}},j+1),
+                  e("div",null,e("div",{style:{fontSize:12,fontWeight:600,color:C.text}},m),e("div",{style:{fontSize:11,color:C.textDim,marginTop:1}},(sc.descs&&sc.descs[j])||""))
+                ))
+              )
+            ):null
+          );
+        })
+      )
+    ) : null,
+    d.tiers.length ? e("div",{style:{marginBottom:20}},
+      e("div",{style:{fontSize:11,fontWeight:600,color:C.accent,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:12}}, "Classification Tiers"),
+      e("div",{style:{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}},
+        e("table",{style:{width:"100%",borderCollapse:"collapse"}},
+          e("thead",null,e("tr",{style:{background:C.surface}},
+            ["Tier","Criteria","Example"].map(h=>e("th",{key:h,style:{padding:"8px 14px",textAlign:"left",fontSize:10,fontWeight:600,color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",borderBottom:"1px solid "+C.border}},h))
+          )),
+          e("tbody",null,d.tiers.map((t,i)=>e("tr",{key:i,style:{borderBottom:i<d.tiers.length-1?"1px solid "+C.surface2:"none"}},
+            e("td",{style:{padding:"10px 14px"}},e("span",{style:{fontWeight:700,color:t.color,fontSize:13}},"Tier "+t.tier)),
+            e("td",{style:{padding:"10px 14px",fontSize:12,color:C.textMid}}),t.criteria,
+            e("td",{style:{padding:"10px 14px",fontSize:12,color:C.textDim}}),t.ex
+          )))
+        )
+      )
+    ) : null,
+    d.limits.length ? e("div",{style:{padding:20,borderRadius:12,background:C.surface,border:"1px solid "+C.border}},
+      e("div",{style:{fontSize:11,fontWeight:600,color:C.danger,marginBottom:12}}, "⚠ Current Limitations"),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:6}},
+        d.limits.map((l,i)=>e("div",{key:i,style:{display:"flex",gap:8,fontSize:12,color:C.textMid,lineHeight:1.5}},
+          e("span",{style:{color:C.danger,fontWeight:700,flexShrink:0}},"•"),l
+        ))
+      )
+    ) : null
+  );
+}
+
+/* ═══════════════════════════════════════
+   APP — FROZEN
+═══════════════════════════════════════ */
+function App() {
+  const d = getD();
+  const [activeView, setActiveView] = useState("overview");
+
+  const views = [
+    {id:"overview",  label:"Overview"},
+    {id:"howitworks",label:"How It Works"},
+    {id:"prototype", label:"Report Outputs"},
+    {id:"buildspec", label:"Tech Overview"},
+  ];
+
+  const viewMap = {
+    overview:   ()=>e(OverviewView,  {d}),
+    howitworks: ()=>e(HowItWorksView,{d}),
+    prototype:  ()=>e(PrototypeView, {d}),
+    buildspec:  ()=>e(BuildSpecView, {d}),
+  };
+
+  return e("div",{style:{display:"flex",flexDirection:"column",minHeight:"100vh",background:C.bg}},
+    /* Ambient particles */
+    e("div",{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}},
+      Array.from({length:10},(_,i)=>e("div",{key:i,style:{position:"absolute",width:2,height:2,borderRadius:"50%",background:C.accent,opacity:0,left:Math.random()*100+"%",top:"100%",animation:"floatUp "+12+"s "+(i*1.2)+"s infinite ease-out"}}))
+    ),
+    /* Grid overlay */
+    e("div",{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,backgroundImage:"linear-gradient("+C.border+"22 1px,transparent 1px),linear-gradient(90deg,"+C.border+"22 1px,transparent 1px)",backgroundSize:"64px 64px"}}),
+    /* Header */
+    e("header",{style:{position:"relative",zIndex:10,background:"linear-gradient(180deg,"+C.surface+" 0%,"+C.bg+" 100%)",borderBottom:"1px solid "+C.border,padding:"0 28px"}},
+      e("div",{style:{display:"flex",alignItems:"stretch",height:58,gap:0}},
+        /* Logo */
+        e("div",{style:{display:"flex",alignItems:"center",gap:8,paddingRight:24,borderRight:"1px solid "+C.border}},
+          e("div",{style:{width:30,height:30,borderRadius:7,background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:mono,fontSize:11,fontWeight:700,color:"#fff"}}, "AI"),
+          e("div",null,
+            e("div",{style:{fontSize:14,fontWeight:700,letterSpacing:"-0.01em"}},
+              e("span",{style:{color:C.logo}},"MANAGE"),e("span",{style:{color:C.accent}},"AI")
+            ),
+            e("div",{style:{fontSize:9,color:C.textDim,letterSpacing:"0.06em",fontFamily:mono}},"SOLUTION DEMO")
+          )
+        ),
+        /* Divider + project info */
+        e("div",{style:{display:"flex",alignItems:"center",padding:"0 20px",borderRight:"1px solid "+C.border}},
+          e("div",null,
+            e("div",{style:{fontSize:13,fontWeight:700,color:C.text}}, d.clientName+" — "+d.solutionName),
+            e("div",{style:{fontSize:10,color:C.textDim,fontFamily:mono}}, d.stack)
+          )
+        ),
+        /* Nav */
+        e("nav",{style:{display:"flex",alignItems:"stretch",flex:1}},
+          views.map(v=>{
+            const isA=activeView===v.id;
+            return e("button",{key:v.id,onClick:()=>setActiveView(v.id),style:{padding:"0 18px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:isA?700:400,color:isA?C.accent:C.textDim,borderBottom:isA?"2px solid "+C.accent:"2px solid transparent",fontFamily:"'DM Sans',sans-serif",letterSpacing:"0.01em",transition:"all 0.2s",whiteSpace:"nowrap"}},v.label);
+          })
+        ),
+        /* Powered by badge */
+        e("div",{style:{display:"flex",alignItems:"center",paddingLeft:20,borderLeft:"1px solid "+C.border}},
+          e("a",{href:d.poweredByUrl,target:"_blank",style:{fontSize:10,color:C.textDim,textDecoration:"none",fontFamily:mono,letterSpacing:"0.04em"}},
+            "Powered by ",e("span",{style:{color:C.logo,fontWeight:700}},"MANAGE"),e("span",{style:{color:C.accent,fontWeight:700}},"AI")
+          )
+        )
+      )
+    ),
+    /* Content */
+    e("main",{style:{position:"relative",zIndex:5,flex:1,padding:"32px 28px",maxWidth:1320,width:"100%",margin:"0 auto"}},
+      (viewMap[activeView]||viewMap.overview)()
+    ),
+    /* Footer */
+    e("footer",{style:{position:"relative",zIndex:5,padding:"14px 28px",borderTop:"1px solid "+C.border,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}},
+      e("div",{style:{fontSize:11,color:C.textDim}},
+        e("span",{style:{color:C.logo,fontWeight:700}},"MANAGE"),e("span",{style:{color:C.accent,fontWeight:700}},"AI"),
+        " · "+d.solutionName+" · "+d.clientName
+      ),
+      e("div",{style:{fontSize:10,color:C.textDim,fontFamily:mono}},"© "+new Date().getFullYear()+" ManageAI. All rights reserved.")
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>

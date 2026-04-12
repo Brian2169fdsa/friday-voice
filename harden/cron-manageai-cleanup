@@ -1,0 +1,10 @@
+#!/bin/bash
+# Daily cleanup cron for ManageAI / FRIDAY
+# Dest: /etc/cron.daily/manageai-cleanup
+# Removes PM2 logs older than 30 days, compressed logs older than 60 days
+
+find /root/.pm2/logs -name "*.log" -mtime +30 -delete 2>/dev/null
+find /root/.pm2/logs -name "*.gz" -mtime +60 -delete 2>/dev/null
+
+# Log disk usage daily
+df -h / | tail -1 | awk -v d="$(date +%Y-%m-%d)" '{print d, "Disk:", $3, "used,", $4, "free,", $5}' >> /var/log/manageai-disk.log 2>/dev/null

@@ -1,0 +1,27 @@
+[Unit]
+Description=PM2 process manager for FRIDAY (claudeagent)
+Documentation=https://pm2.keymetrics.io/
+After=network.target
+Wants=network.target
+
+[Service]
+Type=forking
+User=claudeagent
+Group=claudeagent
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+Environment=PM2_HOME=/home/claudeagent/.pm2
+Environment=HOME=/home/claudeagent
+PIDFile=/home/claudeagent/.pm2/pm2.pid
+Restart=on-failure
+RestartSec=10
+
+ExecStartPre=/bin/chmod 1777 /tmp
+ExecStart=/usr/bin/pm2 resurrect
+ExecReload=/usr/bin/pm2 reload all
+ExecStop=/usr/bin/pm2 kill
+
+[Install]
+WantedBy=multi-user.target

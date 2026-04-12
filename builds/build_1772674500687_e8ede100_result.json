@@ -1,0 +1,7 @@
+{
+  "job_id": "build_1772674500687_e8ede100",
+  "completed_at": "2026-03-05T01:35:01.463Z",
+  "success": false,
+  "output": null,
+  "error": "Error: Claude Code cannot be launched inside another Claude Code session.\nNested sessions share runtime resources and will crash all active sessions.\nTo bypass this check, unset the CLAUDECODE environment variable.\n"
+}

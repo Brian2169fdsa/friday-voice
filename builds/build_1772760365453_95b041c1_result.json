@@ -1,0 +1,7 @@
+{
+  "job_id": "build_1772760365453_95b041c1",
+  "completed_at": "2026-03-06T01:31:06.006Z",
+  "success": false,
+  "output": null,
+  "error": "Command failed: claude -p Process this ManageAI build ticket:\n{\n  \"ticket_id\": \"\",\n  \"client\": \"\",\n  \"project_name\": \"\",\n  \"platform\": \"\",\n  \"request_description\": \"\",\n  \"priority\": \"\",\n  \"submitter\": \"\"\n}\n"
+}

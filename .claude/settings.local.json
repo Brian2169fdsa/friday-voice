@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pm2 list:*)",
+      "Bash(sudo systemctl:*)",
+      "Bash(sudo cat:*)",
+      "Bash(sudo pm2:*)",
+      "Bash(curl -s \"http://localhost:3000/api/factory/build-status\" -H \"x-cockpit-key: friday-cockpit-2026\")",
+      "Bash(curl:*)",
+      "Bash(pm2 save:*)"
+    ]
+  }
+}

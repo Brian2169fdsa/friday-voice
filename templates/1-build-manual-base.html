@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- INJECT: Update title tag with: [CLIENT] — [SOLUTION_NAME] | Skillset Manual v[VERSION] -->
+<title>CLIENT — SOLUTION | Skillset Manual v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #F8F9FB; }
+  ::-webkit-scrollbar-thumb { background: #E2E5EA; border-radius: 2px; }
+  body { font-family: 'DM Sans', 'Helvetica Neue', sans-serif; background: #FFFFFF; color: #1A1A2E; }
+  @keyframes floatUp { 0%{opacity:0;transform:translateY(0) scale(1)}10%{opacity:.2}90%{opacity:0}100%{opacity:0;transform:translateY(-800px) scale(0)} }
+  @keyframes pulseGlow { 0%,100%{box-shadow:0 0 15px rgba(74,143,214,.06)}50%{box-shadow:0 0 30px rgba(74,143,214,.18)} }
+  @keyframes slideIn { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
+  @keyframes dataFlow { 0%{background-position:0% 50%}100%{background-position:200% 50%} }
+  @keyframes pulseDot { 0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.4);opacity:1} }
+  @keyframes fadeIn { from{opacity:0}to{opacity:1} }
+  textarea:focus, input:focus { outline: none; border-color: #4A8FD6 !important; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const e = React.createElement;
+const { useState, useEffect, useRef } = React;
+
+const C = {
+  accent:"#4A8FD6",accentDim:"rgba(74,143,214,0.07)",bg:"#FFFFFF",
+  surface:"#F8F9FB",surface2:"#F0F2F5",border:"#E2E5EA",
+  text:"#1A1A2E",textDim:"#8890A0",textMid:"#5A6070",
+  success:"#22A860",warning:"#E5A200",danger:"#E04848",
+  logo:"#2A2A3E",purple:"#7C5CFC",orange:"#E8723A",teal:"#1AA8A8",
+};
+const mono = "'JetBrains Mono', monospace";
+
+// ============================================================
+// ███████╗ CLAUDE INJECT ZONE — START
+// ============================================================
+// INSTRUCTIONS FOR CLAUDE CODE AGENT:
+//
+// Replace ONLY the function body below (lines between START and END markers).
+// Do NOT touch any other code in this file.
+//
+// Keys you MUST populate:
+//   clientName        — client company short name (e.g. "Cornerstone")
+//   solutionName      — name of the automation solution (e.g. "Contract Drafting")
+//   version           — version string (e.g. "1.0")
+//   stack             — tech stack summary (e.g. "Claude + Make.com")
+//   confidentialLine  — confidential footer line (e.g. "Prepared for Acme Corp")
+//   systemPromptText  — the full Claude system prompt used in this build
+//   calloutTitle      — one-line callout headline (key architectural note)
+//   calloutBody       — 2-3 sentence callout body explaining the architectural choice
+//   scopeIn[]         — array of strings: what this system does (5-8 items)
+//   scopeOut[]        — array of strings: what is explicitly excluded (3-6 items)
+//   accounts[]        — platforms/tools needed: {name, setup, connection, icon, color}
+//   spFolders[]       — data source/folder mapping: {content, find, variable, color}
+//   trainingRows[]    — training matrix rows: {num, name, type, tools, trigger, inputs, outputs, typeColor}
+//   scenarios[]       — Make.com or n8n scenarios: {id, name, trigger, purpose, icon, modules, type, claude, details, frMap[], moduleList[], template}
+//   systemPromptRules[]  — AI rules: {num, title, desc, color}
+//   jsonSchemas[]     — output schemas: {name, fields, used, desc, arrays[]}
+//   makeVars[]        — platform variables: {name, purpose, example}
+//   conditionalLogic[]   — branching logic: {scenario, condition, action, elseAction, color}
+//   errorHandling[]   — error matrix: {trigger, response, severity}
+//   guardrails[]      — non-negotiable guardrail strings (array of strings)
+//   operationalBP[]   — operational best practice categories: {category, icon, color, items[{label, detail, type}]}
+//   buildBP[]         — build best practice categories: {category, icon, color, items[{label, detail, type}]}
+//
+// SUPABASE: The sbUrl and sbKey below are already set for ManageAI's Supabase instance.
+// Do NOT change them. The Supabase schema is already provisioned — Save/Load will work
+// as long as table names match (build_manuals, scope_items, accounts, sp_folders,
+// training_steps, scenarios, system_prompt_rules, json_schemas, make_variables,
+// conditional_logic, error_handling, guardrails, best_practice_categories, best_practice_items).
+//
+// ============================================================
+
+function getDefaultData() {
+  return {
+    clientName: "CLIENT_NAME",
+    solutionName: "SOLUTION_NAME",
+    version: "1.0",
+    stack: "Claude + Make.com",
+    confidentialLine: "Prepared for CLIENT_NAME",
+
+    systemPromptText: `INJECT: Paste the full Claude system prompt text here. Include all rules, constraints, and behavioral directives that govern Claude's operation within this system.`,
+
+    calloutTitle: "INJECT: Key Architectural Note — One sentence headline",
+    calloutBody: "INJECT: 2-3 sentences explaining the key architectural choice or design decision that sets this system apart. E.g. how data flows, what infrastructure is reused, what the HITL pattern looks like.",
+
+    scopeIn: [
+      "INJECT: What this system does — item 1",
+      "INJECT: What this system does — item 2",
+      "INJECT: What this system does — item 3",
+      "INJECT: What this system does — item 4",
+      "INJECT: What this system does — item 5",
+    ],
+
+    scopeOut: [
+      "INJECT: What is explicitly excluded — item 1",
+      "INJECT: What is explicitly excluded — item 2",
+      "INJECT: What is explicitly excluded — item 3",
+    ],
+
+    accounts: [
+      // Each entry: {name, setup, connection, icon, color}
+      // color options: C.purple, C.accent, C.teal, C.orange, C.success
+      {name:"Anthropic (Claude API)",setup:"Create account at console.anthropic.com. Generate API key. Fund with initial credits.",connection:"HTTP module with API key in Authorization header",icon:"🧠",color:"#7C5CFC"},
+      {name:"Make.com",setup:"Core plan or higher. Assign to client team workspace.",connection:"Orchestration platform — no separate connection needed",icon:"⚙️",color:"#4A8FD6"},
+      // INJECT: Add all platforms this build uses
+    ],
+
+    spFolders: [
+      // Each entry: {content, find, variable, color}
+      // color options: same as accounts
+      {content:"INJECT: Data source or folder type",find:"INJECT: Where it lives / how to find it",variable:"INJECT_VAR_NAME",color:"#4A8FD6"},
+      // INJECT: Add all data sources, SharePoint folders, Google Drive folders, etc.
+    ],
+
+    trainingRows: [
+      // Each entry: {num, name, type (Workflow|Knowledge|Instructions), tools, trigger, inputs, outputs, typeColor}
+      {
+        num: 1,
+        name: "INJECT: Training Step Name",
+        type: "Workflow",
+        tools: "Anthropic (Claude API), Make.com",
+        trigger: "INJECT: What triggers this training step",
+        inputs: "INJECT: What goes in — source files, data, configs",
+        outputs: "INJECT: What comes out — files, records, notifications",
+        typeColor: "#4A8FD6"
+      },
+      // INJECT: Add all training steps (typically 3-6 rows)
+    ],
+
+    scenarios: [
+      // Each entry: {id, name, trigger, purpose, icon, modules (count), type ("hitl"|"auto"), claude (bool), details, frMap[], moduleList[], template (null or {name, purpose, mergeTags[]})}
+      {
+        id: "SC-01",
+        name: "INJECT: First Scenario Name",
+        trigger: "INJECT: What file event or webhook triggers this scenario",
+        purpose: "INJECT: What this scenario accomplishes in one sentence",
+        icon: "📥",
+        modules: 8,
+        type: "hitl",
+        claude: true,
+        details: "INJECT: 2-3 sentence description of what happens inside this scenario — what Claude reads, what it produces, what human review gate exists.",
+        frMap: ["INJECT: Functional requirement this maps to"],
+        moduleList: [
+          "INJECT: Module 1 name and action",
+          "INJECT: Module 2 name and action",
+          "INJECT: Module 3 name and action",
+          // Add all modules in order
+        ],
+        template: null
+        // If this scenario generates a DOCX template, replace null with:
+        // {name:"TemplateName.docx", purpose:"Description of what this template is", mergeTags:["tag1","tag2"]}
+      },
+      // INJECT: Add all scenarios (typically 2-4)
+    ],
+
+    systemPromptRules: [
+      // Each entry: {num, title, desc, color}
+      // color options: C.danger, C.warning, C.accent, C.success, C.purple, C.teal, C.textMid
+      {num:1,title:"INJECT: RULE NAME IN CAPS",desc:"INJECT: Full description of this rule — what Claude must or must not do.",color:"#E04848"},
+      // INJECT: Add all system prompt rules (typically 5-10)
+    ],
+
+    jsonSchemas: [
+      // Each entry: {name, fields (count), used (scenario id), desc, arrays[]}
+      {name:"INJECT_SchemaName",fields:10,used:"SC-01",desc:"INJECT: What this schema captures",arrays:["sources_used","risk_flags"]},
+      // INJECT: Add all JSON output schemas
+    ],
+
+    makeVars: [
+      // Each entry: {name, purpose, example}
+      {name:"CLAUDE_MODEL",purpose:"Claude model identifier — update from one place",example:"claude-sonnet-4-5-20250929"},
+      {name:"ANTHROPIC_KEY",purpose:"Anthropic API key",example:"sk-ant-..."},
+      // INJECT: Add all Make.com team variables this build uses
+    ],
+
+    conditionalLogic: [
+      // Each entry: {scenario, condition, action, elseAction, color}
+      {
+        scenario:"SC-01",
+        condition:"INJECT: The IF condition — what is being checked",
+        action:"INJECT: What happens when true",
+        elseAction:"INJECT: What happens when false",
+        color:"#E5A200"
+      },
+      // INJECT: Add all branching/conditional logic rules
+    ],
+
+    errorHandling: [
+      // Each entry: {trigger, response, severity ("warning"|"danger")}
+      {trigger:"Claude HTTP call fails (non-200 / timeout)",response:"Retry up to 2x with exponential backoff. If still failing, save partial state and notify team via Teams/email.",severity:"warning"},
+      {trigger:"Invalid JSON from Claude",response:"Retry with stricter prompt reinforcement. If second attempt fails, save raw output for manual review and notify.",severity:"danger"},
+      // INJECT: Add all error scenarios specific to this build
+    ],
+
+    guardrails: [
+      "INJECT: Non-negotiable guardrail 1",
+      "INJECT: Non-negotiable guardrail 2",
+      "Never store API keys in scenario module fields — use team variables only",
+      // INJECT: Add all system guardrails
+    ],
+
+    operationalBP: [
+      // Each entry: {category, icon, color, items[{label, detail, type ("do"|"dont")}]}
+      {
+        category: "INJECT: Category Name (e.g. 'Proposal Workflow')",
+        icon: "📝",
+        color: "#4A8FD6",
+        items: [
+          {label:"INJECT: Do — short label",detail:"INJECT: Full explanation of why and how.",type:"do"},
+          {label:"INJECT: Don't — short label",detail:"INJECT: Full explanation of what goes wrong if you do this.",type:"dont"},
+        ]
+      },
+      // INJECT: Add all operational best practice categories (typically 3-5)
+    ],
+
+    buildBP: [
+      // Same structure as operationalBP but focused on how to BUILD this system
+      {
+        category: "Prompt Architecture",
+        icon: "🧠",
+        color: "#7C5CFC",
+        items: [
+          {label:"Always version your system prompt",detail:"Name your prompt with a version suffix (e.g. CORE_V1). Store as a Make.com team variable. Increment version when updating so you can roll back if quality drops.",type:"do"},
+          {label:"Don't combine extraction and generation in one Claude call",detail:"Separate intake extraction and document generation into distinct scenarios. Combining them degrades schema compliance and makes error isolation impossible.",type:"dont"},
+        ]
+      },
+      // INJECT: Add all build best practice categories (typically 3-5)
+    ],
+  };
+}
+
+// ============================================================
+// ███████╗ CLAUDE INJECT ZONE — END
+// ============================================================
+// DO NOT MODIFY ANYTHING BELOW THIS LINE
+// The entire UI engine, editor panel, Supabase sync, and all
+// views are locked. Only the data object above changes per client.
+// ============================================================
+
+function EditorField({label, value, onChange, multi, mono: isMono}) {
+  const base = {width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.text,fontSize:12,fontFamily:"'DM Sans', sans-serif"};
+  const style = {...base, ...(isMono ? {fontFamily:mono,fontSize:11} : {}), ...(multi ? {resize:"vertical",minHeight:54} : {})};
+  return e("div",{style:{marginBottom:8}},
+    e("label",{style:{fontSize:9,fontWeight:600,color:C.textDim,letterSpacing:"0.05em",display:"block",marginBottom:3,textTransform:"uppercase"}},label),
+    multi ? e("textarea",{value:value||"",onChange:ev=>onChange(ev.target.value),style}) : e("input",{type:"text",value:value||"",onChange:ev=>onChange(ev.target.value),style})
+  );
+}
+
+function App() {
+  const [data, setData] = useState(getDefaultData());
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [editSection, setEditSection] = useState("overview");
+  const [activeView, setActiveView] = useState("overview");
+  const [animPhase, setAnimPhase] = useState(0);
+  const [expandedScenario, setExpandedScenario] = useState(null);
+  const [expandedBP, setExpandedBP] = useState({});
+  const [expandedBPItem, setExpandedBPItem] = useState({});
+  const [expandedBuildBP, setExpandedBuildBP] = useState({});
+  const [expandedBuildBPItem, setExpandedBuildBPItem] = useState({});
+  const [expandedKnowledge, setExpandedKnowledge] = useState(null);
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null);
+  const [loadStatus, setLoadStatus] = useState(null);
+  const [manualId, setManualId] = useState(null);
+  const sbUrl = "https://abqwambiblgjztzkrbzg.supabase.co";
+  const sbKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicXdhbWJpYmxnanp0emtyYnpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNTA0NzIsImV4cCI6MjA4NzYyNjQ3Mn0.e10i_DqoLwS0UQhEoJGOGRtBlm4dsYxEbPQ3XFkpwQc";
+
+  useEffect(() => {
+    const i = setInterval(() => setAnimPhase(p => (p+1) % 3), 2800);
+    return () => clearInterval(i);
+  }, []);
+
+  function upd(path, value) {
+    setData(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      const keys = path.split(".");
+      let obj = next;
+      for (let i = 0; i < keys.length - 1; i++) {
+        const k = /^\d+$/.test(keys[i]) ? parseInt(keys[i]) : keys[i];
+        obj = obj[k];
+      }
+      const last = /^\d+$/.test(keys[keys.length-1]) ? parseInt(keys[keys.length-1]) : keys[keys.length-1];
+      obj[last] = value;
+      return next;
+    });
+  }
+  function addItem(path, template) {
+    setData(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      const keys = path.split(".");
+      let obj = next;
+      for (let i = 0; i < keys.length; i++) {
+        const k = /^\d+$/.test(keys[i]) ? parseInt(keys[i]) : keys[i];
+        obj = obj[k];
+      }
+      obj.push(JSON.parse(JSON.stringify(template)));
+      return next;
+    });
+  }
+  function removeItem(path, index) {
+    setData(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      const keys = path.split(".");
+      let obj = next;
+      for (let i = 0; i < keys.length; i++) {
+        const k = /^\d+$/.test(keys[i]) ? parseInt(keys[i]) : keys[i];
+        obj = obj[k];
+      }
+      obj.splice(index, 1);
+      return next;
+    });
+  }
+
+  function sbHeaders() {
+    return {"Content-Type":"application/json","apikey":sbKey,"Authorization":"Bearer "+sbKey,"Prefer":"return=representation"};
+  }
+  async function sbPost(table, rows) {
+    const res = await fetch(sbUrl+"/rest/v1/"+table, {method:"POST",headers:{...sbHeaders(),"Prefer":"return=representation,resolution=merge-duplicates"},body:JSON.stringify(rows)});
+    if (!res.ok) throw new Error("POST "+table+" failed: "+await res.text());
+    return res.json();
+  }
+  async function sbDelete(table, col, val) {
+    const res = await fetch(sbUrl+"/rest/v1/"+table+"?"+col+"=eq."+val, {method:"DELETE",headers:sbHeaders()});
+    if (!res.ok) throw new Error("DELETE "+table+" failed");
+  }
+  async function sbGet(table, col, val) {
+    const order = table === "build_manuals" ? "" : "&order=sort_order.asc";
+    const res = await fetch(sbUrl+"/rest/v1/"+table+"?"+col+"=eq."+val+order, {method:"GET",headers:{...sbHeaders(),"Accept":"application/json"}});
+    if (!res.ok) throw new Error("GET "+table+" failed");
+    return res.json();
+  }
+
+  async function saveToCloud() {
+    setSaveStatus('saving');
+    try {
+      const manualRow = {client_name:data.clientName,solution_name:data.solutionName,version:data.version,stack:data.stack,confidential_line:data.confidentialLine,system_prompt_text:data.systemPromptText,callout_title:data.calloutTitle,callout_body:data.calloutBody};
+      if (manualId) manualRow.id = manualId;
+      const [saved] = await sbPost("build_manuals", [manualRow]);
+      const mid = saved.id;
+      if (!manualId) setManualId(mid);
+      const childTables = ["scope_items","accounts","sp_folders","training_steps","scenarios","system_prompt_rules","json_schemas","make_variables","conditional_logic","error_handling","guardrails"];
+      await sbDelete("best_practice_categories","manual_id",mid);
+      for (const t of childTables) await sbDelete(t,"manual_id",mid);
+      const scopeRows = [...data.scopeIn.map((t,i)=>({manual_id:mid,scope_type:"in",text:t,sort_order:i})),...data.scopeOut.map((t,i)=>({manual_id:mid,scope_type:"out",text:t,sort_order:i}))];
+      if (scopeRows.length) await sbPost("scope_items",scopeRows);
+      if (data.accounts.length) await sbPost("accounts",data.accounts.map((a,i)=>({manual_id:mid,name:a.name,setup:a.setup,connection:a.connection,icon:a.icon,color:a.color,sort_order:i})));
+      if (data.spFolders.length) await sbPost("sp_folders",data.spFolders.map((f,i)=>({manual_id:mid,content:f.content,find:f.find,variable:f.variable,color:f.color,sort_order:i})));
+      if (data.trainingRows.length) await sbPost("training_steps",data.trainingRows.map((r,i)=>({manual_id:mid,num:r.num,name:r.name,step_type:r.type,tools:r.tools,trigger_desc:r.trigger,inputs:r.inputs,outputs:r.outputs,type_color:r.typeColor,sort_order:i})));
+      if (data.scenarios.length) await sbPost("scenarios",data.scenarios.map((s,i)=>({manual_id:mid,scenario_id:s.id,name:s.name,trigger_desc:s.trigger,purpose:s.purpose,icon:s.icon,modules:s.modules,scenario_type:s.type,claude:s.claude,details:s.details,fr_map:JSON.stringify(s.frMap),module_list:JSON.stringify(s.moduleList),template:s.template?JSON.stringify(s.template):null,sort_order:i})));
+      if (data.systemPromptRules.length) await sbPost("system_prompt_rules",data.systemPromptRules.map((r,i)=>({manual_id:mid,num:r.num,title:r.title,description:r.desc,color:r.color,sort_order:i})));
+      if (data.jsonSchemas.length) await sbPost("json_schemas",data.jsonSchemas.map((s,i)=>({manual_id:mid,name:s.name,fields:s.fields,used_in:s.used,description:s.desc,arrays:JSON.stringify(s.arrays),sort_order:i})));
+      if (data.makeVars.length) await sbPost("make_variables",data.makeVars.map((v,i)=>({manual_id:mid,name:v.name,purpose:v.purpose,example:v.example,sort_order:i})));
+      if (data.conditionalLogic.length) await sbPost("conditional_logic",data.conditionalLogic.map((c,i)=>({manual_id:mid,scenario:c.scenario,condition:c.condition,action:c.action,else_action:c.elseAction,color:c.color,sort_order:i})));
+      if (data.errorHandling.length) await sbPost("error_handling",data.errorHandling.map((e,i)=>({manual_id:mid,trigger_desc:e.trigger,response:e.response,severity:e.severity,sort_order:i})));
+      if (data.guardrails.length) await sbPost("guardrails",data.guardrails.map((g,i)=>({manual_id:mid,text:g,sort_order:i})));
+      async function saveBP(bpArray,bpType){for(let ci=0;ci<bpArray.length;ci++){const cat=bpArray[ci];const[savedCat]=await sbPost("best_practice_categories",[{manual_id:mid,bp_type:bpType,category:cat.category,icon:cat.icon,color:cat.color,sort_order:ci}]);if(cat.items.length)await sbPost("best_practice_items",cat.items.map((item,ii)=>({category_id:savedCat.id,label:item.label,detail:item.detail,item_type:item.type,sort_order:ii})));}}
+      await saveBP(data.operationalBP,"operational");
+      await saveBP(data.buildBP,"build");
+      setSaveStatus('saved');
+    } catch(err) { console.error("Save error:",err); setSaveStatus('error'); }
+    setTimeout(() => setSaveStatus(null), 3000);
+  }
+
+  async function loadFromCloud(overrideId) {
+    setLoadStatus('loading');
+    try {
+      let mid = overrideId || manualId;
+      if (!mid) {
+        const res = await fetch(sbUrl+"/rest/v1/build_manuals?order=updated_at.desc&limit=1",{headers:{...sbHeaders(),"Accept":"application/json"}});
+        const rows = await res.json();
+        if (!rows.length) { setLoadStatus(null); return; }
+        mid = rows[0].id;
+      }
+      setManualId(mid);
+      const [manual] = await sbGet("build_manuals","id",mid);
+      if (!manual) throw new Error("Manual not found");
+      const [scopeRows,acctRows,spRows,trainRows,scenRows,ruleRows,schemaRows,varRows,condRows,errRows,guardRows] = await Promise.all([
+        sbGet("scope_items","manual_id",mid),sbGet("accounts","manual_id",mid),sbGet("sp_folders","manual_id",mid),
+        sbGet("training_steps","manual_id",mid),sbGet("scenarios","manual_id",mid),sbGet("system_prompt_rules","manual_id",mid),
+        sbGet("json_schemas","manual_id",mid),sbGet("make_variables","manual_id",mid),sbGet("conditional_logic","manual_id",mid),
+        sbGet("error_handling","manual_id",mid),sbGet("guardrails","manual_id",mid),
+      ]);
+      const bpCats = await sbGet("best_practice_categories","manual_id",mid);
+      async function loadBPItems(cats){const result=[];for(const cat of cats){const items=await sbGet("best_practice_items","category_id",cat.id);result.push({category:cat.category,icon:cat.icon,color:cat.color,items:items.map(i=>({label:i.label,detail:i.detail,type:i.item_type}))});}return result;}
+      const opBP = await loadBPItems(bpCats.filter(c=>c.bp_type==="operational"));
+      const buildBP = await loadBPItems(bpCats.filter(c=>c.bp_type==="build"));
+      setData({
+        clientName:manual.client_name,solutionName:manual.solution_name,version:manual.version,
+        stack:manual.stack,confidentialLine:manual.confidential_line,
+        systemPromptText:manual.system_prompt_text,calloutTitle:manual.callout_title,calloutBody:manual.callout_body,
+        scopeIn:scopeRows.filter(r=>r.scope_type==="in").map(r=>r.text),
+        scopeOut:scopeRows.filter(r=>r.scope_type==="out").map(r=>r.text),
+        accounts:acctRows.map(a=>({name:a.name,setup:a.setup,connection:a.connection,icon:a.icon,color:a.color})),
+        spFolders:spRows.map(f=>({content:f.content,find:f.find,variable:f.variable,color:f.color})),
+        trainingRows:trainRows.map(r=>({num:r.num,name:r.name,type:r.step_type,tools:r.tools,trigger:r.trigger_desc,inputs:r.inputs,outputs:r.outputs,typeColor:r.type_color})),
+        scenarios:scenRows.map(s=>({id:s.scenario_id,name:s.name,trigger:s.trigger_desc,purpose:s.purpose,icon:s.icon,modules:s.modules,type:s.scenario_type,claude:s.claude,details:s.details,frMap:typeof s.fr_map==="string"?JSON.parse(s.fr_map):s.fr_map,moduleList:typeof s.module_list==="string"?JSON.parse(s.module_list):s.module_list,template:s.template?(typeof s.template==="string"?JSON.parse(s.template):s.template):null})),
+        systemPromptRules:ruleRows.map(r=>({num:r.num,title:r.title,desc:r.description,color:r.color})),
+        jsonSchemas:schemaRows.map(s=>({name:s.name,fields:s.fields,used:s.used_in,desc:s.description,arrays:typeof s.arrays==="string"?JSON.parse(s.arrays):s.arrays})),
+        makeVars:varRows.map(v=>({name:v.name,purpose:v.purpose,example:v.example})),
+        conditionalLogic:condRows.map(c=>({scenario:c.scenario,condition:c.condition,action:c.action,elseAction:c.else_action,color:c.color})),
+        errorHandling:errRows.map(r=>({trigger:r.trigger_desc,response:r.response,severity:r.severity})),
+        guardrails:guardRows.map(g=>g.text),
+        operationalBP:opBP,buildBP:buildBP,
+      });
+      setLoadStatus('loaded');
+    } catch(err) { console.error("Load error:",err); setLoadStatus('error'); }
+    setTimeout(() => setLoadStatus(null), 3000);
+  }
+
+  useEffect(() => { loadFromCloud(); }, []);
+
+  const cardStyle = {padding:12,borderRadius:8,background:C.bg,border:"1px solid "+C.border,marginBottom:8};
+  const rmBtnStyle = {background:"none",border:"none",color:C.danger,cursor:"pointer",fontSize:13,padding:"2px 5px",fontWeight:700};
+  const addBtnStyle = {width:"100%",padding:"7px",borderRadius:6,border:"1px dashed "+C.border,background:"transparent",color:C.accent,fontSize:10,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",fontWeight:600,marginTop:4};
+
+  function arrayEditor(label, path, arr, fields, template) {
+    return e("div",{style:{marginBottom:14}},
+      e("div",{style:{fontSize:10,fontWeight:600,color:C.accent,marginBottom:6,letterSpacing:"0.04em"}},label),
+      arr.map((item,i) =>
+        e("div",{key:i,style:cardStyle},
+          e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:6}},
+            e("span",{style:{fontSize:10,fontWeight:600,color:C.textMid}},"#"+(i+1)),
+            e("button",{onClick:()=>removeItem(path,i),style:rmBtnStyle},"×")
+          ),
+          fields.map(f => e(EditorField,{key:f.key,label:f.label,value:typeof item==="string"?item:item[f.key],onChange:v=>upd(path+"."+i+"."+(typeof item==="string"?"":f.key),v),multi:f.multi,mono:f.mono}))
+        )
+      ),
+      e("button",{onClick:()=>addItem(path,template),style:addBtnStyle},"+ Add")
+    );
+  }
+
+  function simpleArrayEditor(label, path, arr) {
+    return e("div",{style:{marginBottom:14}},
+      label ? e("div",{style:{fontSize:10,fontWeight:600,color:C.accent,marginBottom:6}},label) : null,
+      arr.map((item,i) =>
+        e("div",{key:i,style:{display:"flex",gap:4,marginBottom:4}},
+          e("input",{type:"text",value:item,onChange:ev=>upd(path+"."+i,ev.target.value),style:{flex:1,padding:"7px 10px",borderRadius:6,border:"1px solid "+C.border,background:C.bg,color:C.text,fontSize:12,fontFamily:"'DM Sans', sans-serif"}}),
+          e("button",{onClick:()=>removeItem(path,i),style:rmBtnStyle},"×")
+        )
+      ),
+      e("button",{onClick:()=>addItem(path,"New item"),style:addBtnStyle},"+ Add")
+    );
+  }
+
+  const editorSections = {
+    overview: () => e("div",null,
+      e(EditorField,{label:"Client Name",value:data.clientName,onChange:v=>upd("clientName",v)}),
+      e(EditorField,{label:"Solution Name",value:data.solutionName,onChange:v=>upd("solutionName",v)}),
+      e(EditorField,{label:"Version",value:data.version,onChange:v=>upd("version",v)}),
+      e(EditorField,{label:"Confidential Line",value:data.confidentialLine,onChange:v=>upd("confidentialLine",v)}),
+      e(EditorField,{label:"Callout Title",value:data.calloutTitle,onChange:v=>upd("calloutTitle",v)}),
+      e(EditorField,{label:"Callout Body",value:data.calloutBody,onChange:v=>upd("calloutBody",v),multi:true}),
+      simpleArrayEditor("IN SCOPE","scopeIn",data.scopeIn),
+      simpleArrayEditor("OUT OF SCOPE","scopeOut",data.scopeOut),
+    ),
+    technology: () => e("div",null,
+      arrayEditor("ACCOUNTS","accounts",data.accounts,[{label:"Name",key:"name"},{label:"Setup",key:"setup",multi:true},{label:"Connection",key:"connection"},{label:"Icon",key:"icon"}],{name:"New Service",setup:"Setup steps...",connection:"Connection type",icon:"🔌",color:C.textMid}),
+      arrayEditor("DATA SOURCE FOLDERS","spFolders",data.spFolders,[{label:"Content",key:"content"},{label:"What to Find",key:"find"},{label:"Variable",key:"variable",mono:true}],{content:"New folder",find:"Where to find it",variable:"NEW_VAR",color:C.accent}),
+      arrayEditor("PLATFORM VARIABLES","makeVars",data.makeVars,[{label:"Name",key:"name",mono:true},{label:"Purpose",key:"purpose"},{label:"Example",key:"example",mono:true}],{name:"NEW_VAR",purpose:"Purpose",example:"value"}),
+    ),
+    training: () => e("div",null,
+      arrayEditor("TRAINING ROWS","trainingRows",data.trainingRows,[{label:"#",key:"num"},{label:"Name",key:"name"},{label:"Type",key:"type"},{label:"Tools",key:"tools"},{label:"Trigger",key:"trigger"},{label:"Inputs",key:"inputs",multi:true},{label:"Outputs",key:"outputs",multi:true}],{num:data.trainingRows.length+1,name:"New Training",type:"Workflow",tools:"Make.com",trigger:"Trigger...",inputs:"Inputs...",outputs:"Outputs...",typeColor:C.accent}),
+    ),
+    workflows: () => e("div",null,
+      data.scenarios.map((sc,i) =>
+        e("div",{key:i,style:{...cardStyle,marginBottom:12}},
+          e("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:8}},
+            e("span",{style:{fontSize:11,fontWeight:700,color:C.accent,fontFamily:mono}},sc.id),
+            e("button",{onClick:()=>removeItem("scenarios",i),style:rmBtnStyle},"×")
+          ),
+          e(EditorField,{label:"Name",value:sc.name,onChange:v=>upd(`scenarios.${i}.name`,v)}),
+          e(EditorField,{label:"Icon",value:sc.icon,onChange:v=>upd(`scenarios.${i}.icon`,v)}),
+          e(EditorField,{label:"Purpose",value:sc.purpose,onChange:v=>upd(`scenarios.${i}.purpose`,v),multi:true}),
+          e(EditorField,{label:"Trigger",value:sc.trigger,onChange:v=>upd(`scenarios.${i}.trigger`,v)}),
+          e(EditorField,{label:"Details",value:sc.details,onChange:v=>upd(`scenarios.${i}.details`,v),multi:true}),
+          e("div",{style:{fontSize:10,fontWeight:600,color:C.purple,marginBottom:4,marginTop:6}},"MODULE LIST"),
+          sc.moduleList.map((m,j) =>
+            e("div",{key:j,style:{display:"flex",gap:4,marginBottom:3}},
+              e("span",{style:{fontFamily:mono,fontSize:10,color:C.accent,padding:"6px 0",minWidth:16}},j+1),
+              e("input",{type:"text",value:m,onChange:ev=>upd(`scenarios.${i}.moduleList.${j}`,ev.target.value),style:{flex:1,padding:"5px 8px",borderRadius:5,border:"1px solid "+C.border,background:C.bg,color:C.text,fontSize:11}}),
+              e("button",{onClick:()=>removeItem(`scenarios.${i}.moduleList`,j),style:rmBtnStyle},"×")
+            )
+          ),
+          e("button",{onClick:()=>addItem(`scenarios.${i}.moduleList`,"New module"),style:{...addBtnStyle,marginTop:4}},"+ Add Module"),
+        )
+      ),
+      e("button",{onClick:()=>addItem("scenarios",{id:`SC-0${data.scenarios.length+1}`,name:"New Scenario",trigger:"Trigger...",purpose:"Purpose...",icon:"📋",modules:5,type:"hitl",claude:false,details:"Details...",frMap:[],moduleList:["Step 1"],template:null}),style:{...addBtnStyle,background:C.accentDim,border:"1px solid "+C.accent+"44"}},"+ Add Scenario"),
+    ),
+    configuration: () => e("div",null,
+      e(EditorField,{label:"System Prompt — Full Text",value:data.systemPromptText,onChange:v=>upd("systemPromptText",v),multi:true}),
+      arrayEditor("SYSTEM PROMPT RULES","systemPromptRules",data.systemPromptRules,[{label:"#",key:"num"},{label:"Title",key:"title"},{label:"Description",key:"desc",multi:true}],{num:data.systemPromptRules.length+1,title:"NEW RULE",desc:"Rule description...",color:C.accent}),
+      arrayEditor("JSON SCHEMAS","jsonSchemas",data.jsonSchemas,[{label:"Name",key:"name",mono:true},{label:"Fields",key:"fields"},{label:"Used In",key:"used"},{label:"Description",key:"desc"}],{name:"NewSchema",fields:5,used:"SC-0X",desc:"Description...",arrays:[]}),
+    ),
+    control: () => e("div",null,
+      arrayEditor("ERROR HANDLING","errorHandling",data.errorHandling,[{label:"Trigger",key:"trigger"},{label:"Response",key:"response",multi:true},{label:"Severity (warning/danger)",key:"severity"}],{trigger:"New error",response:"Response...",severity:"warning"}),
+      simpleArrayEditor("GUARDRAILS","guardrails",data.guardrails),
+    ),
+    bestpractices: () => e("div",null,
+      e("div",{style:{fontSize:11,fontWeight:700,color:C.accent,marginBottom:8,textTransform:"uppercase"}},"Operational Best Practices"),
+      data.operationalBP.map((cat,ci) =>
+        e("div",{key:"op-"+ci,style:{...cardStyle,marginBottom:14}},
+          e("div",{style:{fontSize:11,fontWeight:700,color:cat.color,marginBottom:8}},cat.category),
+          cat.items.map((item,ii) =>
+            e("div",{key:ii,style:{marginBottom:8,padding:"8px 10px",borderRadius:6,background:C.surface}},
+              e(EditorField,{label:(item.type==="do"?"✓":"×")+" Label",value:item.label,onChange:v=>upd(`operationalBP.${ci}.items.${ii}.label`,v)}),
+              e(EditorField,{label:"Detail",value:item.detail,onChange:v=>upd(`operationalBP.${ci}.items.${ii}.detail`,v),multi:true}),
+            )
+          ),
+          e("button",{onClick:()=>addItem(`operationalBP.${ci}.items`,{label:"New item",detail:"Detail...",type:"do"}),style:addBtnStyle},"+ Add Item"),
+        )
+      ),
+      e("div",{style:{fontSize:11,fontWeight:700,color:C.purple,marginBottom:8,marginTop:20,textTransform:"uppercase"}},"Build Best Practices"),
+      data.buildBP.map((cat,ci) =>
+        e("div",{key:"bd-"+ci,style:{...cardStyle,marginBottom:14}},
+          e("div",{style:{fontSize:11,fontWeight:700,color:cat.color,marginBottom:8}},cat.category),
+          cat.items.map((item,ii) =>
+            e("div",{key:ii,style:{marginBottom:8,padding:"8px 10px",borderRadius:6,background:C.surface}},
+              e(EditorField,{label:(item.type==="do"?"✓":"×")+" Label",value:item.label,onChange:v=>upd(`buildBP.${ci}.items.${ii}.label`,v)}),
+              e(EditorField,{label:"Detail",value:item.detail,onChange:v=>upd(`buildBP.${ci}.items.${ii}.detail`,v),multi:true}),
+            )
+          ),
+          e("button",{onClick:()=>addItem(`buildBP.${ci}.items`,{label:"New item",detail:"Detail...",type:"do"}),style:addBtnStyle},"+ Add Item"),
+        )
+      )
+    ),
+    knowledge: () => e("div",null,
+      e("div",{style:{padding:12,borderRadius:8,background:C.accent+"08",border:"1px solid "+C.accent+"20",marginBottom:14}},
+        e("div",{style:{fontSize:11,fontWeight:600,color:C.accent,marginBottom:4}},"Knowledge Configuration"),
+        e("div",{style:{fontSize:10,color:C.textMid,lineHeight:1.5}},"The Knowledge tab displays detailed views of each training step. Edit training content in the Trainings editor tab.")
+      ),
+      arrayEditor("TRAINING DETAILS","trainingRows",data.trainingRows,[{label:"#",key:"num"},{label:"Name",key:"name"},{label:"Type",key:"type"},{label:"Tools",key:"tools"},{label:"Trigger",key:"trigger"},{label:"Inputs",key:"inputs",multi:true},{label:"Outputs",key:"outputs",multi:true}],{num:data.trainingRows.length+1,name:"New Training",type:"Workflow",tools:"Make.com",trigger:"Trigger...",inputs:"Inputs...",outputs:"Outputs...",typeColor:C.accent}),
+    ),
+  };
+
+  const editorTabs = [
+    {id:"overview",label:"Skillset Overview",icon:"🏠"},
+    {id:"technology",label:"Technology",icon:"⚙️"},
+    {id:"training",label:"Trainings",icon:"📋"},
+    {id:"workflows",label:"Workflow",icon:"📊"},
+    {id:"knowledge",label:"Knowledge",icon:"📖"},
+    {id:"configuration",label:"Instructions",icon:"🧠"},
+    {id:"control",label:"Control",icon:"🛡️"},
+    {id:"bestpractices",label:"Best Practices",icon:"✅"},
+  ];
+
+  function editorPanel() {
+    return e("div",{style:{
+      position:"fixed",top:0,left:0,bottom:0,zIndex:100,
+      width:panelOpen?380:0,background:C.surface,borderRight:panelOpen?"1px solid "+C.border:"none",
+      overflow:"hidden",transition:"width 0.3s ease",display:"flex",flexDirection:"column",
+      boxShadow:panelOpen?"4px 0 24px rgba(0,0,0,0.08)":"none",
+    }},
+      e("div",{style:{padding:"16px",borderBottom:"1px solid "+C.border,background:C.bg,flexShrink:0}},
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}},
+          e("div",{style:{display:"flex",alignItems:"baseline",gap:3}},
+            e("span",{style:{fontSize:15,fontWeight:700,color:C.logo}},"MANAGE"),
+            e("span",{style:{fontSize:15,fontWeight:700,color:C.accent}},"AI"),
+            e("span",{style:{fontSize:10,color:C.textDim,marginLeft:8,fontFamily:mono}},"Editor")
+          ),
+          e("button",{onClick:()=>setPanelOpen(false),style:{background:"none",border:"none",color:C.textDim,cursor:"pointer",fontSize:16,lineHeight:1,padding:"2px 6px"}},"✕")
+        ),
+        e("div",{style:{display:"flex",gap:3,flexWrap:"wrap"}},
+          editorTabs.map(t => {
+            const isA = editSection===t.id;
+            return e("button",{key:t.id,onClick:()=>{setEditSection(t.id);setActiveView(t.id==="bestpractices"?"bestpractices":t.id==="training"?"training":t.id==="workflows"?"workflows":t.id==="configuration"?"configuration":t.id==="control"?"control":t.id==="knowledge"?"knowledge":t.id);},
+              style:{padding:"5px 8px",borderRadius:5,border:"1px solid "+(isA?C.accent:C.border),background:isA?C.accentDim:C.bg,color:isA?C.accent:C.textDim,fontSize:10,fontWeight:500,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",display:"flex",alignItems:"center",gap:4,transition:"all 0.2s"}},
+              e("span",{style:{fontSize:11}},t.icon),t.label
+            );
+          })
+        )
+      ),
+      e("div",{style:{flex:1,padding:"14px 16px",overflowY:"auto"}},
+        editorSections[editSection] ? editorSections[editSection]() : null
+      ),
+      e("div",{style:{padding:"12px 16px",borderTop:"1px solid "+C.border,background:C.bg,flexShrink:0,display:"flex",flexDirection:"column",gap:6}},
+        e("div",{style:{width:"100%",padding:"6px",borderRadius:6,border:"1px solid "+C.success+"40",background:C.success+"08",color:C.success,fontSize:10,fontWeight:500,fontFamily:"'DM Sans', sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:6}},"⚡ Supabase Connected"),
+        e("button",{onClick:saveToCloud,style:{width:"100%",padding:"9px",borderRadius:6,border:"none",cursor:"pointer",background:saveStatus==="saved"?C.success:saveStatus==="error"?C.danger:C.accent,color:"#FFF",fontSize:11,fontWeight:600,fontFamily:"'DM Sans', sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"background 0.3s"}},
+          saveStatus==="saving"?"Saving…":saveStatus==="saved"?"✓ Saved to Cloud":saveStatus==="error"?"✗ Save Failed":"☁ Save to Cloud"
+        ),
+        e("button",{onClick:()=>loadFromCloud(),style:{width:"100%",padding:"8px",borderRadius:6,border:"1px solid "+C.accent+"40",cursor:"pointer",background:loadStatus==="loaded"?C.success+"12":loadStatus==="error"?C.danger+"12":C.accent+"08",color:loadStatus==="loaded"?C.success:loadStatus==="error"?C.danger:C.accent,fontSize:10,fontWeight:600,fontFamily:"'DM Sans', sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"all 0.3s"}},
+          loadStatus==="loading"?"Loading…":loadStatus==="loaded"?"✓ Loaded from Cloud":loadStatus==="error"?"✗ Load Failed":"☁ Load from Cloud"
+        ),
+        e("button",{onClick:()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=data.clientName.toLowerCase().replace(/\s+/g,"-")+"-build-manual.json";a.click();},style:{width:"100%",padding:"7px",borderRadius:6,border:"1px solid "+C.border,cursor:"pointer",background:"transparent",color:C.textMid,fontSize:10,fontWeight:500,fontFamily:"'DM Sans', sans-serif"}},"↓ Export JSON"),
+        e("button",{onClick:()=>setData(getDefaultData()),style:{width:"100%",padding:"6px",borderRadius:6,border:"1px solid "+C.border,cursor:"pointer",background:"transparent",color:C.textDim,fontSize:10,fontFamily:"'DM Sans', sans-serif"}},"Reset to Default")
+      )
+    );
+  }
+
+  const views = [
+    {id:"overview",label:"Skillset Overview"},{id:"technology",label:"Technology"},
+    {id:"training",label:"Trainings"},{id:"workflows",label:"Workflow"},
+    {id:"knowledge",label:"Knowledge"},{id:"configuration",label:"Instructions"},
+    {id:"control",label:"Control"},{id:"bestpractices",label:"Best Practices"},
+  ];
+
+  function navBtn(v) {
+    const isA = activeView===v.id;
+    return e("button",{key:v.id,onClick:()=>setActiveView(v.id),style:{padding:"8px 13px",borderRadius:6,border:"none",cursor:"pointer",fontSize:11,fontWeight:500,fontFamily:"'DM Sans', sans-serif",letterSpacing:"0.02em",transition:"all 0.3s ease",background:isA?C.accent:"transparent",color:isA?"#FFF":C.textDim}},v.label);
+  }
+
+  function overviewView() {
+    const flowSteps = [
+      {icon:"📄",label:"Source Data",sub:"Files / Quotes / Triggers",clr:C.border},
+      "→",
+      {icon:"📥",label:"SC-01: Intake",sub:"Extract + Classify",clr:C.accent},
+      "→",
+      {icon:"✅",label:"Human Review",sub:"HITL Gate",clr:C.warning},
+      "→",
+      {icon:"📝",label:"SC-02: Generate",sub:"AI-Powered Output",clr:C.purple},
+      "→",
+      {icon:"✅",label:"Human Review",sub:"HITL Gate",clr:C.warning},
+      "→",
+      {icon:"📦",label:"SC-03: Deliver",sub:"Package + Send",clr:C.success},
+    ];
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},[data.solutionName]),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720,lineHeight:1.6}},"AI-assisted automation for "+data.clientName+". Built on "+data.stack+" — query F.R.I.D.A.Y. for full client context before reading this manual.")
+      ),
+      e("div",{style:{padding:24,borderRadius:12,background:C.surface,border:"1px solid "+C.border,marginBottom:20}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.accent,letterSpacing:"0.04em",marginBottom:18}},data.solutionName.toUpperCase()+" FLOW"),
+        e("div",{style:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",alignItems:"center"}},
+          flowSteps.map((item,i)=>
+            typeof item==="string" ? e("span",{key:i,style:{color:C.textDim,fontSize:14,flexShrink:0}},item)
+            : e("div",{key:i,style:{padding:"10px 14px",borderRadius:10,background:C.bg,border:"2px solid "+item.clr,textAlign:"center",minWidth:88}},
+                e("div",{style:{fontSize:18,marginBottom:3}},item.icon),
+                e("div",{style:{fontSize:10,fontWeight:600,fontFamily:mono,color:item.clr===C.border?C.textMid:item.clr}},item.label),
+                e("div",{style:{fontSize:8,color:C.textDim,marginTop:1}},item.sub))
+          )
+        )
+      ),
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:16,marginBottom:20}},
+        e("div",{style:{padding:20,borderRadius:12,background:C.success+"06",border:"1px solid "+C.success+"20"}},
+          e("div",{style:{fontSize:11,fontWeight:600,color:C.success,letterSpacing:"0.06em",marginBottom:12,textTransform:"uppercase"}},"In Scope"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8}},data.scopeIn.map((item,i)=>e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:8,fontSize:11,color:C.textMid,lineHeight:1.5}},e("span",{style:{color:C.success,flexShrink:0,fontWeight:700,marginTop:1}},"✓"),item)))
+        ),
+        e("div",{style:{padding:20,borderRadius:12,background:C.danger+"06",border:"1px solid "+C.danger+"20"}},
+          e("div",{style:{fontSize:11,fontWeight:600,color:C.danger,letterSpacing:"0.06em",marginBottom:12,textTransform:"uppercase"}},"Out of Scope (Phase 1)"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8}},data.scopeOut.map((item,i)=>e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:8,fontSize:11,color:C.textMid,lineHeight:1.5}},e("span",{style:{color:C.danger,flexShrink:0,fontWeight:700,marginTop:1}},"×"),item)))
+        )
+      ),
+      e("div",{style:{padding:"16px 20px",borderRadius:10,background:C.teal+"08",border:"1px solid "+C.teal+"22",display:"flex",alignItems:"flex-start",gap:12}},
+        e("span",{style:{fontSize:18,flexShrink:0}},"📂"),
+        e("div",null,e("div",{style:{fontSize:12,fontWeight:600,color:C.teal,marginBottom:3}},data.calloutTitle),e("div",{style:{fontSize:11,color:C.textMid,lineHeight:1.6}},data.calloutBody))
+      )
+    );
+  }
+
+  function technologyView() {
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Tools, Accounts & Access"),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720,lineHeight:1.6}},"All required platforms, connections, and access levels.")
+      ),
+      e("div",{style:{padding:22,borderRadius:12,background:C.surface,border:"1px solid "+C.border,marginBottom:20}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.accent,letterSpacing:"0.04em",marginBottom:14}},"TOOLS, ACCOUNTS & ACCESS"),
+        e("div",{style:{overflowX:"auto"}},
+          e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:11}},
+            e("thead",null,e("tr",{style:{background:C.surface2}},
+              ["Tool / Service","Setup Steps","Connection"].map((h,i)=>e("th",{key:i,style:{padding:"10px 12px",textAlign:"left",fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:"0.04em",borderBottom:"1px solid "+C.border}},h))
+            )),
+            e("tbody",null,data.accounts.map((row,ri)=>
+              e("tr",{key:ri,style:{borderBottom:"1px solid "+C.border,background:ri%2===0?C.bg:C.surface}},
+                e("td",{style:{padding:"10px 12px",verticalAlign:"top"}},e("div",{style:{display:"flex",alignItems:"center",gap:8}},e("span",{style:{fontSize:16}},row.icon),e("span",{style:{fontWeight:600}},row.name))),
+                e("td",{style:{padding:"10px 12px",verticalAlign:"top",maxWidth:240}},e("span",{style:{color:C.textMid,lineHeight:1.5,fontSize:11}},row.setup)),
+                e("td",{style:{padding:"10px 12px",verticalAlign:"top"}},e("span",{style:{fontFamily:mono,color:row.color||C.accent,fontSize:10}},row.connection))
+              )
+            ))
+          )
+        )
+      ),
+      e("div",{style:{padding:22,borderRadius:12,background:C.surface,border:"1px solid "+C.border,marginBottom:20}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.teal,letterSpacing:"0.04em",marginBottom:14}},"DATA SOURCE MAPPING"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          data.spFolders.map(item=>e("div",{key:item.content,style:{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:8,background:C.bg,border:"1px solid "+C.border}},
+            e("div",{style:{width:4,height:32,borderRadius:2,background:item.color,flexShrink:0}}),
+            e("div",{style:{flex:1}},e("div",{style:{fontSize:12,fontWeight:600,marginBottom:2}},item.content),e("div",{style:{fontSize:10,color:C.textDim}},item.find)),
+            e("div",{style:{fontFamily:mono,fontSize:10,color:item.color,padding:"3px 8px",borderRadius:4,background:item.color+"0A",border:"1px solid "+item.color+"15",flexShrink:0}},item.variable)
+          ))
+        )
+      )
+    );
+  }
+
+  function trainingView() {
+    const typeColors = {Workflow:C.accent,Knowledge:C.purple,Instructions:C.teal};
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Skillset Configuration"),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720,lineHeight:1.6}},"Complete training matrix — triggers, inputs, and outputs for each skillset component.")
+      ),
+      e("div",{style:{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}},
+        Object.entries(typeColors).map(([type,color])=>e("div",{key:type,style:{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:6,background:color+"0D",border:"1px solid "+color+"30"}},e("div",{style:{width:8,height:8,borderRadius:"50%",background:color}}),e("span",{style:{fontSize:11,fontWeight:600,color:color}},type)))
+      ),
+      e("div",{style:{borderRadius:12,border:"1px solid "+C.border,overflow:"hidden"}},
+        e("div",{style:{overflowX:"auto"}},
+          e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:11}},
+            e("thead",null,e("tr",{style:{background:"linear-gradient(135deg,"+C.surface+","+C.surface2+")"}},
+              ["#","Training Name","Type","Tools Required","Trigger","Inputs","Outputs"].map((h,i)=>e("th",{key:i,style:{padding:"12px 14px",textAlign:"left",fontSize:10,fontWeight:700,color:C.textDim,letterSpacing:"0.06em",borderBottom:"2px solid "+C.border,whiteSpace:"nowrap"}},h))
+            )),
+            e("tbody",null,data.trainingRows.map((row,ri)=>{
+              const tc=typeColors[row.type]||C.accent;
+              return e("tr",{key:ri,style:{borderBottom:"1px solid "+C.border,background:ri%2===0?C.bg:C.surface}},
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top"}},e("div",{style:{width:24,height:24,borderRadius:6,background:tc+"12",border:"1px solid "+tc+"30",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:mono,fontSize:11,fontWeight:700,color:tc}},row.num)),
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:160}},e("span",{style:{fontSize:12,fontWeight:600}},row.name)),
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top",whiteSpace:"nowrap"}},e("span",{style:{padding:"3px 8px",borderRadius:4,background:tc+"12",color:tc,fontSize:10,fontWeight:600,border:"1px solid "+tc+"25"}},row.type)),
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:160}},e("div",{style:{display:"flex",flexDirection:"column",gap:3}},row.tools.split(", ").map((t,ti)=>e("span",{key:ti,style:{fontSize:10,fontFamily:mono,color:C.textMid}},t)))),
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:180}},e("div",{style:{padding:"5px 9px",borderRadius:5,background:C.warning+"08",border:"1px solid "+C.warning+"20",fontSize:10,color:C.textMid,lineHeight:1.5,fontFamily:mono}},row.trigger)),
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:200,maxWidth:260}},e("div",{style:{fontSize:11,color:C.textMid,lineHeight:1.6}},row.inputs)),
+                e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:200,maxWidth:260}},e("div",{style:{fontSize:11,color:C.text,lineHeight:1.6}},row.outputs))
+              );
+            }))
+          )
+        )
+      )
+    );
+  }
+
+  function workflowsView() {
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Workflow Configuration"),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720}},"Scenario-by-scenario breakdown. Every HITL gate requires human approval before the next phase fires.")
+      ),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+        data.scenarios.map((sc,i)=>{
+          const isActive=animPhase===i; const isExpanded=expandedScenario===sc.id;
+          return e("div",{key:sc.id},
+            e("div",{onClick:()=>setExpandedScenario(isExpanded?null:sc.id),style:{padding:"16px 20px",borderRadius:12,cursor:"pointer",background:isActive?C.accentDim:C.surface,border:"1px solid "+(isActive?C.accent:C.border),transition:"all 0.4s ease",position:"relative",overflow:"hidden",animation:isActive?"pulseGlow 2.5s infinite":"none"}},
+              isActive?e("div",{style:{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,"+C.accent+",transparent)",backgroundSize:"200% 100%",animation:"dataFlow 1.5s linear infinite"}}):null,
+              e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+                e("div",{style:{width:44,height:44,borderRadius:10,background:isActive?C.accent+"18":C.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0,border:"1px solid "+(isActive?C.accent+"33":C.border)}},sc.icon),
+                e("div",{style:{flex:1}},
+                  e("div",{style:{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:3}},
+                    e("span",{style:{fontFamily:mono,fontSize:10,color:C.accent,background:C.accentDim,padding:"2px 6px",borderRadius:4,fontWeight:600}},sc.id),
+                    e("span",{style:{fontSize:13,fontWeight:600}},sc.name),
+                    sc.type==="hitl"?e("span",{style:{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.warning+"15",color:C.warning,fontWeight:600}},"HITL GATE"):null,
+                    sc.claude?e("span",{style:{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.purple+"12",color:C.purple,fontWeight:600}},"CLAUDE AI"):null,
+                    sc.template?e("span",{style:{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.success+"12",color:C.success,fontWeight:600}},"📄 TEMPLATE"):null
+                  ),
+                  e("div",{style:{fontSize:11,color:C.textDim,lineHeight:1.4}},sc.purpose)
+                ),
+                e("div",{style:{textAlign:"right",flexShrink:0}},e("div",{style:{fontFamily:mono,fontSize:16,fontWeight:600,color:C.accent}},sc.modules),e("div",{style:{fontSize:9,color:C.textDim,letterSpacing:"0.04em"}},"MODULES")),
+                e("div",{style:{width:8,height:8,borderRadius:"50%",flexShrink:0,background:isActive?C.success:C.border,animation:isActive?"pulseDot 1.5s infinite":"none"}}),
+                e("div",{style:{fontSize:11,color:C.textDim,marginLeft:4}},isExpanded?"▲":"▼")
+              )
+            ),
+            isExpanded?e("div",{style:{margin:"6px 0 6px 0",padding:18,borderRadius:10,background:C.surface,border:"1px solid "+C.border,animation:"slideIn 0.3s ease"}},
+              e("div",{style:{fontSize:12,color:C.textMid,lineHeight:1.6,marginBottom:14}},sc.details),
+              e("div",{style:{display:"flex",gap:16,flexWrap:"wrap",marginBottom:14}},
+                e("div",null,e("div",{style:{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:"0.04em",marginBottom:4}},"TRIGGER"),e("div",{style:{fontSize:11,fontFamily:mono,padding:"4px 8px",background:C.surface2,borderRadius:4,border:"1px solid "+C.border}},sc.trigger)),
+                sc.frMap&&sc.frMap.length>0?e("div",null,e("div",{style:{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:"0.04em",marginBottom:4}},"MAPS TO"),e("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},sc.frMap.map(fr=>e("span",{key:fr,style:{fontSize:10,padding:"3px 7px",borderRadius:4,background:C.accentDim,color:C.accent,fontWeight:500}},fr)))):null
+              ),
+              e("div",{style:{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:"0.04em",marginBottom:6}},"MODULE SEQUENCE"),
+              e("div",{style:{display:"flex",flexDirection:"column",gap:4,marginBottom:sc.template?16:0}},
+                sc.moduleList.map((m,j)=>e("div",{key:j,style:{display:"flex",alignItems:"center",gap:8}},e("span",{style:{fontFamily:mono,fontSize:9,color:C.accent,fontWeight:600,minWidth:16}},j+1),e("span",{style:{fontSize:10,padding:"4px 10px",borderRadius:4,background:C.bg,border:"1px solid "+C.border,color:C.textMid}},m)))
+              ),
+              sc.template?e("div",{style:{padding:"14px 18px",borderRadius:8,background:C.success+"06",border:"1px solid "+C.success+"20"}},
+                e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},e("span",{style:{fontSize:16}},"📄"),e("div",null,e("div",{style:{fontSize:12,fontWeight:600,color:C.success}},sc.template.name),e("div",{style:{fontSize:11,color:C.textMid}},sc.template.purpose))),
+                e("div",{style:{fontSize:10,fontWeight:600,color:C.textDim,letterSpacing:"0.04em",marginBottom:6}},"MERGE TAGS"),
+                e("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},sc.template.mergeTags.map(tag=>e("span",{key:tag,style:{fontFamily:mono,fontSize:10,padding:"3px 8px",borderRadius:4,background:C.purple+"0A",color:C.purple,border:"1px solid "+C.purple+"15"}},`{{${tag}}}`)))
+              ):null
+            ):null,
+            i<data.scenarios.length-1?e("div",{style:{display:"flex",alignItems:"center",padding:"4px 0 4px 28px",gap:10}},
+              e("div",{style:{width:20,height:1,background:"repeating-linear-gradient(90deg,"+C.warning+" 0px,"+C.warning+" 4px,transparent 4px,transparent 8px)"}}),
+              e("div",{style:{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:16,background:C.warning+"0A",border:"1px dashed "+C.warning+"44"}},
+                e("span",{style:{fontSize:11}},"✅"),
+                e("span",{style:{fontSize:10,fontWeight:500,color:C.warning}},"Human Review Gate")
+              )
+            ):null
+          );
+        })
+      )
+    );
+  }
+
+  function configurationView() {
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Instruction Detail"),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720}},"Model selection, system prompt rules, full prompt text, and all JSON schemas.")
+      ),
+      e("div",{style:{padding:20,borderRadius:12,background:C.surface,border:"1px solid "+C.border,marginBottom:16}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.accent,letterSpacing:"0.04em",marginBottom:14}},"MODEL SELECTION & HTTP SETTINGS"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:10,marginBottom:14}},
+          [{label:"Model",value:data.makeVars.find(v=>v.name==="CLAUDE_MODEL")?.example||"claude-sonnet-4-5-20250929"},{label:"Variable",value:"{{CLAUDE_MODEL}}"},{label:"Method",value:"POST"},{label:"URL",value:"api.anthropic.com/v1/messages"},{label:"anthropic-version",value:"2023-06-01"},{label:"content-type",value:"application/json"}].map(item=>
+            e("div",{key:item.label,style:{padding:"10px 14px",borderRadius:8,background:C.bg,border:"1px solid "+C.border}},
+              e("div",{style:{fontSize:10,color:C.textDim,fontWeight:500,letterSpacing:"0.04em",marginBottom:3}},item.label),
+              e("div",{style:{fontSize:12,fontFamily:mono,fontWeight:500}},item.value)
+            )
+          )
+        )
+      ),
+      e("div",{style:{fontSize:12,fontWeight:600,color:C.textDim,letterSpacing:"0.06em",marginBottom:12,textTransform:"uppercase"}},"System Prompt Rules"),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginBottom:16}},
+        data.systemPromptRules.map((rule,i)=>
+          e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:14,padding:"14px 18px",borderRadius:10,background:C.surface,border:"1px solid "+C.border}},
+            e("div",{style:{width:28,height:28,borderRadius:7,flexShrink:0,background:rule.color+"12",border:"1px solid "+rule.color+"25",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:mono,fontSize:11,fontWeight:700,color:rule.color}},rule.num),
+            e("div",null,e("div",{style:{fontSize:12,fontWeight:600,marginBottom:2}},rule.title),e("div",{style:{fontSize:11,color:C.textMid,lineHeight:1.5}},rule.desc))
+          )
+        )
+      ),
+      e("div",{style:{borderRadius:10,border:"1px solid "+C.purple+"40",overflow:"hidden",marginBottom:20}},
+        e("div",{onClick:()=>setPromptOpen(o=>!o),style:{padding:"14px 18px",cursor:"pointer",display:"flex",alignItems:"center",gap:12,background:promptOpen?C.purple+"08":C.surface,borderBottom:promptOpen?"1px solid "+C.purple+"25":"none",transition:"background 0.2s"}},
+          e("div",{style:{width:32,height:32,borderRadius:8,background:C.purple+"14",border:"1px solid "+C.purple+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}},"💬"),
+          e("div",{style:{flex:1}},
+            e("div",{style:{fontSize:13,fontWeight:600,color:promptOpen?C.purple:C.text}},"Full System Prompt"),
+            e("div",{style:{fontSize:11,color:C.textDim,marginTop:2}},"Applied as system message in every Claude API call")
+          ),
+          e("div",{style:{display:"flex",alignItems:"center",gap:8}},
+            e("span",{style:{fontSize:10,padding:"2px 8px",borderRadius:4,background:C.teal+"12",color:C.teal,fontWeight:600,border:"1px solid "+C.teal+"25"}},data.systemPromptRules.length+" RULES"),
+            e("div",{style:{fontSize:14,color:promptOpen?C.purple:C.textDim,transition:"transform 0.2s",transform:promptOpen?"rotate(180deg)":"rotate(0deg)"}},"▼")
+          )
+        ),
+        promptOpen?e("div",{style:{background:C.bg,animation:"slideIn 0.25s ease"}},
+          e("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 18px",background:C.surface2,borderBottom:"1px solid "+C.border}},
+            e("span",{style:{fontSize:10,fontFamily:mono,color:C.textDim}},"system prompt · applied to all Claude HTTP module calls"),
+            e("button",{onClick:()=>{navigator.clipboard.writeText(data.systemPromptText).then(()=>{setPromptCopied(true);setTimeout(()=>setPromptCopied(false),2000);});},style:{fontSize:11,padding:"5px 12px",borderRadius:6,cursor:"pointer",fontFamily:"'DM Sans', sans-serif",fontWeight:600,transition:"all 0.2s",border:"1px solid "+(promptCopied?C.success+"60":C.border),background:promptCopied?C.success+"10":C.bg,color:promptCopied?C.success:C.textMid}},promptCopied?"✓ Copied!":"📋 Copy Prompt")
+          ),
+          e("div",{style:{padding:"18px 22px",fontFamily:mono,fontSize:12,color:C.textMid,whiteSpace:"pre-wrap",lineHeight:1.7}},data.systemPromptText),
+          e("div",{style:{margin:"0 18px 18px",padding:"10px 14px",borderRadius:8,background:C.warning+"08",border:"1px solid "+C.warning+"22",fontSize:11,color:C.textMid,lineHeight:1.5}},
+            e("span",{style:{fontWeight:600,color:C.warning}},"⚠️ Usage: "),
+            "Store as a platform variable and reference with {{SYSTEM_PROMPT}} to keep it consistent across all scenarios."
+          )
+        ):null
+      ),
+      e("div",{style:{padding:20,borderRadius:12,background:C.surface,border:"1px solid "+C.border}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.accent,letterSpacing:"0.04em",marginBottom:14}},"JSON SCHEMAS (STRUCTURED OUTPUTS)"),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))",gap:10}},
+          data.jsonSchemas.map(schema=>
+            e("div",{key:schema.name,style:{padding:16,borderRadius:8,background:C.bg,border:"1px solid "+C.border}},
+              e("div",{style:{fontFamily:mono,fontSize:13,fontWeight:600,color:C.purple,marginBottom:4}},schema.name),
+              e("div",{style:{fontSize:11,color:C.textMid,marginBottom:10}},schema.desc),
+              e("div",{style:{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}},
+                e("span",{style:{fontSize:10,padding:"2px 6px",borderRadius:3,background:C.surface2,color:C.textDim,fontFamily:mono}},schema.fields+" fields"),
+                e("span",{style:{fontSize:10,padding:"2px 6px",borderRadius:3,background:C.accentDim,color:C.accent,fontFamily:mono}},"Used in "+schema.used)
+              ),
+              schema.arrays&&e("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},schema.arrays.map(a=>e("span",{key:a,style:{fontSize:9,padding:"2px 6px",borderRadius:3,background:C.purple+"0A",color:C.purple,fontFamily:mono}},a+"[]")))
+            )
+          )
+        )
+      )
+    );
+  }
+
+  function controlView() {
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Control"),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720}},"Error handling, logging, and system guardrails.")
+      ),
+      e("div",{style:{padding:20,borderRadius:12,background:C.surface,border:"1px solid "+C.border,marginBottom:16}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.orange,letterSpacing:"0.04em",marginBottom:14}},"ERROR HANDLING MATRIX"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          data.errorHandling.map((err,i)=>e("div",{key:i,style:{padding:"14px 16px",borderRadius:8,background:C.bg,border:"1px solid "+(err.severity==="danger"?C.danger+"30":C.warning+"30")}},
+            e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+              e("div",{style:{width:8,height:8,borderRadius:"50%",background:err.severity==="danger"?C.danger:C.warning,flexShrink:0}}),
+              e("span",{style:{fontSize:12,fontWeight:600}},err.trigger),
+              e("span",{style:{fontSize:9,padding:"2px 6px",borderRadius:4,background:err.severity==="danger"?C.danger+"12":C.warning+"12",color:err.severity==="danger"?C.danger:C.warning,fontWeight:600,marginLeft:"auto"}},err.severity.toUpperCase())
+            ),
+            e("div",{style:{fontSize:11,color:C.textMid,lineHeight:1.5,paddingLeft:16}},err.response)
+          ))
+        )
+      ),
+      e("div",{style:{padding:20,borderRadius:12,background:C.danger+"06",border:"1px solid "+C.danger+"20"}},
+        e("div",{style:{fontSize:12,fontWeight:600,color:C.danger,letterSpacing:"0.04em",marginBottom:12}},"SYSTEM GUARDRAILS (NON-NEGOTIABLE)"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:8}},
+          data.guardrails.map((g,i)=>e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:C.textMid,lineHeight:1.5}},e("span",{style:{color:C.danger,flexShrink:0,fontWeight:700}},"×"),g))
+        )
+      )
+    );
+  }
+
+  function bpView(bpData, expandedState, setExpandedState, expandedItemState, setExpandedItemState) {
+    return e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+      bpData.map((cat,ci)=>{
+        const catOpen=!!expandedState[ci];
+        return e("div",{key:ci,style:{borderRadius:12,border:"1px solid "+(catOpen?cat.color+"44":C.border),overflow:"hidden"}},
+          e("div",{onClick:()=>setExpandedState(p=>({...p,[ci]:!p[ci]})),style:{padding:"16px 20px",background:catOpen?cat.color+"06":C.surface,cursor:"pointer",display:"flex",alignItems:"center",gap:12}},
+            e("div",{style:{width:40,height:40,borderRadius:10,background:cat.color+"12",border:"1px solid "+cat.color+"25",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}},cat.icon),
+            e("div",{style:{flex:1}},e("div",{style:{fontSize:14,fontWeight:600,color:catOpen?cat.color:C.text}},cat.category),e("div",{style:{fontSize:11,color:C.textDim}},cat.items.filter(x=>x.type==="do").length+" do / "+cat.items.filter(x=>x.type==="dont").length+" don't")),
+            e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+              e("div",{style:{width:20,height:20,borderRadius:"50%",background:C.success+"12",border:"1px solid "+C.success+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.success}},cat.items.filter(x=>x.type==="do").length),
+              e("div",{style:{width:20,height:20,borderRadius:"50%",background:C.danger+"12",border:"1px solid "+C.danger+"30",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.danger}},cat.items.filter(x=>x.type==="dont").length),
+              e("div",{style:{fontSize:14,color:catOpen?cat.color:C.textDim,marginLeft:6,transition:"transform 0.2s",transform:catOpen?"rotate(180deg)":"rotate(0deg)"}},"▼")
+            )
+          ),
+          catOpen?e("div",{style:{padding:"0 16px 16px",background:C.bg,display:"flex",flexDirection:"column",gap:6,animation:"slideIn 0.25s ease"}},
+            cat.items.map((item,ii)=>{
+              const itemKey=ci+"-"+ii; const itemOpen=!!expandedItemState[itemKey]; const isDo=item.type==="do";
+              return e("div",{key:ii,style:{borderRadius:8,border:"1px solid "+(isDo?C.success+"25":C.danger+"25"),overflow:"hidden",marginTop:ii===0?12:0}},
+                e("div",{onClick:()=>setExpandedItemState(p=>({...p,[itemKey]:!p[itemKey]})),style:{padding:"11px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:isDo?C.success+"04":C.danger+"04"}},
+                  e("div",{style:{width:22,height:22,borderRadius:6,flexShrink:0,background:isDo?C.success+"15":C.danger+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:isDo?C.success:C.danger}},isDo?"✓":"×"),
+                  e("span",{style:{fontSize:12,fontWeight:500,flex:1}},item.label),
+                  e("span",{style:{fontSize:11,color:C.textDim}},itemOpen?"▲":"▼")
+                ),
+                itemOpen?e("div",{style:{padding:"10px 14px 12px 46px",background:C.bg,fontSize:12,color:C.textMid,lineHeight:1.6,borderTop:"1px solid "+C.border,animation:"fadeIn 0.2s ease"}},item.detail):null
+              );
+            })
+          ):null
+        );
+      })
+    );
+  }
+
+  function bestPracticesView() {
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Best Practices"),e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720}},"Operational and build guidance. Click a category, then each item for full detail.")),
+      e("div",{style:{marginBottom:20}},
+        e("div",{style:{fontSize:13,fontWeight:600,color:C.accent,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.05em"}},"Operational"),
+        bpView(data.operationalBP,expandedBP,setExpandedBP,expandedBPItem,setExpandedBPItem)
+      ),
+      e("div",{style:{marginBottom:20}},
+        e("div",{style:{fontSize:13,fontWeight:600,color:C.purple,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.05em"}},"Build"),
+        bpView(data.buildBP,expandedBuildBP,setExpandedBuildBP,expandedBuildBPItem,setExpandedBuildBPItem)
+      )
+    );
+  }
+
+  function knowledgeView() {
+    return e("div",{style:{animation:"slideIn 0.5s ease"}},
+      e("div",{style:{marginBottom:28}},
+        e("h2",{style:{fontSize:22,fontWeight:600,margin:"0 0 6px"}},"Knowledge Configuration"),
+        e("p",{style:{fontSize:13,color:C.textDim,margin:0,maxWidth:720,lineHeight:1.6}},"Detailed view of each training step. Click to expand trigger, inputs, and outputs.")
+      ),
+      e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+        data.trainingRows.map((row,ri) => {
+          const isExp = expandedKnowledge === ri;
+          const typeColors = {Workflow:C.accent,Knowledge:C.purple,Instructions:C.teal};
+          const tc = typeColors[row.type] || C.accent;
+          return e("div",{key:ri},
+            e("div",{onClick:()=>setExpandedKnowledge(isExp?null:ri),style:{padding:"16px 20px",borderRadius:12,cursor:"pointer",background:isExp?tc+"06":C.surface,border:"1px solid "+(isExp?tc+"44":C.border),transition:"all 0.3s ease"}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+                e("div",{style:{width:36,height:36,borderRadius:8,background:tc+"14",border:"1px solid "+tc+"30",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:mono,fontSize:14,fontWeight:700,color:tc,flexShrink:0}},row.num),
+                e("div",{style:{flex:1}},
+                  e("div",{style:{fontSize:14,fontWeight:600,marginBottom:2}},row.name),
+                  e("div",{style:{display:"flex",gap:6,alignItems:"center"}},
+                    e("span",{style:{fontSize:10,padding:"2px 8px",borderRadius:4,background:tc+"12",color:tc,fontWeight:600,border:"1px solid "+tc+"25"}},row.type),
+                    e("span",{style:{fontSize:10,color:C.textDim}},row.tools)
+                  )
+                ),
+                e("div",{style:{fontSize:12,color:C.textDim,flexShrink:0}},isExp?"▲":"▼")
+              )
+            ),
+            isExp?e("div",{style:{margin:"6px 0",padding:20,borderRadius:10,background:C.bg,border:"1px solid "+C.border,animation:"slideIn 0.3s ease"}},
+              e("div",{style:{marginBottom:16}},
+                e("div",{style:{fontSize:10,fontWeight:700,color:C.warning,letterSpacing:"0.06em",marginBottom:6,textTransform:"uppercase"}},"Trigger"),
+                e("div",{style:{padding:"8px 12px",borderRadius:6,background:C.warning+"08",border:"1px solid "+C.warning+"20",fontFamily:mono,fontSize:11,color:C.textMid,lineHeight:1.5}},row.trigger)
+              ),
+              e("div",{style:{marginBottom:16}},
+                e("div",{style:{fontSize:10,fontWeight:700,color:C.accent,letterSpacing:"0.06em",marginBottom:6,textTransform:"uppercase"}},"Inputs"),
+                e("div",{style:{padding:"10px 14px",borderRadius:6,background:C.accent+"06",border:"1px solid "+C.accent+"15",fontSize:11,color:C.textMid,lineHeight:1.7}},row.inputs)
+              ),
+              e("div",null,
+                e("div",{style:{fontSize:10,fontWeight:700,color:C.success,letterSpacing:"0.06em",marginBottom:6,textTransform:"uppercase"}},"Outputs"),
+                e("div",{style:{padding:"10px 14px",borderRadius:6,background:C.success+"06",border:"1px solid "+C.success+"15",fontSize:11,color:C.text,lineHeight:1.7}},row.outputs)
+              )
+            ):null
+          );
+        })
+      )
+    );
+  }
+
+  const viewMap={overview:overviewView,technology:technologyView,training:trainingView,workflows:workflowsView,configuration:configurationView,control:controlView,bestpractices:bestPracticesView,knowledge:knowledgeView};
+  const content=(viewMap[activeView]||overviewView)();
+
+  return e("div",{style:{display:"flex",minHeight:"100vh"}},
+    editorPanel(),
+    e("div",{style:{flex:1,minHeight:"100vh",background:C.bg,position:"relative",transition:"margin-left 0.3s ease",marginLeft:panelOpen?380:0}},
+      e("div",{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,backgroundImage:"linear-gradient("+C.border+"33 1px, transparent 1px), linear-gradient(90deg, "+C.border+"33 1px, transparent 1px)",backgroundSize:"60px 60px"}}),
+      e("div",{style:{position:"fixed",inset:0,pointerEvents:"none",zIndex:0}},
+        Array.from({length:12},(_,i)=>e("div",{key:i,style:{position:"absolute",width:2,height:2,borderRadius:"50%",background:C.accent,opacity:0,left:(Math.random()*100)+"%",top:"100%",animation:"floatUp 10s "+(i*0.9)+"s infinite ease-out"}}))
+      ),
+      e("header",{style:{position:"relative",zIndex:10,padding:"20px 28px 16px",borderBottom:"1px solid "+C.border,background:"linear-gradient(180deg,"+C.surface+" 0%,"+C.bg+" 100%)"}},
+        e("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:12}},
+            !panelOpen?e("button",{onClick:()=>setPanelOpen(true),title:"Open Editor",style:{width:32,height:32,borderRadius:6,border:"1px solid "+C.border,background:C.surface,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:C.accent,flexShrink:0,transition:"all 0.2s"}},"✏️"):null,
+            e("div",{style:{display:"flex",alignItems:"baseline",gap:4}},e("span",{style:{fontSize:20,fontWeight:700,color:C.logo,letterSpacing:"-0.02em"}},"MANAGE"),e("span",{style:{fontSize:20,fontWeight:700,color:C.accent,letterSpacing:"-0.02em"}},"AI")),
+            e("div",{style:{width:1,height:20,background:C.border}}),
+            e("div",null,
+              e("div",{style:{fontSize:12,fontWeight:600}},data.clientName+" — "+data.solutionName),
+              e("div",{style:{fontSize:9,color:C.textDim,marginTop:1,fontFamily:mono}},"Skillset Manual v"+data.version+" · "+data.stack)
+            )
+          ),
+          e("div",{style:{display:"flex",gap:2,background:C.surface2,borderRadius:8,padding:3,border:"1px solid "+C.border,flexWrap:"wrap"}},views.map(v=>navBtn(v)))
+        )
+      ),
+      e("main",{style:{position:"relative",zIndex:5,padding:"30px 28px",maxWidth:1400,margin:"0 auto"}},content),
+      e("footer",{style:{position:"relative",zIndex:5,padding:"16px 28px",borderTop:"1px solid "+C.border,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}},
+        e("div",{style:{fontSize:11,color:C.textDim}},e("span",{style:{color:C.logo}},"MANAGE"),e("span",{style:{color:C.accent}},"AI"),e("span",{style:{marginLeft:8}},"· "+data.solutionName+" Skillset Manual v"+data.version+" · 2026")),
+        e("div",{style:{fontSize:10,color:C.textDim,fontFamily:mono}},"CONFIDENTIAL — "+data.confidentialLine)
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>

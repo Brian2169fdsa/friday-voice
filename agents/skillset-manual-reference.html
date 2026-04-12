@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<!-- saved from url=(0077)file:///C:/Users/davea/Downloads/Cornerstone_PR_Skillset_Manual_v3%20(1).html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cornerstone — Proposal &amp; Resume Drafting | Skillset Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; }
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: #FFFFFF;
+    color: #0F172A;
+    -webkit-font-smoothing: antialiased;
+  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  @keyframes pulseRing { 0%, 100% { box-shadow: 0 0 0 0 rgba(55,120,200,0.25); } 50% { box-shadow: 0 0 0 6px rgba(55,120,200,0); } }
+  @keyframes flowLine { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+  textarea:focus, input:focus { outline: none; border-color: #4A90E2 !important; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const e = React.createElement;
+const { useState, useEffect, useRef } = React;
+
+// ─── DESIGN TOKENS (from ManageAI Design System Guide) ───
+const T = {
+  bg: "#FFFFFF", surface: "#FFFFFF", surfaceAlt: "#F8FAFC", surfaceHover: "#EDF0F4",
+  border: "#E2E8F0", borderLight: "#EEF0F4", borderAccent: "#4A90E2",
+  navBg: "#0F172A", navText: "#CBD5E1", navActive: "#4A90E2",
+  text: "#0F172A", textSecondary: "#5A6C7D", textTertiary: "#94A3B8",
+  accent: "#4A90E2", accentLight: "#EBF3FC", accentMid: "#6BAAE0", accentDark: "#2D6AAF",
+  teal: "#0D9488", tealLight: "#E6F7F5",
+  purple: "#7C5CFC", purpleLight: "#F0EDFF",
+  green: "#16A34A", greenLight: "#E8F8EE",
+  amber: "#D97706", amberLight: "#FEF8E8",
+  red: "#DC2626", redLight: "#FEF2F2",
+  orange: "#EA580C", orangeLight: "#FFF5EB",
+  display: "'Montserrat', sans-serif", sans: "'Inter', 'Montserrat', sans-serif",
+  mono: "'JetBrains Mono', monospace",
+  radius: "10px", radiusLg: "12px", radiusSm: "6px",
+  shadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
+  shadowMd: "0 4px 12px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.03)",
+  shadowLg: "0 12px 40px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03)",
+};
+
+const LOGO_DATA = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAATAAAAA0CAYAAAANHWRRAAAACXBIWXMAABYlAAAWJQFJUiTwAAALK0lEQVR4nO2d0XHjOBKG/7m6d08hAekioBWBdRFYG4FxEYz2XVVLV+l9tBEMHcFqIlg5AkkZyAl0jSPwPbDl0tpEAyAbpCXjq5ranQFIQATxA+hugF9eXl6QyWQy58i/hq5AJpPJtCULWCaTOVuygGUymbMlC1gmkzlbsoBlMpmz5d9DVyCTaYMx5hrAFMAYwLUj2wHADsCaiA591OvSKBbbCvUzdrHeLycrpbIsAOtI3u2Xk/nbfxQFzBizgvvlAICKiKrA+gVhjPkKYO3JNieinUJZJepO4KIkoo1COdcAmhr5FxHNOt57CuBvR/IjEU273P+kjFLIsiOidy+XNsaYMYA5gBmAUcAlNwDuAHw3xjyhboOKiH4FludqtxT08gxjKBbbKurnJ3FdLLbVfjkJeqYexqjbLBjfDOzac8NrY8xGeXRbe8oEgK9dC+HO8Icn2xzApmtZqOvb+JuMMRURWYUyUmIht8mNMWaVapbDg9oK/s4kMQLwHUDJA/MqQMic7fZJsAF5rlAPKFXSmjjoagO7gn+2FAzPiPp6YUJGu1sWupTcGWNs4jJaw78/RDjKROXPUC8Fu4jXKVeoB64dz7AyDRSL7Rjhz7xMVxMZDSN+wSNaJ/hl8s2IVOAR3QZmL9PV5JUfH7gzhS5rZvxc1eD36i/UoqPNCMD2Iw8eAxOznB2x/ap3tLyQ39hO0opAu5cmFuGd4k67YzpY91ROMJFCf4W4l95XdgXgm9b9BH5kEfsnxWIb0+5HYvOroBlG0aUDVggzymoR29H6MK6O0K+Ih2ARN/uxGoUaY+aIWzLuAfwEcM9/HgA8Rlz70Z770FjEz3pv2OjfK5phFEd72DTmIh79bhXrEVJerFjO0c9S8mgM/yjeqNh6jIwxtotnmpfS3wOyBnkV2YZm0fyO7QFMQ72Sn4i275+FjtMrGO04sBtjzJyIgmxiPbupj9gW11x17ZgRfDPG7Hoqy0lLoQdqoa86FB1y7T0RlSE3I6I16tXB8V07Oom6ildwHc4JtmVJ7f4kpN8Vi225X04O2vVykSIS/3uEQbpCGgNtI2ynk7ycP4W0UrUyMqsPYNSXRmFpeTZqaw9l0SyELM8A/ttGOIhoxzFx93yfPPNqRmr3Z9QhE22vVyfVViKvPYw9TNLLmgJfp5TSW3fMFlxhQKM+/06pbSzSiL3vumnXwGIiKonoaxav97ANS2r31X452UEewCw7AXqhi4DthbQRhKUh2yV8HqanNpUSyhxDtrWVHIj5IOVRrJKPEQYKDoRH6Pk5SUv/m9j4OX4npKXL7xq7LzIivtlT9ea/Tah6o310ETDrSW8M0OQXu/Jc+zvq4EVNSiHt6WRkr4R8Nz0v7W45uLc3QoQeAPh5SYNYGVm0FdKeQu2qmXZw4KrU7g9H29Z+OakgTzCsVr18tBYwHg1/92RbNYzEFWS710/tl5WXYtLavTz+T0DH1B5dnlDbFlz8wbOTviiFtKc3Szipne4iZ2FTIa2MuE+mHaUnvXrzd6ntewts7WQDY6GRbCH/2GoUsFXoCWnUew63aD7jfRyQZsf0cYD/N1d9zPxY6KX4q/L0L+wplcTXBpY7hdA+Q3tkLx22WUnt/rhfTjZv/q2C3Pa9LCM1wigs6iNLXPaL41ajNfxbhWaJjKtWSHsXR0REFdfZ1aksFGcFRLQ2xtzD/XyuUItYas+ZzwPVFPC5grvec45r89VZEuePGmQ61nTqaJx60oFQ29cr++XkV7HYruEWvqJYbKcNwqdKZwEjol9s63Id6QLUBnvruVUSI21APJNrtqXRMYMhotIT5lFwnaxWmQ1IL7Lr90rPKfSkAslrtfFc+4oxJjhvA7FHQ91Bb4M5AHxRvFcsUrs/sc2riRL+Gfu0VY0CUQmj4NHj3pOtV7vXCaWQ9iAcASPV59gxtZlBNo7e8TYbdVjopTaqmv6RRa2r51aagR0Crj9y0+HPOKKci4FtVdHtDgBs1JdMSDfsHEiGWhwYBxeG7j87JZXd62hbkWZflStBqWNGwWX6hPF7oni0UkiThB7wGHQDnBDSDEwqN9OdUkh7hn+njC9dun9ntANZLWTDXhOp7F6A/PD2AXYHX8e0sRXywcvo/3myrTUdCV2EHnitszR4tZ415qOg08GBq1K7r30nrbKNS1w1pAxsVRUwftlsxCXJghO5g0seT++SNaBj2rhahcG2GGn2px2pXwppIUIP+ANbpzEVOtLDgZKfmbJjemi+ZB5J9a1EvHn2z4CsKe1egD+eqQq8T5KOGcAccjza0ajfCQ7P6CT0wGu7pwhuHLe8LiNQLLa+dn8M3ZTNRv5BQiqSfJWIiOae/XTJ7F5AUDxTFXovDnGQduBbJDhChL27M9QhKi4jq4YXTPRARXrmVnAfhXNnjCkdS8IN3J3pGuHP1+dIAur20jh77gHDbfXSwCcqsYOj6I0uFlsreDNbk/Kzahb1i9fU+VLavQB/4+wiZ04buMVC6pidIKID29n+ErK1FrGA8+5jn9PBkz5Hc9tI78IU4bPA0pcnwN4XymHg2K3WBJx3/7RfTmLj7yrIcZ4lEgh+MgEjoh27/H+8SUq6KZdnXz4BkwShDSXS2cN8Qa5dsJ70W+geNmlZ7N8KlvQ+3Bpj8ukRulhP+qhYbF+UyxwVi+2shTCKJP0yNy8/TuNEUtu9gDoMobczxo5lpjz6hmcWUrxNNIFCr80VGjoPz2QG35byGWCP4FDPU73cpALGWNSd7yf62aVe9lDGW/o4QsRC94ihIYQecD8naWSeZ2+kGkO1O1AHtqru6U0uYET0i4hm/CfpMiDgTKmU2JQ3PwlyjY2zc1Eq3ScWV/ycJGCDHvB4YZQDl6860PcxA+uTIZcaSQJbT2HbYeff2OG8ey3e/YaAMIwCwKaLiPG147bXnzsB5933wZ3m9qKLEbCA8+77ILmABgS5hmC716QThcO76Xt+BeI9owBeRfuA4TvwkNihK8BYrRulDKPoGyukhXyMIJQp3B7Bgo+82SiV1QgRWQ5Ajf6mQIDQ/wm9I2zWcNtb5ngT38Ue10fI9RsB+NsYs0cdXrFxhbCcHGQ5h/73F6xyEPMu5ef0eNuQ9FyfIXuDY5HKmheL7cq3TSmEixCwgHimtZaoGGOOyzhXxyyR+AgRxhfk6sIKac+ovw2gYqvkM9VcYn9rjBk3iM8M9UzJ97sKcIiOMaap831FnGjF/uYRzms2Zz3pc81A02KxreDuk0dvdOeIhEtZQvpGrlKrIO7cvu1FY63yhHocEDmrDBB68SOxLag86eXbf+Dyp4hzVlzh/fE4MeL1cMln7gcGrlbKxZaedJXZ5tkLGC8TrJDFdxRMGypPeqlcXiOB57Cdor19RCTgK0+N8XPsrJhCz+MqcU9EtodyhsTX7pV2gbyPUvx+qMa5+WcvYKjFq9WBbG0J6Jh3fbn8Q4NcBxJ6wH8wZGPnYhEbo90ZcyE8A/jtEr+ufQoHrlohS8iZX20pPem2awGXIGDS6PKY0KDua/Q+Qzos/EGukt0OSPQSdzkrjGMIp6jPR9MM4n0AMObQjUvH1+6VhjG9iYCzwm7YudCasxawDufddyblIX4t6hIS5GqFtMfEH40VZ2G++DkiqohoDOA3tN9S9Yzaw/ofIrKfaG+l9aSntv2VnnTb5eZfXl6092xmMunhEIYp6mXm2JHtwH/Wn/Gr3jy7KYUsm/1yIqVr1WPjyTLjrxxZuAVtt19O3k0KsoBlMpmz5ayXkJlM5nOTBSyTyZwtWcAymczZkgUsk8mcLVnAMpnM2ZIFLJPJnC1ZwDKZzNnyf0AKNZXzC0+uAAAAAElFTkSuQmCC";
+
+// ─── SHARED COMPONENTS ───
+function Badge({children, color, bg, style: extra}) {
+  return e("span", {style: {
+    display:"inline-flex", alignItems:"center", gap:4,
+    fontSize:12, fontWeight:700, letterSpacing:"0.02em",
+    padding:"3px 8px", borderRadius:"4px",
+    color: color||T.accent, background: bg||T.accentLight,
+    fontFamily: T.sans, lineHeight:1.4, ...(extra||{})
+  }}, children);
+}
+function SectionLabel({children, color, style:extra}) {
+  return e("div", {style: {
+    fontSize:12, fontWeight:700, letterSpacing:"2.5px", textTransform:"uppercase",
+    color: color||T.textTertiary, marginBottom:8, fontFamily:T.display, ...(extra||{})
+  }}, children);
+}
+function Card({children, style:extra, hover}) {
+  const [hovered, setHovered] = useState(false);
+  return e("div", {
+    onMouseEnter: hover ? ()=>setHovered(true) : undefined,
+    onMouseLeave: hover ? ()=>setHovered(false) : undefined,
+    style: {
+      background: T.surface, border:"1px solid "+T.border, borderRadius:T.radiusLg,
+      padding:24, transition:"all 0.25s ease",
+      boxShadow: hovered ? T.shadowMd : T.shadow, ...(extra||{})
+    }
+  }, children);
+}
+function Icon({name, size, color}) {
+  size=size||18; color=color||"currentColor";
+  const icons = {
+    intake: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}),e("polyline",{points:"7 10 12 15 17 10"}),e("line",{x1:12,y1:15,x2:12,y2:3})),
+    draft: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"}),e("polyline",{points:"14 2 14 8 20 8"}),e("line",{x1:16,y1:13,x2:8,y2:13}),e("line",{x1:16,y1:17,x2:8,y2:17})),
+    package: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"}),e("polyline",{points:"3.27 6.96 12 12.01 20.73 6.96"}),e("line",{x1:12,y1:22.08,x2:12,y2:12})),
+    shield: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"})),
+    check: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"},e("polyline",{points:"20 6 9 17 4 12"})),
+    chevDown: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:2,strokeLinecap:"round",strokeLinejoin:"round"},e("polyline",{points:"6 9 12 15 18 9"})),
+    file: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"}),e("polyline",{points:"13 2 13 9 20 9"})),
+    folder: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"})),
+    zap: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("polygon",{points:"13 2 3 14 12 14 11 22 21 10 12 10 13 2"})),
+    cpu: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("rect",{x:4,y:4,width:16,height:16,rx:2}),e("rect",{x:9,y:9,width:6,height:6}),e("line",{x1:9,y1:1,x2:9,y2:4}),e("line",{x1:15,y1:1,x2:15,y2:4}),e("line",{x1:9,y1:20,x2:9,y2:23}),e("line",{x1:15,y1:20,x2:15,y2:23})),
+    clock: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("circle",{cx:12,cy:12,r:10}),e("polyline",{points:"12 6 12 12 16 14"})),
+    alert: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"}),e("line",{x1:12,y1:9,x2:12,y2:13}),e("line",{x1:12,y1:17,x2:12.01,y2:17})),
+    user: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("path",{d:"M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"}),e("circle",{cx:12,cy:7,r:4})),
+    server: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("rect",{x:2,y:2,width:20,height:8,rx:2}),e("rect",{x:2,y:14,width:20,height:8,rx:2}),e("line",{x1:6,y1:6,x2:6.01,y2:6}),e("line",{x1:6,y1:18,x2:6.01,y2:18})),
+    layers: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("polygon",{points:"12 2 2 7 12 12 22 7 12 2"}),e("polyline",{points:"2 17 12 22 22 17"}),e("polyline",{points:"2 12 12 17 22 12"})),
+    database: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("ellipse",{cx:12,cy:5,rx:9,ry:3}),e("path",{d:"M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"}),e("path",{d:"M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"})),
+    globe: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("circle",{cx:12,cy:12,r:10}),e("line",{x1:2,y1:12,x2:22,y2:12}),e("path",{d:"M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"})),
+    workflow: e("svg",{width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:color,strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round"},e("polyline",{points:"16 18 22 12 16 6"}),e("polyline",{points:"8 6 2 12 8 18"})),
+  };
+  return icons[name] || null;
+}
+
+// ─── APP ───
+function App() {
+  const [activeView, setActiveView] = useState("overview");
+  const [expandedScenario, setExpandedScenario] = useState(null);
+  const [expandedKnowledge, setExpandedKnowledge] = useState(null);
+  const [expandedBP, setExpandedBP] = useState({});
+  const [expandedBPItem, setExpandedBPItem] = useState({});
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [archTab, setArchTab] = useState("sequences");
+  const [seqHover, setSeqHover] = useState(null);
+  const [seqWorkflow, setSeqWorkflow] = useState("PR-03");
+  const [implTab, setImplTab] = useState("workflows");
+  const [configTab, setConfigTab] = useState("claude");
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const views = [
+    {id:"overview",label:"Overview"},{id:"howitworks",label:"How It Works"},
+    {id:"implementation",label:"Implementation"},{id:"configuration",label:"Configuration"},
+    {id:"bestpractices",label:"Best Practices"},{id:"architecture",label:"Architecture"},
+  ];
+
+  // ─── HEADER ───
+  function renderHeader() {
+    return e("header", {style:{
+      position:"sticky",top:0,zIndex:100,
+      padding:scrolled?"14px 40px":"20px 40px",
+      background:scrolled?"rgba(255,255,255,0.92)":T.bg,
+      backdropFilter:"blur(12px)",
+      borderBottom:"1px solid "+(scrolled?T.border:"transparent"),
+      transition:"all 0.3s ease",
+    }},
+e("div",{style:{maxWidth:1200,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}},
+  e("div",{style:{display:"flex",alignItems:"center",gap:16}},
+    e("img",{
+      src:"https://manageai.io/wp-content/uploads/2026/03/manage_aiArtboard-1.webp",
+      alt:"MANAGE AI",
+      style:{height:20, width:"auto"}
+    }),
+    e("div",{style:{width:1,height:24,background:T.border}}),
+    e("div",null,
+      e("div",{style:{fontSize:13,fontWeight:700,color:T.text,lineHeight:1.3}},"Cornerstone — Proposal & Resume Drafting"),
+      e("div",{style:{fontSize:12,color:T.textTertiary,fontFamily:T.sans,marginTop:1}},"Skillset Training Manual v3.2")
+    )
+  ),
+        e("nav",{style:{display:"flex",gap:1,padding:3,borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.border,flexWrap:"wrap"}},
+          views.map(v => {
+            const active = activeView===v.id;
+            const isArch = v.id==="architecture";
+            return e("button",{key:v.id,onClick:()=>{setActiveView(v.id);window.scrollTo({top:0,behavior:"smooth"});},
+              style:{
+                padding:"7px 14px",border:"none",borderRadius:7,cursor:"pointer",
+                fontSize:12,fontWeight:active?700:500,fontFamily:T.sans,
+                background:active?(isArch?T.purple:T.navBg):"transparent",
+                color:active?"#FFFFFF":T.textTertiary,
+                boxShadow:active?"0 1px 3px rgba(30,51,72,0.2)":"none",
+                transition:"all 0.2s ease",letterSpacing:"0.01em",
+              }
+            },v.label);
+          })
+        )
+      )
+    );
+  }
+
+  // ═══════════════ OVERVIEW ═══════════════
+  function overviewView() {
+    const flowSteps = [
+      {icon:"folder",label:"Create Workspace",color:T.textSecondary},
+      {icon:"file",label:"Intake + Normalize",color:T.textSecondary},
+      {icon:"intake",label:"Kickoff Pack",color:T.accent},
+      {label:"PM Review",sub:"HITL Gate",isGate:true},
+      {icon:"draft",label:"Content Pack",color:T.purple},
+      {label:"Review Loop",sub:"HITL Gate",isGate:true},
+      {icon:"package",label:"Final Handoff",color:T.green},
+    ];
+    return e("div",{style:{animation:"fadeUp 0.5s ease"}},
+      e("div",{style:{marginBottom:36,maxWidth:680}},
+        e("h1",{style:{fontSize:32,fontWeight:700,fontFamily:T.display,color:T.text,lineHeight:1.2,marginBottom:10,letterSpacing:"-0.02em"}},"Proposal & Resume Drafting"),
+        e("p",{style:{fontSize:15,color:T.textSecondary,lineHeight:1.7,margin:0}},"AI-assisted proposal generation for construction RFPs. Extracts compliance requirements, retrieves reusable content from Cornerstone's existing SharePoint, drafts section blocks with source transparency, and packages deliverables with human-in-the-loop at every gate.")
+      ),
+      // Flow
+      e(Card,{style:{padding:28,marginBottom:20}},
+        e(SectionLabel,null,"Proposal Drafting Flow"),
+        e("div",{style:{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",alignItems:"center",marginTop:12}},
+          flowSteps.map((step,i)=>
+            e(React.Fragment,{key:i},
+              step.isGate
+                ? e("div",{style:{padding:"8px 14px",borderRadius:20,border:"1.5px dashed "+T.amber+"55",background:T.amberLight+"80",textAlign:"center"}},
+                    e("div",{style:{fontSize:12,fontWeight:700,color:T.amber}},step.label),
+                    e("div",{style:{fontSize:12,color:T.amber+"99"}},step.sub))
+                : e("div",{style:{padding:"12px 16px",borderRadius:10,background:T.bg,border:"1.5px solid "+(step.color||T.border),textAlign:"center",minWidth:100}},
+                    e("div",{style:{marginBottom:4,display:"flex",justifyContent:"center"}},e(Icon,{name:step.icon,size:20,color:step.color})),
+                    e("div",{style:{fontSize:12,fontWeight:700,color:T.text}},step.label)),
+              i<flowSteps.length-1 ? e("svg",{width:20,height:12,viewBox:"0 0 20 12",style:{flexShrink:0}},e("path",{d:"M2 6h16M14 2l4 4-4 4",fill:"none",stroke:T.textTertiary,strokeWidth:1.2,strokeLinecap:"round",opacity:0.5})) : null
+            )
+          )
+        )
+      ),
+      // Metric boxes
+      e("div",{style:{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:16,marginBottom:20}},
+        [{label:"SYSTEMS CONNECTED",value:"6",sub:"Claude \u00b7 Make.com \u00b7 SharePoint \u00b7 Teams \u00b7 CloudConvert \u00b7 Plumsail",color:T.accent},
+         {label:"SKILL CONFIGURATIONS",value:"9",sub:"7 Workflows \u00b7 1 Knowledge Model \u00b7 1 System Prompt",color:T.purple},
+         {label:"BEST PRACTICES",value:"24",sub:"12 Operational \u00b7 12 Build",color:T.teal}].map((m,i)=>
+          e("div",{key:i,style:{padding:"20px 24px",borderRadius:T.radiusLg,background:T.surface,border:"1px solid "+T.border,borderTop:"3px solid "+m.color,boxShadow:T.shadow}},
+            e("div",{style:{fontSize:12,fontWeight:700,letterSpacing:"0.1em",color:T.textTertiary,marginBottom:8}},m.label),
+            e("div",{style:{fontSize:36,fontWeight:700,color:T.text,fontFamily:T.display,lineHeight:1,marginBottom:6}},m.value),
+            e("div",{style:{fontSize:12,color:T.textTertiary,lineHeight:1.4}},m.sub))
+        )
+      ),
+      // Scope cards
+      e("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}},
+        e(Card,{style:{padding:24,background:T.greenLight+"60",borderColor:T.green+"18"}},
+          e(SectionLabel,{color:T.green},"In Scope (Phase 1)"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginTop:8}},
+            ["Kickoff + compliance intelligence: extract deliverables, limits, due dates, required forms","Reusable content retrieval: pull boilerplate + prior proposals from SharePoint","Draft section blocks: paste-ready, consistent headings, word-limit aware","Resume/project matching: recommend best-fit and flag missing data","Output packaging: Proposal Kickoff Pack + Content Pack (DOCX)","Human-in-the-loop checkpoints at every gate","Connects to existing SharePoint — no file reorganization required"].map((item,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:T.textSecondary,lineHeight:1.55}},
+                e("div",{style:{width:16,height:16,borderRadius:4,background:T.green+"15",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}},e(Icon,{name:"check",size:10,color:T.green})),item))
+          )
+        ),
+        e(Card,{style:{padding:24,background:T.redLight+"60",borderColor:T.red+"18"}},
+          e(SectionLabel,{color:T.red},"Out of Scope (Phase 1)"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginTop:8}},
+            ["Automated InDesign layout or file generation","Estimating/pricing, schedule generation, or cost modeling","Legal/contractual/binding statements outside approved boilerplate","CRM integration until CRM system/access is confirmed","Claude citations (incompatible with structured outputs — uses sources_used[] instead)"].map((item,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:8,fontSize:12,color:T.textSecondary,lineHeight:1.55}},
+                e("span",{style:{color:T.red,fontWeight:700,flexShrink:0}},"×"),item))
+          )
+        )
+      )
+    );
+  }
+
+  // ═══════════════ HOW IT WORKS ═══════════════
+  function howItWorksView() {
+    const steps = [
+      {num:1,title:"New Pursuit Identified",sub:"Workspace Setup",
+        desc:"A PM creates a new pursuit folder in SharePoint. The system automatically generates a standardized workspace with subfolders for intake, working drafts, outputs, and review approvals — plus a status tracker and Teams notification.",
+        color:T.accent},
+      {num:2,title:"RFP Uploaded to Intake",sub:"File Ingestion & Normalization",
+        desc:"The PM drops the RFP (PDF or Word) and any addenda into the intake folder. The system normalizes file names, converts non-PDF formats, and validates that a primary RFP document is present. If missing, it stops the pipeline and alerts the team.",
+        color:T.accent},
+      {num:3,title:"Kickoff Pack Generated",sub:"AI-Powered RFP Analysis",
+        desc:"Claude reads the full RFP and extracts structured intelligence: mandatory deliverables, compliance requirements, evaluation criteria, submission deadlines, required forms, and a proposed response outline. Everything is output as structured JSON and a formatted DOCX — the Proposal Kickoff Pack.",
+        color:T.purple,
+        detail:{type:"schema",label:"Kickoff Pack Output Schema",fields:["deliverables_checklist[]","compliance_requirements[]","evaluation_criteria[]","proposed_outline[]","submission_deadline","required_forms[]","data_gaps[]"]}},
+      {num:4,title:"PM Reviews Kickoff Pack",sub:"Human-in-the-Loop Gate 1",
+        desc:"The PM reviews the Kickoff Pack for accuracy — verifying that compliance requirements are correctly interpreted, the proposed outline aligns with their win strategy, and any data gaps are addressed before drafting begins. Nothing proceeds without explicit approval.",
+        color:T.amber,isGate:true},
+      {num:5,title:"Content Assets Retrieved",sub:"SharePoint Knowledge Retrieval",
+        desc:"The system pulls reusable content from Cornerstone's existing SharePoint: boilerplate narratives, past proposal sections, project experience sheets, staff resumes, and corporate facts (insurance, bonding, NAICS codes). No reorganization of existing files required — the system reads from mapped folder locations.",
+        color:T.teal,
+        detail:{type:"sources",label:"Content Sources",items:[
+          {name:"Boilerplate Narratives",desc:"Pre-approved text blocks by topic"},
+          {name:"Past Proposals",desc:"Previously submitted proposal sections"},
+          {name:"Project Sheets",desc:"Scope, sector, delivery method, value"},
+          {name:"Staff Resumes",desc:"Role, certifications, years of experience"},
+          {name:"Corporate Facts",desc:"Insurance certs, bonding capacity, org chart"},
+        ]}},
+      {num:6,title:"Proposal Content Pack Drafted",sub:"AI Section-by-Section Drafting",
+        desc:"Claude drafts each section of the proposal individually, following the approved outline. For each section, it pulls the most relevant boilerplate, matches project experience and resumes to the RFP requirements, respects word limits, and cites every source used. Sections where data is missing are flagged with [NEEDS_INPUT] tags rather than invented.",
+        color:T.purple,
+        detail:{type:"schema",label:"Per-Section Output",fields:["section_title","section_content","word_count","sources_used[]","recommended_projects[]","recommended_resumes[]","data_gaps[]"]}},
+      {num:7,title:"PM Reviews & Edits Content",sub:"Human-in-the-Loop Gate 2",
+        desc:"The PM and subject matter experts review the Content Pack. Edits are submitted as structured feedback. Claude revises affected sections with awareness of compliance impact — tracking what changed and whether any compliance requirement is now at risk.",
+        color:T.amber,isGate:true},
+      {num:8,title:"Final Handoff for Layout",sub:"Archive & InDesign Handoff",
+        desc:"Once the PM approves the final draft, the system archives all outputs to the pursuit's final folder, updates the status tracker to APPROVED, and notifies the team to proceed with InDesign layout. All AI-generated JSON is preserved as an audit trail.",
+        color:T.green},
+    ];
+
+    function StepNumber({num, color, isGate}) {
+      return e("div",{style:{
+        width:40,height:40,borderRadius:"50%",flexShrink:0,
+        background:isGate?T.amberLight:color+"0C",
+        border:"2px solid "+(isGate?T.amber+"50":color+"35"),
+        display:"flex",alignItems:"center",justifyContent:"center",
+        fontFamily:T.display,fontSize:16,fontWeight:700,
+        color:isGate?T.amber:color,
+        position:"relative",zIndex:2,
+      }},isGate?e(Icon,{name:"user",size:18,color:T.amber}):num);
+    }
+
+    function SchemaDetail({detail}) {
+      return e("div",{style:{marginTop:14,padding:"16px 20px",borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.borderLight}},
+        e("div",{style:{fontSize:12,fontWeight:700,color:T.purple,letterSpacing:"0.04em",marginBottom:10}},detail.label),
+        e("div",{style:{display:"flex",gap:6,flexWrap:"wrap"}},
+          detail.fields.map(f=>e("code",{key:f,style:{fontSize:12,fontFamily:T.mono,padding:"4px 10px",borderRadius:5,background:T.purpleLight,color:T.purple,border:"1px solid "+T.purple+"15"}},f))
+        )
+      );
+    }
+
+    function SourcesDetail({detail}) {
+      return e("div",{style:{marginTop:14,padding:"16px 20px",borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.borderLight}},
+        e("div",{style:{fontSize:12,fontWeight:700,color:T.teal,letterSpacing:"0.04em",marginBottom:10}},detail.label),
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))",gap:8}},
+          detail.items.map((item,i)=>e("div",{key:i,style:{padding:"10px 14px",borderRadius:8,background:T.bg,border:"1px solid "+T.borderLight}},
+            e("div",{style:{fontSize:12,fontWeight:700,color:T.text,marginBottom:2}},item.name),
+            e("div",{style:{fontSize:12,color:T.textTertiary,lineHeight:1.4}},item.desc)))
+        )
+      );
+    }
+
+    return e("div",{style:{animation:"fadeUp 0.5s ease"}},
+      e("div",{style:{marginBottom:36,maxWidth:720}},
+        e("h1",{style:{fontSize:32,fontWeight:700,fontFamily:T.display,color:T.text,lineHeight:1.2,marginBottom:12,letterSpacing:"-0.02em"}},"How the Proposal Drafting System Works"),
+        e("p",{style:{fontSize:15,color:T.textTertiary,lineHeight:1.7,margin:0}},"The agent follows a structured eight-step pipeline from RFP intake through final handoff. Every AI-generated output passes through a human review gate before advancing. Data flows from Cornerstone\u2019s existing SharePoint through Claude\u2019s analysis and drafting, with full source transparency at every step.")
+      ),
+      // Steps
+      e("div",{style:{position:"relative",paddingLeft:0}},
+        steps.map((step,i)=>{
+          const isLast = i===steps.length-1;
+          return e("div",{key:i,style:{
+            display:"flex",gap:24,marginBottom:isLast?0:0,
+            paddingBottom:isLast?0:40,
+            position:"relative",
+            animation:"fadeUp 0.4s ease "+(i*0.06)+"s both",
+          }},
+            // Left: number + connector line
+            e("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}},
+              StepNumber({num:step.num,color:step.color,isGate:step.isGate}),
+              !isLast?e("div",{style:{width:2,flex:1,background:"linear-gradient(180deg, "+step.color+"25 0%, "+(steps[i+1]?steps[i+1].color:"transparent")+"25 100%)",marginTop:4}}):null
+            ),
+            // Right: content
+            e("div",{style:{flex:1,paddingTop:2,paddingBottom:isLast?0:0}},
+              e("div",{style:{fontSize:17,fontWeight:700,color:T.text,fontFamily:T.display,lineHeight:1.3}},
+                step.title,
+                e("span",{style:{fontWeight:400,color:T.textTertiary}}," \u2014 "+step.sub)),
+              e("div",{style:{fontSize:13,color:T.textSecondary,lineHeight:1.7,marginTop:8,maxWidth:780}},step.desc),
+              step.detail&&step.detail.type==="schema"?SchemaDetail({detail:step.detail}):null,
+              step.detail&&step.detail.type==="sources"?SourcesDetail({detail:step.detail}):null,
+              step.isGate?e("div",{style:{marginTop:12,display:"inline-flex",alignItems:"center",gap:8,padding:"6px 14px",borderRadius:20,border:"1.5px dashed "+T.amber+"40",background:T.amberLight+"60"}},
+                e(Icon,{name:"shield",size:14,color:T.amber}),
+                e("span",{style:{fontSize:12,fontWeight:700,color:T.amber}},"Human approval required before next step")):null
+            )
+          );
+        })
+      )
+    );
+  }
+
+  // ═══════════════ IMPLEMENTATION (merged: Technology + Trainings + Workflows + Knowledge) ═══════════════
+  function implementationView() {
+    // ─── SUB-TAB DATA ───
+    const typeColors = {Workflow:T.accent,Knowledge:T.purple,Instructions:T.teal};
+    const trainingRows = [
+      {num:1,name:"Create Pursuit Workspace",type:"Workflow",tools:"SharePoint, Make.com",trigger:"New folder in /Pursuits/",inputs:"New pursuit folder path from SharePoint trigger.",outputs:"Standardized subfolder structure, pursuit_status.json, Teams notification."},
+      {num:2,name:"Intake Ingestion & File Normalization",type:"Workflow",tools:"CloudConvert, SharePoint, Make.com",trigger:"New file in /01_Pursuit Intake/",inputs:"Raw files (PDF, DOCX, DOC) dropped into intake folder.",outputs:"Normalized file names, PDF conversions, RFP validation."},
+      {num:3,name:"Generate Kickoff Pack",type:"Workflow",tools:"Claude API, SharePoint, Plumsail, Make.com",trigger:"KICKOFF_START.txt created",inputs:"All PDFs base64-encoded + PR_KickoffPack schema + PR_CORE_V1 prompt.",outputs:"Kickoff_Pack_v1.json + DOCX with compliance mapping."},
+      {num:4,name:"Kickoff Approval Gate",type:"Workflow",tools:"SharePoint, Make.com",trigger:"KICKOFF_APPROVED.txt created",inputs:"Approval trigger + pursuit context.",outputs:"Status update, DRAFT_START.txt created, Teams notification."},
+      {num:5,name:"Content Pack — Schema & Content Model",type:"Knowledge",tools:"N/A (stored in prompt/docs)",trigger:"Maintained centrally by AI architect.",inputs:"Schema definitions, word limit rules, citation logic.",outputs:"Shared mental model for consistent section drafts."},
+      {num:6,name:"Generate Proposal Content Pack",type:"Workflow",tools:"Claude API, SharePoint, Plumsail, Make.com",trigger:"DRAFT_START.txt created",inputs:"Kickoff Pack JSON + boilerplate + past proposals + project sheets + resumes.",outputs:"PR_ContentPack.json + Proposal_Content_Pack_v1.docx."},
+      {num:7,name:"Review Loop & Revision",type:"Workflow",tools:"Claude API, SharePoint, Plumsail, Make.com",trigger:"Reviewer_Edits_v1.json uploaded",inputs:"Structured reviewer edits + original Content Pack + compliance requirements.",outputs:"Updated v2 DOCX + ChangeLog with compliance impact."},
+      {num:8,name:"System Prompt & Compliance Rules",type:"Instructions",tools:"Claude API, Make.com",trigger:"All Claude calls in PR-03, PR-05, PR-06",inputs:"PR_CORE_V1 system prompt (7 rules).",outputs:"Consistent compliance-first behavior across all outputs."},
+      {num:9,name:"Final Assembly & Handoff",type:"Workflow",tools:"SharePoint, Make.com",trigger:"DRAFT_APPROVED.txt created",inputs:"Approval signal + all output files.",outputs:"Archived to /Final/, status APPROVED, Teams notification."},
+    ];
+    const accounts = [
+      {name:"Anthropic (Claude API)",setup:"Create account at console.anthropic.com. Generate API key. Fund ~$50 initial credits.",connection:"HTTP module with API key in headers",icon:"cpu",color:T.purple},
+      {name:"Make.com",setup:"Core plan ($10.99/mo). 10,000 operations.",connection:"Orchestration platform",icon:"workflow",color:T.accent},
+      {name:"Microsoft SharePoint",setup:"Confirm existing M365 instance. Identify Document Library.",connection:"SharePoint app with service account",icon:"folder",color:T.teal},
+      {name:"Microsoft Teams",setup:"Identify or create notification channel.",connection:"Teams app with service/bot account",icon:"globe",color:T.purple},
+      {name:"CloudConvert",setup:"Create account. Free tier ~25 conversions/day.",connection:"CloudConvert app with API key",icon:"zap",color:T.orange},
+      {name:"Plumsail Documents",setup:"Make.com app for DOCX template merge.",connection:"Plumsail app with API key",icon:"file",color:T.green},
+    ];
+    const spFolders = [
+      {content:"Boilerplate narratives",find:"Pre-approved text blocks",variable:"PR_BOILERPLATE_PATH",color:T.accent},
+      {content:"Project sheets",find:"Project info (scope, sector, delivery method)",variable:"PR_PROJECTS_PATH",color:T.purple},
+      {content:"Staff resumes",find:"Staff resumes (role, certifications)",variable:"PR_RESUMES_PATH",color:T.teal},
+      {content:"Past proposals",find:"Previously submitted proposals",variable:"PR_PAST_PROPOSALS_PATH",color:T.green},
+      {content:"Corporate facts",find:"Insurance certs, bonding, NAICS, org chart",variable:"PR_CORPORATE_FACTS_PATH",color:T.orange},
+      {content:"Pursuit workspaces",find:"Active pursuit folder root",variable:"PR_PURSUITS_ROOT",color:T.amber},
+    ];
+    const scenarios = [
+      {id:"PR-01",name:"Create Pursuit Workspace",trigger:"New folder created in /Pursuits/",purpose:"Set up standardized subfolder structure + status tracking",icon:"folder",modules:7,type:"auto",claude:false,details:"When someone creates a new pursuit folder, this scenario builds the standardized subfolder structure, initializes pursuit_status.json, and notifies the team via Teams.",frMap:["Workspace setup","Status tracking"],moduleList:["SharePoint: Watch Folders","Create /00_Admin/","Create /01_Pursuit Intake/","Create /02_Working Drafts/","Create /03_Outputs/","Create /04_Review Approvals/","Create pursuit_status.json","Teams: Post Message"]},
+      {id:"PR-02",name:"Intake Ingestion + File Normalization",trigger:"New file in /01_Pursuit Intake/",purpose:"Normalize file names, convert DOC/DOCX to PDF, validate RFP exists",icon:"file",modules:3,type:"auto",claude:false,details:"Normalizes uploaded files to standard names. Router splits DOC/DOCX to CloudConvert from PDFs. Validates RFP.pdf exists.",frMap:["File normalization","RFP validation"],moduleList:["SharePoint: Watch Files","Router: DOC/DOCX \u2192 CloudConvert","Router: PDF \u2192 pass-through","SharePoint: Rename/Move Files","SharePoint: Check RFP.pdf","On error: MISSING_RFP.txt + Teams Alert + STOP"]},
+      {id:"PR-03",name:"Generate Kickoff Pack",trigger:"KICKOFF_START.txt created in /04_Review Approvals/",purpose:"Parse RFP through Claude \u2192 structured Kickoff Pack JSON + DOCX",icon:"intake",modules:7,type:"hitl",claude:true,details:"HITL gate. Lists all PDFs, base64-encodes, sends to Claude with PR_KickoffPack schema. Claude extracts deliverables, compliance, eval criteria, outline, dates, forms, and data gaps.",frMap:["Kickoff intelligence","Compliance mapping","Outline generation"],moduleList:["SharePoint: Watch KICKOFF_START.txt","SharePoint: List /01_Pursuit Intake/ \u2192 Iterator","SharePoint: Download each PDF","Tools: Base64 encode","HTTP: POST to Claude API","SharePoint: Save Kickoff_Pack_v1.json","Plumsail: Merge Template","Teams: Notify PM"],template:{name:"Kickoff_Pack_Template.docx",tags:["pursuit_name","submission_deadline","deliverables_checklist","evaluation_criteria","compliance_requirements","proposed_outline","data_gaps"]}},
+      {id:"PR-04",name:"HITL Checkpoint 1: Kickoff Approval",trigger:"KICKOFF_APPROVED.txt created",purpose:"Gate between kickoff and content drafting",icon:"check",modules:3,type:"hitl",claude:false,details:"PM reviews Kickoff Pack DOCX. Creates KICKOFF_APPROVED.txt. Scenario updates status, creates DRAFT_START.txt, notifies team.",frMap:["Approval gate","Status tracking"],moduleList:["SharePoint: Watch KICKOFF_APPROVED.txt","SharePoint: Update pursuit_status.json","SharePoint: Create DRAFT_START.txt","Teams: Post Message"]},
+      {id:"PR-05",name:"Generate Proposal Content Pack",trigger:"DRAFT_START.txt created",purpose:"Retrieve content assets, iterate per section through Claude, produce full Content Pack",icon:"draft",modules:9,type:"hitl",claude:true,details:"Downloads Kickoff Pack, retrieves boilerplate, past proposals, projects, and resumes. Iterator loops through proposed_outline[] \u2014 one Claude call per section. Aggregator combines into PR_ContentPack.json.",frMap:["Content retrieval","Section drafting","Source transparency","Resume/project matching"],moduleList:["SharePoint: Download Kickoff_Pack_v1.json","SharePoint: List + Download Boilerplate","SharePoint: List + Download Past Proposals","SharePoint: List + Download Projects","SharePoint: List + Download Resumes","Iterator: Loop proposed_outline[]","HTTP: POST to Claude API per section","Aggregator: Combine all sections","SharePoint: Save PR_ContentPack.json","Plumsail: Merge Template","SharePoint: Create DRAFT_REVIEW_REQUIRED.txt","Teams: Notify PM"],template:{name:"Proposal_Content_Pack_Template.docx",tags:["section_title","section_content","sources_used","recommended_projects","recommended_resumes","data_gaps"]}},
+      {id:"PR-06",name:"HITL Checkpoint 2: Review Loop",trigger:"Reviewer_Edits_v1.json uploaded to /02_Working Drafts/",purpose:"AI-assisted revision with compliance context",icon:"workflow",modules:4,type:"hitl",claude:true,details:"Reviewer creates structured edits JSON. Claude revises affected sections with compliance impact assessment. Outputs updated v2 DOCX + ChangeLog.",frMap:["Review integration","Compliance-aware revision","Change tracking"],moduleList:["SharePoint: Watch Reviewer_Edits*.json","Download Reviewer_Edits \u2192 Parse","Download PR_ContentPack.json","HTTP: POST to Claude API","Merge updated sections","Plumsail: v2 DOCX","Save ChangeLog","Teams: Notify"]},
+      {id:"PR-07",name:"HITL Checkpoint 3: Final Assembly",trigger:"DRAFT_APPROVED.txt created",purpose:"Archive all outputs \u2014 notify team for InDesign layout",icon:"package",modules:2,type:"hitl",claude:false,details:"Final approval gate. Copies all outputs to /Final/. Updates status to APPROVED. Notifies team to proceed with InDesign.",frMap:["Archive","Handoff"],moduleList:["SharePoint: Watch DRAFT_APPROVED.txt","Copy files \u2192 /03_Outputs/Final/","Update pursuit_status.json","Teams: Notify \u2014 proceed to InDesign"]},
+    ];
+    const scColors = {"PR-01":T.textSecondary,"PR-02":T.textSecondary,"PR-03":T.accent,"PR-04":T.amber,"PR-05":T.purple,"PR-06":T.teal,"PR-07":T.green};
+
+    return e("div",{style:{animation:"fadeUp 0.5s ease"}},
+      e("div",{style:{marginBottom:24,maxWidth:680}},
+        e("h1",{style:{fontSize:32,fontWeight:700,fontFamily:T.display,color:T.text,lineHeight:1.2,marginBottom:10,letterSpacing:"-0.02em"}},"Implementation"),
+        e("p",{style:{fontSize:15,color:T.textSecondary,lineHeight:1.7,margin:0}},"Everything needed to build and run the system. Tools and accounts, workflow configurations with module sequences, and the complete training matrix.")
+      ),
+
+      // Sub-tabs
+      e("div",{style:{display:"flex",gap:1,padding:3,borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.border,marginBottom:24,width:"fit-content"}},
+        [{id:"workflows",label:"Workflows (7)"},{id:"training",label:"Training Matrix"},{id:"tools",label:"Tools & Accounts"}].map(t=>
+          e("button",{key:t.id,onClick:()=>setImplTab(t.id),style:{
+            padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",
+            fontSize:12,fontWeight:implTab===t.id?700:500,fontFamily:T.sans,
+            background:implTab===t.id?T.navBg:"transparent",
+            color:implTab===t.id?"#FFFFFF":T.textTertiary,
+            boxShadow:implTab===t.id?"0 1px 3px rgba(30,51,72,0.2)":"none",
+            transition:"all 0.2s ease",
+          }},t.label)
+        )
+      ),
+
+      // ── WORKFLOWS SUB-TAB ──
+      implTab==="workflows" ? e("div",null,
+        e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+          scenarios.map((sc,i)=>{
+            const isExp=expandedScenario===sc.id;
+            const color=scColors[sc.id]||T.accent;
+            return e("div",{key:sc.id},
+              e("div",{onClick:()=>setExpandedScenario(isExp?null:sc.id),style:{display:"flex",gap:16,padding:"20px 24px",borderRadius:T.radiusLg,cursor:"pointer",background:isExp?color+"04":T.surface,border:"1px solid "+(isExp?color+"30":T.border),transition:"all 0.25s ease",boxShadow:isExp?"0 4px 16px "+color+"10":T.shadow,animation:"fadeUp 0.4s ease "+(i*0.06)+"s both"}},
+                e("div",{style:{width:3,borderRadius:2,background:color,flexShrink:0,alignSelf:"stretch",opacity:isExp?1:0.4,transition:"opacity 0.2s"}}),
+                e("div",{style:{width:44,height:44,borderRadius:10,flexShrink:0,background:color+"0C",border:"1px solid "+color+"18",display:"flex",alignItems:"center",justifyContent:"center"}},e(Icon,{name:sc.icon,size:20,color:color})),
+                e("div",{style:{flex:1,minWidth:0}},
+                  e("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}},
+                    e(Badge,{color:color,bg:color+"10"},sc.id),
+                    e("span",{style:{fontSize:14,fontWeight:700,color:T.text}},sc.name),
+                    sc.type==="hitl"?e(Badge,{color:T.amber,bg:T.amberLight},"HITL"):null,
+                    sc.claude?e(Badge,{color:T.purple,bg:T.purpleLight},"Claude AI"):null,
+                    sc.template?e(Badge,{color:T.green,bg:T.greenLight},"TEMPLATE"):null),
+                  e("div",{style:{fontSize:12,color:T.textSecondary,lineHeight:1.55}},sc.purpose)),
+                e("div",{style:{textAlign:"right",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"center",gap:4}},
+                  e("div",{style:{fontFamily:T.sans,fontSize:20,fontWeight:700,color:color,lineHeight:1}},sc.modules),
+                  e("div",{style:{fontSize:12,color:T.textTertiary,letterSpacing:"0.06em",fontWeight:700}},"MODULES")),
+                e("div",{style:{display:"flex",alignItems:"center",flexShrink:0,transition:"transform 0.2s",transform:isExp?"rotate(180deg)":"rotate(0)"}},e(Icon,{name:"chevDown",size:16,color:T.textTertiary}))
+              ),
+              isExp?e("div",{style:{margin:"4px 0 0 0",padding:"20px 24px 20px 76px",borderRadius:T.radius,background:T.surfaceAlt,border:"1px solid "+T.borderLight,animation:"fadeUp 0.25s ease"}},
+                e("div",{style:{fontSize:12,color:T.textSecondary,lineHeight:1.65,marginBottom:16}},sc.details),
+                e("div",{style:{display:"flex",gap:24,flexWrap:"wrap",marginBottom:16}},
+                  e("div",null,e("div",{style:{fontSize:12,fontWeight:700,color:T.textTertiary,letterSpacing:"0.08em",marginBottom:6}},"TRIGGER"),e("code",{style:{fontSize:12,fontFamily:T.mono,padding:"4px 10px",background:T.surface,borderRadius:5,border:"1px solid "+T.border,color:T.text}},sc.trigger)),
+                  e("div",null,e("div",{style:{fontSize:12,fontWeight:700,color:T.textTertiary,letterSpacing:"0.08em",marginBottom:6}},"MAPS TO"),e("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},sc.frMap.map(fr=>e(Badge,{key:fr,color:T.accent,bg:T.accentLight},fr))))),
+                e("div",{style:{fontSize:12,fontWeight:700,color:T.textTertiary,letterSpacing:"0.08em",marginBottom:8}},"MODULE SEQUENCE"),
+                e("div",{style:{display:"flex",flexDirection:"column",gap:4,marginBottom:sc.template?16:0}},
+                  sc.moduleList.map((m,j)=>e("div",{key:j,style:{display:"flex",alignItems:"center",gap:8}},e("span",{style:{fontFamily:T.mono,fontSize:12,color:color,fontWeight:700,minWidth:20}},j+1),e("span",{style:{fontSize:12,padding:"4px 10px",borderRadius:4,background:T.surface,border:"1px solid "+T.borderLight,color:T.textSecondary}},m)))),
+                sc.template?e("div",{style:{padding:"14px 18px",borderRadius:8,background:T.greenLight+"60",border:"1px solid "+T.green+"20"}},
+                  e("div",{style:{fontSize:13,fontWeight:700,color:T.green,marginBottom:8}},sc.template.name),
+                  e("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},sc.template.tags.map(tag=>e("span",{key:tag,style:{fontFamily:T.mono,fontSize:12,padding:"3px 8px",borderRadius:4,background:T.purpleLight,color:T.purple}},"{{"+tag+"}}")))):null
+              ):null,
+              i<scenarios.length-1?e("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"6px 0 6px 40px"}},e("div",{style:{width:24,height:0,borderTop:"1.5px dashed "+T.border}})):null
+            );
+          })
+        )
+      ) : null,
+
+      // ── TRAINING MATRIX SUB-TAB ──
+      implTab==="training" ? e("div",null,
+        e("div",{style:{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap"}},
+          Object.entries(typeColors).map(([type,color])=>e("div",{key:type,style:{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:6,background:color+"0D",border:"1px solid "+color+"30"}},e("div",{style:{width:8,height:8,borderRadius:"50%",background:color}}),e("span",{style:{fontSize:12,fontWeight:700,color:color}},type)))
+        ),
+        e("div",{style:{borderRadius:T.radiusLg,border:"1px solid "+T.border,overflow:"hidden",boxShadow:T.shadow}},
+          e("div",{style:{overflowX:"auto"}},
+            e("table",{style:{width:"100%",borderCollapse:"collapse",fontSize:12}},
+              e("thead",null,e("tr",{style:{background:T.surfaceAlt}},
+                ["#","Training Name","Type","Tools","Trigger","Inputs","Outputs"].map((h,i)=>e("th",{key:i,style:{padding:"12px 14px",textAlign:"left",fontSize:12,fontWeight:700,color:T.textTertiary,letterSpacing:"0.06em",borderBottom:"2px solid "+T.border,whiteSpace:"nowrap"}},h))
+              )),
+              e("tbody",null,trainingRows.map((row,ri)=>{
+                const tc=typeColors[row.type]||T.accent;
+                return e("tr",{key:ri,style:{borderBottom:"1px solid "+T.borderLight,background:ri%2===0?T.bg:T.surfaceAlt}},
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top"}},e("div",{style:{width:24,height:24,borderRadius:6,background:tc+"0C",border:"1px solid "+tc+"18",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:T.mono,fontSize:12,fontWeight:700,color:tc}},row.num)),
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:160}},e("span",{style:{fontSize:12,fontWeight:700}},row.name)),
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top",whiteSpace:"nowrap"}},e(Badge,{color:tc,bg:tc+"10"},row.type)),
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:140}},e("span",{style:{fontSize:12,fontFamily:T.mono,color:T.textSecondary}},row.tools)),
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:160}},e("code",{style:{fontSize:12,fontFamily:T.mono,padding:"3px 8px",background:T.amberLight,borderRadius:4,color:T.textSecondary}},row.trigger)),
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:180,maxWidth:240}},e("div",{style:{fontSize:12,color:T.textSecondary,lineHeight:1.6}},row.inputs)),
+                  e("td",{style:{padding:"12px 14px",verticalAlign:"top",minWidth:180,maxWidth:240}},e("div",{style:{fontSize:12,color:T.text,lineHeight:1.6}},row.outputs))
+                );
+              }))
+            )
+          )
+        )
+      ) : null,
+
+      // ── TOOLS & ACCOUNTS SUB-TAB ──
+      implTab==="tools" ? e("div",null,
+        e(Card,{style:{padding:24,marginBottom:16}},
+          e(SectionLabel,null,"Required Accounts"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:6,marginTop:12}},
+            accounts.map((a,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:8,background:T.surfaceAlt,border:"1px solid "+T.borderLight,animation:"fadeUp 0.3s ease "+(i*0.04)+"s both"}},
+                e("div",{style:{width:36,height:36,borderRadius:8,background:a.color+"0C",border:"1px solid "+a.color+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{name:a.icon,size:16,color:a.color})),
+                e("div",{style:{flex:1}},
+                  e("div",{style:{fontSize:13,fontWeight:700,color:T.text}},a.name),
+                  e("div",{style:{fontSize:12,color:T.textTertiary,marginTop:2}},a.setup)),
+                e("div",{style:{fontSize:12,fontFamily:T.mono,color:a.color,maxWidth:200,textAlign:"right"}},a.connection)
+              )
+            )
+          )
+        ),
+        e(Card,{style:{padding:24,marginBottom:16}},
+          e(SectionLabel,{color:T.teal},"SharePoint Folder Mapping (Existing Locations)"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:6,marginTop:12}},
+            spFolders.map((f,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:8,background:T.bg,border:"1px solid "+T.borderLight}},
+                e("div",{style:{width:4,height:32,borderRadius:2,background:f.color,flexShrink:0}}),
+                e("div",{style:{flex:1}},e("div",{style:{fontSize:13,fontWeight:700}},f.content),e("div",{style:{fontSize:12,color:T.textTertiary}},f.find)),
+                e("code",{style:{fontSize:12,fontFamily:T.mono,color:f.color,padding:"3px 8px",borderRadius:4,background:f.color+"08",border:"1px solid "+f.color+"15"}},f.variable))
+            )
+          )
+        ),
+        e(Card,{style:{padding:24}},
+          e(SectionLabel,null,"Folders The System Creates (Per Pursuit)"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(240px, 1fr))",gap:8,marginTop:12}},
+            [{folder:"/00_Admin/",purpose:"Status files, error logs",icon:"cpu"},{folder:"/01_Pursuit Intake/",purpose:"RFPs, addenda, owner instructions",icon:"file"},{folder:"/02_Working Drafts/",purpose:"Reviewer edits",icon:"draft"},{folder:"/03_Outputs/",purpose:"Kickoff Pack, Content Pack",icon:"package"},{folder:"/04_Review Approvals/",purpose:"Trigger files for approvals",icon:"check"}].map((item,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderRadius:8,background:T.surfaceAlt,border:"1px solid "+T.borderLight}},
+                e("div",{style:{width:32,height:32,borderRadius:6,background:T.accentLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{name:item.icon,size:15,color:T.accent})),
+                e("div",null,e("div",{style:{fontSize:12,fontWeight:700,fontFamily:T.mono,color:T.text}},item.folder),e("div",{style:{fontSize:12,color:T.textTertiary}},item.purpose)))
+            )
+          )
+        )
+      ) : null
+    );
+  }
+
+  // ═══════════════ CONFIGURATION (merged: Instructions + Control) ═══════════════
+  function configurationView() {
+    const rules = [
+      {num:1,title:"COMPLIANCE FIRST",desc:"Every output must satisfy the RFP's mandatory requirements before scored criteria. Flag unmet requirements.",color:T.red},
+      {num:2,title:"NO INVENTED FACTS",desc:"Only use information from source documents. If missing, output [NEEDS_INPUT: description] and add to data_gaps[].",color:T.amber},
+      {num:3,title:"REQUIREMENTS vs. RECOMMENDATIONS",desc:"Distinguish between what the RFP requires (shall/must) and recommends (should/may). Label each.",color:T.accent},
+      {num:4,title:"STRICT SCHEMA",desc:"Always output valid JSON matching schema. No extra keys, no missing required fields, no markdown in JSON.",color:T.textSecondary},
+      {num:5,title:"SOURCE TRANSPARENCY",desc:"Include sources_used[] for every content block referencing source file names. Never cite unsupplied sources.",color:T.green},
+      {num:6,title:"WORD LIMITS",desc:"If the RFP specifies limits, respect them. Flag sections where source material exceeds the limit.",color:T.purple},
+      {num:7,title:"ONE QUESTION AT A TIME",desc:"Surface the single most critical gap first. Don't overwhelm with a list of 20 questions.",color:T.teal},
+    ];
+
+    return e("div",{style:{animation:"fadeUp 0.5s ease"}},
+      e("div",{style:{marginBottom:24,maxWidth:680}},
+        e("h1",{style:{fontSize:32,fontWeight:700,fontFamily:T.display,color:T.text,lineHeight:1.2,marginBottom:10,letterSpacing:"-0.02em"}},"Configuration"),
+        e("p",{style:{fontSize:15,color:T.textSecondary,lineHeight:1.7,margin:0}},"Claude model settings, system prompt rules, JSON schemas, error handling, guardrails, and permissions.")
+      ),
+
+      // Sub-tabs
+      e("div",{style:{display:"flex",gap:1,padding:3,borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.border,marginBottom:24,width:"fit-content"}},
+        [{id:"claude",label:"Claude & Schemas"},{id:"control",label:"Error Handling & Guardrails"},{id:"permissions",label:"Permissions"}].map(t=>
+          e("button",{key:t.id,onClick:()=>setConfigTab(t.id),style:{
+            padding:"7px 14px",borderRadius:7,border:"none",cursor:"pointer",
+            fontSize:12,fontWeight:configTab===t.id?700:500,fontFamily:T.sans,
+            background:configTab===t.id?T.navBg:"transparent",
+            color:configTab===t.id?"#FFFFFF":T.textTertiary,
+            boxShadow:configTab===t.id?"0 1px 3px rgba(30,51,72,0.2)":"none",
+            transition:"all 0.2s ease",
+          }},t.label)
+        )
+      ),
+
+      // ── CLAUDE & SCHEMAS ──
+      configTab==="claude" ? e("div",null,
+        e(Card,{style:{padding:24,marginBottom:16}},
+          e(SectionLabel,{color:T.accent},"Model Selection & HTTP Settings"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:10,marginTop:12}},
+            [{label:"Model",value:"claude-sonnet-4-5-20250929"},{label:"Variable",value:"{{PR_CLAUDE_MODEL}}"},{label:"Method",value:"POST"},{label:"URL",value:"api.anthropic.com/v1/messages"},{label:"anthropic-version",value:"2023-06-01"},{label:"content-type",value:"application/json"}].map(item=>
+              e("div",{key:item.label,style:{padding:"10px 14px",borderRadius:8,background:T.surfaceAlt,border:"1px solid "+T.borderLight}},
+                e("div",{style:{fontSize:12,color:T.textTertiary,fontWeight:700,letterSpacing:"0.06em",marginBottom:4}},item.label.toUpperCase()),
+                e("div",{style:{fontSize:12,fontFamily:T.mono,fontWeight:500,color:T.text}},item.value)))
+          )
+        ),
+        e(SectionLabel,{style:{marginBottom:12}},"System Prompt: PR_CORE_V1"),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:6,marginBottom:20}},
+          rules.map((rule,i)=>
+            e(Card,{key:i,hover:true,style:{padding:"14px 18px",animation:"fadeUp 0.35s ease "+(i*0.04)+"s both"}},
+              e("div",{style:{display:"flex",gap:14,alignItems:"flex-start"}},
+                e("div",{style:{width:28,height:28,borderRadius:6,flexShrink:0,background:rule.color+"0C",border:"1px solid "+rule.color+"18",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:T.sans,fontSize:12,fontWeight:700,color:rule.color}},rule.num),
+                e("div",null,e("div",{style:{fontSize:12,fontWeight:700,color:T.text,marginBottom:2}},rule.title),e("div",{style:{fontSize:12,color:T.textSecondary,lineHeight:1.55}},rule.desc))
+              )
+            )
+          )
+        ),
+        e(Card,{style:{padding:24}},
+          e(SectionLabel,{color:T.purple},"JSON Schemas (Structured Outputs)"),
+          e("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(260px, 1fr))",gap:12,marginTop:12}},
+            [{name:"PR_KickoffPack",fields:10,used:"PR-03",desc:"RFP parsing \u2192 deliverables, compliance, eval criteria, outline",arrays:["deliverables_checklist","evaluation_criteria","compliance_requirements","proposed_outline","data_gaps"]},
+             {name:"PR_ContentPackSection",fields:7,used:"PR-05",desc:"Per-section draft with content, word count, sources",arrays:["sources_used","recommended_projects","recommended_resumes","data_gaps"]},
+             {name:"PR_ChangeLog",fields:4,used:"PR-06",desc:"Revision tracking with compliance impact",arrays:["changes","updated_sections","new_data_gaps"]}].map(s=>
+              e("div",{key:s.name,style:{padding:18,borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.borderLight}},
+                e("div",{style:{fontFamily:T.mono,fontSize:14,fontWeight:700,color:T.purple,marginBottom:4}},s.name),
+                e("div",{style:{fontSize:12,color:T.textSecondary,marginBottom:12}},s.desc),
+                e("div",{style:{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}},
+                  e(Badge,{color:T.textSecondary,bg:T.surfaceAlt,style:{border:"1px solid "+T.border}},s.fields+" fields"),
+                  e(Badge,{color:T.accent,bg:T.accentLight},"\u2192 "+s.used)),
+                e("div",{style:{display:"flex",gap:4,flexWrap:"wrap"}},s.arrays.map(a=>e("span",{key:a,style:{fontSize:12,padding:"2px 6px",borderRadius:3,background:T.purpleLight,color:T.purple,fontFamily:T.mono,fontWeight:500}},a+"[]")))
+              )
+            )
+          )
+        )
+      ) : null,
+
+      // ── ERROR HANDLING & GUARDRAILS ──
+      configTab==="control" ? e("div",null,
+        e(Card,{style:{padding:24,marginBottom:16}},
+          e(SectionLabel,{color:T.orange},"Error Handling Matrix"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginTop:12}},
+            [{trigger:"Claude HTTP call fails (non-200 / timeout)",response:"Route to error handler. Write ERROR_<scenario>.txt. Notify via Teams.",severity:"danger"},
+             {trigger:"Malformed JSON from Claude",response:"Retry with stricter prompt. If second attempt fails, save raw output for manual review.",severity:"danger"},
+             {trigger:"RFP.pdf missing from /01_Pursuit Intake/",response:"Create MISSING_RFP.txt. Notify team. STOP pipeline.",severity:"danger"},
+             {trigger:"data_gaps[] not empty in Claude output",response:"Create NEEDS_INPUT.txt with first gap only. Notify PM.",severity:"warning"},
+             {trigger:"CloudConvert conversion failure",response:"Retry once. If persistent, notify PM for manual conversion.",severity:"warning"},
+             {trigger:"SharePoint permission error",response:"Write error to /00_Admin/. Notify admin.",severity:"danger"}].map((err,i)=>
+              e("div",{key:i,style:{padding:"14px 16px",borderRadius:8,background:T.bg,border:"1px solid "+(err.severity==="danger"?T.red+"20":T.amber+"20")}},
+                e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:6}},
+                  e("div",{style:{width:8,height:8,borderRadius:"50%",background:err.severity==="danger"?T.red:T.amber,flexShrink:0}}),
+                  e("span",{style:{fontSize:12,fontWeight:700,color:T.text}},err.trigger),
+                  e(Badge,{color:err.severity==="danger"?T.red:T.amber,bg:err.severity==="danger"?T.redLight:T.amberLight,style:{marginLeft:"auto"}},err.severity.toUpperCase())),
+                e("div",{style:{fontSize:12,color:T.textSecondary,lineHeight:1.55,paddingLeft:16}},err.response)
+              )
+            )
+          )
+        ),
+        e(Card,{style:{padding:24,background:T.redLight+"60",borderColor:T.red+"18"}},
+          e(SectionLabel,{color:T.red},"System Guardrails (Non-Negotiable)"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginTop:8}},
+            ["Never submit AI-generated content without PM review and HITL gate approval",
+             "Never let Claude modify or generate Terms & Conditions",
+             "Never invent missing scope, compliance language, or commercial terms",
+             "Never store API keys in scenario module fields \u2014 use team variables only",
+             "Never process ITAR, CUI, or classified RFP materials through this pipeline",
+             "Do not pass unreviewed PII from staff resumes without data handling review"].map((g,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:10,fontSize:12,color:T.textSecondary,lineHeight:1.55}},
+                e("div",{style:{width:18,height:18,borderRadius:4,background:T.red+"12",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}},e("span",{style:{color:T.red,fontSize:12,fontWeight:700}},"\u00D7")),g)
+            )
+          )
+        )
+      ) : null,
+
+      // ── PERMISSIONS ──
+      configTab==="permissions" ? e("div",null,
+        e(Card,{style:{padding:24}},
+          e(SectionLabel,{color:T.accent},"Permissions & Access Control"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:8,marginTop:12}},
+            [{area:"SharePoint Libraries",level:"Read / Write",scope:"Service account needs explicit access to all folders.",icon:"folder",color:T.teal},
+             {area:"Anthropic API",level:"API Key",scope:"Store as PR_ANTHROPIC_KEY in Make.com team variables.",icon:"cpu",color:T.purple},
+             {area:"Make.com Workspace",level:"Admin (build) / Operator (run)",scope:"Builders need admin; operators need run permissions.",icon:"workflow",color:T.accent},
+             {area:"Teams Channel",level:"Post permissions",scope:"Bot/service account must be able to post.",icon:"globe",color:T.purple}].map((p,i)=>
+              e("div",{key:i,style:{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:8,background:T.surfaceAlt,border:"1px solid "+T.borderLight}},
+                e("div",{style:{width:36,height:36,borderRadius:8,background:p.color+"0C",border:"1px solid "+p.color+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},e(Icon,{name:p.icon,size:16,color:p.color})),
+                e("div",{style:{flex:1}},
+                  e("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:2}},e("span",{style:{fontSize:13,fontWeight:700,color:T.text}},p.area),e(Badge,{color:p.color,bg:p.color+"0C"},p.level)),
+                  e("div",{style:{fontSize:12,color:T.textTertiary}},p.scope))
+              )
+            )
+          )
+        )
+      ) : null
+    );
+  }
+
+  // ═══════════════ BEST PRACTICES ═══════════════
+  function bestPracticesView() {
+    const opBP = [
+      {category:"Proposal Workflow",color:T.accent,items:[
+        {label:"Always run PR-01 before uploading any RFP",detail:"Workspace structure must exist before other scenarios write files.",type:"do"},
+        {label:"Upload RFP + all addenda before triggering kickoff",detail:"PR-03 downloads everything at trigger time. Late documents will be missed.",type:"do"},
+        {label:"Don't skip the HITL approval gates",detail:"Human sign-off prevents RFP interpretation errors before spending tokens.",type:"dont"},
+        {label:"Don't let Claude draft final legal language",detail:"Compliance requirements from Claude are for drafting guidance only.",type:"dont"},
+      ]},
+      {category:"Content Quality",color:T.purple,items:[
+        {label:"Validate boilerplate folder naming before go-live",detail:"PR-05 retrieval quality depends on how well files are named by topic.",type:"do"},
+        {label:"Seed at least 2-3 past proposals before piloting",detail:"Without examples, section quality will be generic.",type:"do"},
+        {label:"Track recurring data_gaps[]",detail:"Persistent gaps signal missing content in boilerplate folders.",type:"do"},
+        {label:"Don't ignore [NEEDS_INPUT] tags",detail:"These are compliance-critical fields requiring a PM decision.",type:"dont"},
+      ]},
+      {category:"Compliance & Governance",color:T.red,items:[
+        {label:"Maintain audit trail for all AI outputs",detail:"Archive Kickoff_Pack.json and PR_ContentPack.json as pursuit records.",type:"do"},
+        {label:"Cross-reference compliance_requirements[]",detail:"Always verify against prime/owner contract before submitting.",type:"do"},
+        {label:"Don't submit without PM review",detail:"No output goes to an evaluator without PM approval. HITL gates are non-negotiable.",type:"dont"},
+        {label:"Don't process ITAR/CUI materials",detail:"System is not configured for controlled or export-controlled data.",type:"dont"},
+      ]},
+    ];
+    const buildBP = [
+      {category:"Prompt Architecture",color:T.purple,items:[
+        {label:"Always version your system prompt",detail:"Name PR_CORE_V1, V2, etc. Store in Make.com data store. Increment for rollback.",type:"do"},
+        {label:"Separate system prompt from user message",detail:"System prompt sets rules. User message contains task + schema + documents.",type:"do"},
+        {label:"Pass source documents as document blocks",detail:"Base64-encode PDFs for native Claude reading with better citation accuracy.",type:"do"},
+        {label:"Don't prompt for multiple output formats in one call",detail:"Mixing formats degrades schema compliance and increases malformed JSON risk.",type:"dont"},
+      ]},
+      {category:"Schema & Structured Outputs",color:T.teal,items:[
+        {label:"Always use json_schema output_config",detail:"Enforces schema compliance at the API level.",type:"do"},
+        {label:"Set strict: true in every schema",detail:"Forces exact match — no extra keys, no missing required fields.",type:"do"},
+        {label:"Test schemas with edge-case RFPs",detail:"Run on 3-5 real RFPs with varying formats before go-live.",type:"do"},
+        {label:"Don't mix Claude citations with json_schema",detail:"They are incompatible. Use sources_used[] arrays instead.",type:"dont"},
+      ]},
+      {category:"Make.com Build Patterns",color:T.orange,items:[
+        {label:"Build and test each scenario independently",detail:"Validate each in isolation before enabling the full pipeline.",type:"do"},
+        {label:"Use Iterator + Aggregator for PR-05",detail:"One Claude call per section iteration. Aggregator combines all outputs.",type:"do"},
+        {label:"Add error handler routes to every HTTP module",detail:"Route to: write ERROR file, post Teams alert, stop execution.",type:"do"},
+        {label:"Don't hardcode folder paths",detail:"Every path should derive from trigger folder or Make.com variables.",type:"dont"},
+      ]},
+    ];
+
+    function renderBPSection(title,color,bpData,prefix) {
+      return e("div",{style:{marginBottom:24}},
+        e("div",{style:{fontSize:13,fontWeight:700,color:color,marginBottom:12,textTransform:"uppercase",letterSpacing:"0.05em"}},title),
+        e("div",{style:{display:"flex",flexDirection:"column",gap:10}},
+          bpData.map((cat,ci)=>{
+            const catKey=prefix+ci;
+            const catOpen=!!expandedBP[catKey];
+            return e("div",{key:ci,style:{borderRadius:T.radiusLg,border:"1px solid "+(catOpen?cat.color+"30":T.border),overflow:"hidden",boxShadow:T.shadow}},
+              e("div",{onClick:()=>setExpandedBP(p=>({...p,[catKey]:!p[catKey]})),style:{padding:"16px 20px",background:catOpen?cat.color+"04":T.surface,cursor:"pointer",display:"flex",alignItems:"center",gap:12}},
+                e("div",{style:{width:40,height:40,borderRadius:10,background:cat.color+"0C",border:"1px solid "+cat.color+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+                  e(Icon,{name:ci===0?"draft":ci===1?"cpu":"shield",size:18,color:cat.color})),
+                e("div",{style:{flex:1}},
+                  e("div",{style:{fontSize:14,fontWeight:700,color:catOpen?cat.color:T.text}},cat.category),
+                  e("div",{style:{fontSize:12,color:T.textTertiary}},cat.items.filter(x=>x.type==="do").length+" do / "+cat.items.filter(x=>x.type==="dont").length+" don't")),
+                e("div",{style:{display:"flex",alignItems:"center",transition:"transform 0.2s",transform:catOpen?"rotate(180deg)":"rotate(0)"}},e(Icon,{name:"chevDown",size:16,color:T.textTertiary}))
+              ),
+              catOpen?e("div",{style:{padding:"0 16px 16px",background:T.bg,display:"flex",flexDirection:"column",gap:6,animation:"fadeUp 0.25s ease"}},
+                cat.items.map((item,ii)=>{
+                  const itemKey=catKey+"-"+ii; const itemOpen=!!expandedBPItem[itemKey]; const isDo=item.type==="do";
+                  return e("div",{key:ii,style:{borderRadius:8,border:"1px solid "+(isDo?T.green+"20":T.red+"20"),overflow:"hidden",marginTop:ii===0?12:0}},
+                    e("div",{onClick:()=>setExpandedBPItem(p=>({...p,[itemKey]:!p[itemKey]})),style:{padding:"11px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:10,background:isDo?T.greenLight+"40":T.redLight+"40"}},
+                      e("div",{style:{width:22,height:22,borderRadius:6,flexShrink:0,background:isDo?T.green+"15":T.red+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:isDo?T.green:T.red}},isDo?"\u2713":"\u2717"),
+                      e("span",{style:{fontSize:12,fontWeight:500,flex:1,color:T.text}},item.label),
+                      e("span",{style:{fontSize:12,color:T.textTertiary}},itemOpen?"\u25B2":"\u25BC")),
+                    itemOpen?e("div",{style:{padding:"10px 14px 12px 46px",background:T.bg,fontSize:12,color:T.textSecondary,lineHeight:1.6,borderTop:"1px solid "+T.borderLight,animation:"fadeIn 0.2s ease"}},item.detail):null
+                  );
+                })
+              ):null
+            );
+          })
+        )
+      );
+    }
+
+    return e("div",{style:{animation:"fadeUp 0.5s ease"}},
+      e("div",{style:{marginBottom:36,maxWidth:680}},
+        e("h1",{style:{fontSize:32,fontWeight:700,fontFamily:T.display,color:T.text,lineHeight:1.2,marginBottom:10,letterSpacing:"-0.02em"}},"Best Practices"),
+        e("p",{style:{fontSize:15,color:T.textSecondary,lineHeight:1.7,margin:0}},"Operational and build guidance. Click a category, then each item for detail.")
+      ),
+      renderBPSection("Operational",T.accent,opBP,"op-"),
+      renderBPSection("Build",T.purple,buildBP,"bd-")
+    );
+  }
+
+  // ═══════════════ ARCHITECTURE ═══════════════
+
+  // ─── Reusable sequence diagram ───
+  // ═══════════════ ARCHITECTURE ═══════════════
+
+  // ─── Reusable sequence diagram ───
+  function SeqDiagram({actors, steps, width, height}) {
+    const W = width || 960, H = height || 500;
+    return e("div",{style:{overflowX:"auto",padding:"0 0 8px"}},
+      e("svg",{width:W,height:H,viewBox:"0 0 "+W+" "+H,style:{display:"block"}},
+        e("rect",{width:W,height:H,fill:T.surfaceAlt,rx:12}),
+        actors.map(a=>e("g",{key:a.id},
+          e("rect",{x:a.x-52,y:14,width:104,height:44,rx:8,fill:a.color+"10",stroke:a.color+"35",strokeWidth:1.5}),
+          e("text",{x:a.x,y:32,textAnchor:"middle",fill:a.color,fontSize:12,fontWeight:700,fontFamily:T.sans},a.label),
+          e("text",{x:a.x,y:48,textAnchor:"middle",fill:T.textTertiary,fontSize:10,fontWeight:500,fontFamily:T.sans},a.sub),
+          e("line",{x1:a.x,y1:62,x2:a.x,y2:H-12,stroke:a.color+"20",strokeWidth:1.5,strokeDasharray:"4 4"})
+        )),
+        steps.map((s,i)=>{
+          const isHov = seqHover === (seqWorkflow+"-"+i);
+          const hovKey = seqWorkflow+"-"+i;
+          const fa = actors.find(a=>a.id===s.from);
+          const ta = s.type==="self" ? fa : actors.find(a=>a.id===s.to);
+          const x1=fa.x, x2=ta.x;
+          if(s.type==="self") {
+            return e("g",{key:i,onMouseEnter:()=>setSeqHover(hovKey),onMouseLeave:()=>setSeqHover(null),style:{cursor:"pointer"}},
+              e("path",{d:"M"+(x1+3)+" "+s.y+" h28 v16 h-28",fill:"none",stroke:s.color||fa.color,strokeWidth:1.5}),
+              e("polygon",{points:(x1+3)+" "+(s.y+12)+" "+(x1+3)+" "+(s.y+20)+" "+(x1-3)+" "+(s.y+16),fill:s.color||fa.color}),
+              e("text",{x:x1+38,y:s.y+5,fill:isHov?(s.color||fa.color):T.textSecondary,fontSize:11,fontWeight:isHov?700:500,fontFamily:T.mono,style:{transition:"fill 0.15s"}},s.label),
+              s.note && isHov ? e("g",null,
+                e("rect",{x:x1+30,y:s.y+20,width:Math.min(s.note.length*5.2+16,420),height:20,rx:4,fill:T.text+"E8"}),
+                e("text",{x:x1+38,y:s.y+33,fill:"#FFF",fontSize:9,fontFamily:T.sans},s.note)) : null);
+          }
+          const goRight = x2 > x1, midX = (x1+x2)/2;
+          return e("g",{key:i,onMouseEnter:()=>setSeqHover(hovKey),onMouseLeave:()=>setSeqHover(null),style:{cursor:"pointer"}},
+            isHov ? e("rect",{x:Math.min(x1,x2)-2,y:s.y-13,width:Math.abs(x2-x1)+4,height:20,rx:3,fill:(s.color||fa.color)+"08"}) : null,
+            e("line",{x1:x1+(goRight?4:-4),y1:s.y,x2:x2+(goRight?-6:6),y2:s.y,stroke:s.color||fa.color,strokeWidth:s.highlight?2:1.3,strokeDasharray:s.dashed?"5 3":"none",opacity:isHov?1:0.65,style:{transition:"opacity 0.15s"}}),
+            e("polygon",{points:goRight?(x2-6)+","+(s.y-3.5)+" "+x2+","+s.y+" "+(x2-6)+","+(s.y+3.5):(x2+6)+","+(s.y-3.5)+" "+x2+","+s.y+" "+(x2+6)+","+(s.y+3.5),fill:s.color||fa.color,opacity:isHov?1:0.65}),
+            e("text",{x:midX,y:s.y-5,textAnchor:"middle",fill:isHov?(s.color||fa.color):T.textSecondary,fontSize:11,fontWeight:isHov?600:500,fontFamily:s.label.includes("/")||s.label.includes("_")?T.mono:T.sans,style:{transition:"fill 0.15s"}},s.label.length>52?s.label.substring(0,52)+"\u2026":s.label),
+            s.note && isHov ? e("g",null,
+              e("rect",{x:midX-Math.min(s.note.length*2.6+8,210),y:s.y+6,width:Math.min(s.note.length*5.2+16,420),height:20,rx:4,fill:T.text+"E8"}),
+              e("text",{x:midX-Math.min(s.note.length*2.6,202),y:s.y+19,fill:"#FFF",fontSize:9,fontFamily:T.sans},s.note)) : null);
+        })
+      )
+    );
+  }
+
+  function architectureView() {
+    // ─── Actors ───
+    const A = {
+      pm:{id:"pm",label:"PM",sub:"Browser",color:T.text,x:80},
+      sp:{id:"sp",label:"SharePoint",sub:"M365",color:T.teal,x:240},
+      make:{id:"make",label:"Make.com",sub:"Scenario Engine",color:T.accent,x:420},
+      claude:{id:"claude",label:"Claude API",sub:"Anthropic",color:T.purple,x:600},
+      plum:{id:"plum",label:"Plumsail",sub:"DOCX Merge",color:T.green,x:600},
+      cc:{id:"cc",label:"CloudConvert",sub:"File Convert",color:T.orange,x:600},
+      teams:{id:"teams",label:"MS Teams",sub:"Notifications",color:T.purple,x:780},
+    };
+
+    // ─── All 7 workflow sequences ───
+    const workflows = {
+      "PR-01":{title:"PR-01: Create Pursuit Workspace",desc:"PM creates folder \u2192 Make.com builds subfolder structure + initializes status tracking.",
+        actors:[A.pm,A.sp,A.make,{...A.teams,x:600}],height:350,
+        steps:[
+          {from:"pm",to:"sp",label:"Creates new folder in /Pursuits/",y:90,highlight:true,note:"e.g. /Pursuits/Acme_Hospital_2026/"},
+          {from:"sp",to:"make",label:"Trigger: new folder detected",y:120,note:"Make.com SharePoint Watch Folders module"},
+          {from:"make",to:"sp",label:"Create /00_Admin/",y:150},
+          {from:"make",to:"sp",label:"Create /01_Pursuit Intake/",y:175},
+          {from:"make",to:"sp",label:"Create /02_Working Drafts/",y:200},
+          {from:"make",to:"sp",label:"Create /03_Outputs/  +  /04_Review Approvals/",y:225},
+          {from:"make",to:"sp",label:"Write pursuit_status.json to /00_Admin/",y:258,note:'Content: {"status":"WORKSPACE_CREATED","created_at":"<ISO>","pursuit":"Acme_Hospital"}'},
+          {from:"make",to:"teams",label:'"Workspace created for Acme_Hospital"',y:290,note:"Posts to Proposals channel with folder link"},
+        ]},
+      "PR-02":{title:"PR-02: Intake Ingestion + File Normalization",desc:"Normalizes uploaded files, converts DOC/DOCX \u2192 PDF, validates RFP exists.",
+        actors:[A.pm,A.sp,A.make,{...A.cc,x:600},{...A.teams,x:780}],height:380,
+        steps:[
+          {from:"pm",to:"sp",label:"Uploads RFP + addenda to /01_Pursuit Intake/",y:90,highlight:true},
+          {from:"sp",to:"make",label:"Trigger: new file detected",y:120,note:"Filter: /01_Pursuit Intake/, ext: pdf/docx/doc"},
+          {from:"make",to:"make",label:"Router: check file extension",y:150,type:"self",note:"DOC/DOCX \u2192 CloudConvert. PDF \u2192 pass through."},
+          {from:"make",to:"cc",label:"Convert DOCX \u2192 PDF",y:190,note:"CloudConvert API. Free tier: 25 conversions/day."},
+          {from:"cc",to:"make",label:"Converted PDF returned",y:215,dashed:true},
+          {from:"make",to:"sp",label:"Rename to standard names (RFP.pdf, Addendum_01.pdf)",y:248,note:"Deterministic naming convention"},
+          {from:"make",to:"make",label:"Check: does RFP.pdf exist?",y:278,type:"self",note:"If missing \u2192 error branch. Pipeline STOPS."},
+          {from:"make",to:"sp",label:"If missing: write MISSING_RFP.txt to /00_Admin/",y:313,color:T.red},
+          {from:"make",to:"teams",label:"Notify: files normalized (or RFP missing \u2192 STOP)",y:343},
+        ]},
+      "PR-03":{title:"PR-03: Generate Kickoff Pack",desc:"HITL gate. Parses RFP through Claude \u2192 structured Kickoff Pack with compliance mapping.",
+        actors:[A.pm,A.sp,A.make,A.claude,{...A.plum,x:780},{...A.teams,x:920}],height:410,width:980,
+        steps:[
+          {from:"pm",to:"sp",label:"Creates KICKOFF_START.txt in /04_Review Approvals/",y:90,highlight:true,note:"Manual HITL trigger \u2014 PM decides when intake is complete"},
+          {from:"sp",to:"make",label:"Trigger: KICKOFF_START.txt detected",y:120},
+          {from:"make",to:"sp",label:"List all PDFs in /01_Pursuit Intake/",y:150,note:"Gets RFP.pdf + any addenda + Owner_Instructions.pdf"},
+          {from:"make",to:"make",label:"Iterator: download + base64-encode each PDF",y:180,type:"self",note:"Each PDF \u2192 document block for Claude native PDF reading"},
+          {from:"make",to:"claude",label:"POST /v1/messages  +  PR_KickoffPack schema",y:215,highlight:true,note:"System: PR_CORE_V1 (7 rules). max_tokens: 4000. strict: true"},
+          {from:"claude",to:"make",label:"JSON: deliverables, compliance, outline, gaps",y:245,dashed:true,note:"Schema enforced via output_config json_schema"},
+          {from:"make",to:"sp",label:"Save Kickoff_Pack_v1.json \u2192 /03_Outputs/",y:278},
+          {from:"make",to:"plum",label:"Merge JSON into Kickoff_Pack_Template.docx",y:308,note:"Merge tags: {{pursuit_name}}, {{compliance_requirements}}, etc."},
+          {from:"plum",to:"sp",label:"Kickoff_Pack_v1.docx \u2192 /03_Outputs/",y:338,dashed:true},
+          {from:"make",to:"teams",label:'"Kickoff Pack ready for PM review"',y:370,note:"Tags PM with link to DOCX"},
+        ]},
+      "PR-04":{title:"PR-04: Kickoff Approval Gate",desc:"PM reviews Kickoff Pack. Approval triggers content drafting phase.",
+        actors:[A.pm,A.sp,A.make,{...A.teams,x:600}],height:300,
+        steps:[
+          {from:"pm",to:"pm",label:"Reviews Kickoff_Pack_v1.docx",y:90,type:"self",note:"Checks: deliverables correct? Compliance captured? Outline sensible?"},
+          {from:"pm",to:"sp",label:"Creates KICKOFF_APPROVED.txt in /04_Review Approvals/",y:130,highlight:true,note:"Manual HITL gate \u2014 PM signals OK to proceed"},
+          {from:"sp",to:"make",label:"Trigger: KICKOFF_APPROVED.txt detected",y:160},
+          {from:"make",to:"sp",label:"Update pursuit_status.json",y:195,note:'Content: {"status":"KICKOFF_APPROVED","approved_at":"<ISO>","approved_by":"PM"}'},
+          {from:"make",to:"sp",label:"Create DRAFT_START.txt in /04_Review Approvals/",y:230,note:"This file triggers PR-05 (content generation)"},
+          {from:"make",to:"teams",label:'"Kickoff approved. Content drafting authorized."',y:265},
+        ]},
+      "PR-05":{title:"PR-05: Generate Proposal Content Pack",desc:"Retrieves all content from SharePoint, iterates per section through Claude, produces full Content Pack.",
+        actors:[A.pm,A.sp,A.make,A.claude,{...A.plum,x:780},{...A.teams,x:920}],height:510,width:980,
+        steps:[
+          {from:"sp",to:"make",label:"Trigger: DRAFT_START.txt detected",y:90},
+          {from:"make",to:"sp",label:"Download Kickoff_Pack_v1.json",y:118,note:"Gets proposed_outline[], evaluation_criteria[], compliance_requirements[]"},
+          {from:"make",to:"sp",label:"Download boilerplate (PR_BOILERPLATE_PATH)",y:146,note:"2\u20133 files matched by section keyword (safety, staffing, etc.)"},
+          {from:"make",to:"sp",label:"Download past proposals + projects + resumes",y:174,note:"From PR_PAST_PROPOSALS_PATH, PR_PROJECTS_PATH, PR_RESUMES_PATH"},
+          {from:"make",to:"make",label:"Iterator: loop proposed_outline[] sections",y:208,type:"self",highlight:true,note:"One Claude call PER section \u2014 not one call for entire proposal"},
+          {from:"make",to:"claude",label:"POST /v1/messages per section (PR_ContentPackSection)",y:248,note:"Each section gets relevant boilerplate + schema. max_tokens: 3000"},
+          {from:"claude",to:"make",label:"Section JSON: content, sources_used[], recommendations",y:278,dashed:true},
+          {from:"make",to:"make",label:"Aggregator: combine all sections \u2192 PR_ContentPack.json",y:312,type:"self"},
+          {from:"make",to:"sp",label:"Save PR_ContentPack.json \u2192 /03_Outputs/",y:345},
+          {from:"make",to:"plum",label:"Merge into Proposal_Content_Pack_Template.docx",y:375},
+          {from:"plum",to:"sp",label:"Proposal_Content_Pack_v1.docx saved",y:405,dashed:true},
+          {from:"make",to:"sp",label:"Create DRAFT_REVIEW_REQUIRED.txt",y:435},
+          {from:"make",to:"teams",label:'"Content Pack v1 ready for review"',y:465},
+        ]},
+      "PR-06":{title:"PR-06: Review Loop & Revision",desc:"Reviewer provides structured edits \u2192 Claude revises with compliance awareness.",
+        actors:[A.pm,A.sp,A.make,A.claude,{...A.plum,x:780},{...A.teams,x:920}],height:430,width:980,
+        steps:[
+          {from:"pm",to:"pm",label:"Reviews Proposal_Content_Pack_v1.docx",y:90,type:"self",note:"PM marks sections needing changes"},
+          {from:"pm",to:"sp",label:"Uploads Reviewer_Edits_v1.json \u2192 /02_Working Drafts/",y:125,highlight:true,note:'Format: [{section_number, instruction, new_text?}, ...]'},
+          {from:"sp",to:"make",label:"Trigger: Reviewer_Edits*.json detected",y:155},
+          {from:"make",to:"sp",label:"Download edits + PR_ContentPack.json",y:185},
+          {from:"make",to:"claude",label:"POST /v1/messages with PR_ChangeLog schema",y:220,highlight:true,note:"Edits + original content + compliance_requirements[]. max_tokens: 4000"},
+          {from:"claude",to:"make",label:"updated_sections[] + changes[] with compliance_impact",y:250,dashed:true,note:"Each change assessed for compliance impact"},
+          {from:"make",to:"sp",label:"Save PR_ContentPack_v2.json \u2192 /03_Outputs/",y:283},
+          {from:"make",to:"plum",label:"Merge \u2192 Proposal_Content_Pack_v2.docx",y:313},
+          {from:"plum",to:"sp",label:"v2 DOCX saved",y:340,dashed:true},
+          {from:"make",to:"sp",label:"Save ChangeLog_v1_to_v2.json",y:368,note:"Tracks every change with compliance impact for audit trail"},
+          {from:"make",to:"teams",label:'"v2 ready \u2014 see change log for compliance impact"',y:398},
+        ]},
+      "PR-07":{title:"PR-07: Final Assembly & Handoff",desc:"Final approval \u2192 archives outputs \u2192 notifies team for InDesign layout.",
+        actors:[A.pm,A.sp,A.make,{...A.teams,x:600}],height:300,
+        steps:[
+          {from:"pm",to:"pm",label:"Reviews final Content Pack + Change Log",y:90,type:"self"},
+          {from:"pm",to:"sp",label:"Creates DRAFT_APPROVED.txt in /04_Review Approvals/",y:125,highlight:true,note:"Final HITL gate \u2014 PM approves for handoff"},
+          {from:"sp",to:"make",label:"Trigger: DRAFT_APPROVED.txt detected",y:155},
+          {from:"make",to:"sp",label:"Copy /03_Outputs/ files \u2192 /03_Outputs/Final/",y:190,note:"Kickoff Pack + Content Pack + Change Logs"},
+          {from:"make",to:"sp",label:'Update pursuit_status.json \u2192 APPROVED',y:225,note:'{"status":"APPROVED","approved_at":"<ISO>"}'},
+          {from:"make",to:"teams",label:'"APPROVED \u2014 proceed to InDesign layout"',y:260,note:"InDesign is manual, out of scope Phase 1"},
+        ]},
+    };
+
+    const wf = workflows[seqWorkflow];
+    const wfKeys = Object.keys(workflows);
+    const wfColors={"PR-01":T.textSecondary,"PR-02":T.orange,"PR-03":T.accent,"PR-04":T.amber,"PR-05":T.purple,"PR-06":T.teal,"PR-07":T.green};
+
+    // ─── CLEAN SYSTEM DIAGRAM (HTML/CSS based, not SVG spaghetti) ───
+    function SystemRelationshipDiagram() {
+      const W=1020, H=600;
+      // All nodes - x,y is CENTER of node
+      const nodes = [
+        {id:"pm",   x:490,y:56,  w:180,h:48, label:"Project Manager",sub:"HITL reviews + approvals",color:T.text},
+        {id:"sp",   x:490,y:186, w:220,h:60, label:"Microsoft SharePoint",sub:"Source + Destination",color:T.teal,accent:true},
+        {id:"make", x:490,y:346, w:220,h:60, label:"Make.com",sub:"Orchestrates PR-01 through PR-07",color:T.accent,accent:true},
+        {id:"claude",x:130,y:520,w:170,h:52, label:"Claude API",sub:"AI reasoning (PR-03, 05, 06)",color:T.purple},
+        {id:"plum", x:370,y:520, w:150,h:52, label:"Plumsail",sub:"DOCX template merge",color:T.green},
+        {id:"cc",   x:610,y:520, w:150,h:52, label:"CloudConvert",sub:"DOC/DOCX \u2192 PDF",color:T.orange},
+        {id:"teams",x:830,y:520, w:130,h:52, label:"MS Teams",sub:"Notifications",color:T.purple},
+      ];
+      function nd(id){return nodes.find(n=>n.id===id);}
+
+      // Edge-to-edge arrow: connects specific sides of nodes
+      // side: "bottom","top","left","right"
+      function edgePoint(n, side, offset) {
+        const o = offset||0;
+        if(side==="bottom") return {x:n.x+o, y:n.y+n.h/2};
+        if(side==="top")    return {x:n.x+o, y:n.y-n.h/2};
+        if(side==="left")   return {x:n.x-n.w/2, y:n.y+o};
+        if(side==="right")  return {x:n.x+n.w/2, y:n.y+o};
+        return {x:n.x,y:n.y};
+      }
+
+      function arrowHead(x, y, dir, color) {
+        const s=6;
+        if(dir==="down")  return e("polygon",{points:(x-s)+","+(y-s*1.2)+" "+x+","+y+" "+(x+s)+","+(y-s*1.2),fill:color,opacity:0.6});
+        if(dir==="up")    return e("polygon",{points:(x-s)+","+(y+s*1.2)+" "+x+","+y+" "+(x+s)+","+(y+s*1.2),fill:color,opacity:0.6});
+        if(dir==="left")  return e("polygon",{points:(x+s*1.2)+","+(y-s)+" "+x+","+y+" "+(x+s*1.2)+","+(y+s),fill:color,opacity:0.6});
+        if(dir==="right") return e("polygon",{points:(x-s*1.2)+","+(y-s)+" "+x+","+y+" "+(x-s*1.2)+","+(y+s),fill:color,opacity:0.6});
+      }
+
+      // All connections defined declaratively
+      const connections = [
+        // PM → SharePoint (straight down)
+        {from:"pm",fromSide:"bottom",to:"sp",toSide:"top",label:"Uploads RFPs + trigger files",color:T.text,style:"solid"},
+        // SharePoint → Make.com (left channel down)
+        {from:"sp",fromSide:"bottom",fromOff:-65,to:"make",toSide:"top",toOff:-65,label:"Triggers scenarios",color:T.teal,style:"solid"},
+        // Make.com → SharePoint (right channel up — response)
+        {from:"make",fromSide:"top",fromOff:65,to:"sp",toSide:"bottom",toOff:65,label:"Writes outputs back",color:T.green,style:"dashed"},
+        // Make.com → Claude
+        {from:"make",fromSide:"bottom",fromOff:-70,to:"claude",toSide:"top",label:"Structured JSON request",color:T.purple,style:"solid"},
+        // Claude → Make.com (response)
+        {from:"claude",fromSide:"top",fromOff:25,to:"make",toSide:"bottom",toOff:-45,label:"JSON response",color:T.purple,style:"dashed"},
+        // Make.com → Plumsail
+        {from:"make",fromSide:"bottom",fromOff:-25,to:"plum",toSide:"top",label:"Merge DOCX",color:T.green,style:"solid"},
+        // Plumsail → SharePoint (response path up-left)
+        {from:"plum",fromSide:"left",to:"sp",toSide:"left",label:"Merged DOCX",color:T.green,style:"dashed",curveLeft:true},
+        // Make.com → CloudConvert
+        {from:"make",fromSide:"bottom",fromOff:35,to:"cc",toSide:"top",label:"Convert files",color:T.orange,style:"solid"},
+        // CloudConvert → SharePoint (response path up-right)
+        {from:"cc",fromSide:"right",to:"sp",toSide:"right",label:"Converted PDFs",color:T.orange,style:"dashed",curveRight:true},
+        // Make.com → Teams
+        {from:"make",fromSide:"bottom",fromOff:80,to:"teams",toSide:"top",label:"Notify team",color:T.purple,style:"solid"},
+      ];
+
+      return e("div",{style:{overflowX:"auto"}},
+        e("svg",{width:W,height:H,viewBox:"0 0 "+W+" "+H,style:{display:"block"}},
+          e("rect",{width:W,height:H,fill:"#FAFBFD",rx:12}),
+
+          // Draw connections first (behind nodes)
+          connections.map((c,i)=>{
+            const f=nd(c.from), t=nd(c.to);
+            const p1=edgePoint(f,c.fromSide,c.fromOff);
+            const p2=edgePoint(t,c.toSide,c.toOff);
+            const isDashed = c.style==="dashed";
+            const col = c.color;
+
+            // Determine arrow direction at endpoint
+            const arrowDir = c.toSide==="top"?"down":c.toSide==="bottom"?"up":c.toSide==="left"?"right":"left";
+
+            // Special curved path for Plumsail → SharePoint
+            if(c.curveLeft) {
+              const cx = Math.min(p1.x, p2.x) - 80;
+              const labelW = c.label.length*6+14;
+              return e("g",{key:i},
+                e("path",{d:"M"+p1.x+" "+p1.y+" C"+cx+" "+p1.y+" "+cx+" "+p2.y+" "+p2.x+" "+p2.y,
+                  fill:"none",stroke:col,strokeWidth:1.6,strokeDasharray:isDashed?"6 4":"none",opacity:0.45}),
+                arrowHead(p2.x, p2.y, "right", col),
+                e("rect",{x:cx-labelW/2+10,y:(p1.y+p2.y)/2-10,width:labelW,height:20,rx:5,fill:"#FAFBFD",stroke:col+"20",strokeWidth:0.5}),
+                e("text",{x:cx+10,y:(p1.y+p2.y)/2+4,textAnchor:"middle",fill:col,fontSize:11,fontWeight:600,fontFamily:T.sans},c.label)
+              );
+            }
+
+            // Special curved path for CloudConvert → SharePoint (right side)
+            if(c.curveRight) {
+              const cx = Math.max(p1.x, p2.x) + 80;
+              const labelW = c.label.length*6+14;
+              return e("g",{key:i},
+                e("path",{d:"M"+p1.x+" "+p1.y+" C"+cx+" "+p1.y+" "+cx+" "+p2.y+" "+p2.x+" "+p2.y,
+                  fill:"none",stroke:col,strokeWidth:1.6,strokeDasharray:isDashed?"6 4":"none",opacity:0.45}),
+                arrowHead(p2.x, p2.y, "left", col),
+                e("rect",{x:cx-labelW/2,y:(p1.y+p2.y)/2-10,width:labelW,height:20,rx:5,fill:"#FAFBFD",stroke:col+"20",strokeWidth:0.5}),
+                e("text",{x:cx,y:(p1.y+p2.y)/2+4,textAnchor:"middle",fill:col,fontSize:11,fontWeight:600,fontFamily:T.sans},c.label)
+              );
+            }
+
+            // Standard straight or slightly curved path
+            const midX=(p1.x+p2.x)/2, midY=(p1.y+p2.y)/2;
+            const isStraight = Math.abs(p1.x-p2.x) < 5;
+            const path = isStraight
+              ? "M"+p1.x+" "+p1.y+" L"+p2.x+" "+p2.y
+              : "M"+p1.x+" "+p1.y+" C"+p1.x+" "+(p1.y+50)+" "+p2.x+" "+(p2.y-50)+" "+p2.x+" "+p2.y;
+
+            const labelW = c.label.length*6+14;
+            return e("g",{key:i},
+              e("path",{d:path,fill:"none",stroke:col,strokeWidth:1.6,strokeDasharray:isDashed?"6 4":"none",opacity:0.45}),
+              arrowHead(p2.x, p2.y, arrowDir, col),
+              c.label ? e("g",null,
+                e("rect",{x:midX-labelW/2,y:midY-10,width:labelW,height:20,rx:5,fill:"#FAFBFD",stroke:col+"20",strokeWidth:0.5}),
+                e("text",{x:midX,y:midY+4,textAnchor:"middle",fill:col,fontSize:11,fontWeight:600,fontFamily:T.sans},c.label)
+              ) : null
+            );
+          }),
+
+          // Draw nodes on top
+          nodes.map(nd=>e("g",{key:nd.id},
+            // Node rectangle
+            e("rect",{x:nd.x-nd.w/2,y:nd.y-nd.h/2,width:nd.w,height:nd.h,rx:nd.accent?12:8,
+              fill:nd.accent?nd.color+"05":"#FFFFFF",
+              stroke:nd.color+(nd.accent?"35":"25"),strokeWidth:nd.accent?2:1.5}),
+            // Color accent bar on top for key nodes
+            nd.accent?e("rect",{x:nd.x-nd.w/2+1,y:nd.y-nd.h/2+1,width:nd.w-2,height:3,rx:1,fill:nd.color,opacity:0.5}):null,
+            // Label
+            e("text",{x:nd.x,y:nd.y+(nd.accent?-3:-5),textAnchor:"middle",fill:nd.accent?nd.color:T.text,fontSize:nd.accent?15:13,fontWeight:700,fontFamily:T.sans},nd.label),
+            // Sublabel
+            e("text",{x:nd.x,y:nd.y+(nd.accent?16:13),textAnchor:"middle",fill:T.textTertiary,fontSize:11,fontWeight:500,fontFamily:T.sans},nd.sub)
+          )),
+
+          // Legend
+          e("g",{transform:"translate(24,"+(H-32)+")"},
+            e("line",{x1:0,y1:0,x2:28,y2:0,stroke:T.textTertiary,strokeWidth:1.6,opacity:0.5}),
+            e("text",{x:34,y:4,fill:T.textTertiary,fontSize:11,fontFamily:T.sans},"Request"),
+            e("line",{x1:110,y1:0,x2:138,y2:0,stroke:T.textTertiary,strokeWidth:1.6,strokeDasharray:"6 4",opacity:0.5}),
+            e("text",{x:144,y:4,fill:T.textTertiary,fontSize:11,fontFamily:T.sans},"Response")
+          )
+        )
+      );
+    }
+
+    // ─── MAIN RENDER ───
+    return e("div",{style:{animation:"fadeUp 0.5s ease"}},
+      e("div",{style:{marginBottom:36,maxWidth:680}},
+        e("h1",{style:{fontSize:32,fontWeight:700,fontFamily:T.display,color:T.text,lineHeight:1.2,marginBottom:10,letterSpacing:"-0.02em"}},"Architecture & Sequences"),
+        e("p",{style:{fontSize:15,color:T.textSecondary,lineHeight:1.7,margin:0}},"How all the pieces connect, and detailed sequence diagrams for every workflow showing exactly who does what, when.")
+      ),
+
+      // Sub-tabs
+      e("div",{style:{display:"flex",gap:1,padding:3,borderRadius:10,background:T.surfaceAlt,border:"1px solid "+T.border,marginBottom:24,width:"fit-content"}},
+        [{id:"sequences",label:"Workflow Sequences"},{id:"diagram",label:"System Diagram"},{id:"mapping",label:"Prototype \u2192 Production"}].map(t=>
+          e("button",{key:t.id,onClick:()=>setArchTab(t.id),style:{
+            padding:"8px 18px",borderRadius:7,border:"none",cursor:"pointer",
+            fontSize:12,fontWeight:archTab===t.id?700:500,fontFamily:T.sans,
+            background:archTab===t.id?T.navBg:"transparent",
+            color:archTab===t.id?"#FFFFFF":T.textTertiary,
+            boxShadow:archTab===t.id?"0 1px 3px rgba(30,51,72,0.2)":"none",
+            transition:"all 0.2s ease",
+          }},t.label)
+        )
+      ),
+
+      // ── WORKFLOW SEQUENCES ──
+      archTab==="sequences" ? e("div",null,
+        e("div",{style:{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}},
+          wfKeys.map(k=>{
+            const active=seqWorkflow===k; const c=wfColors[k]; const hasClaude=["PR-03","PR-05","PR-06"].includes(k);
+            return e("button",{key:k,onClick:()=>{setSeqWorkflow(k);setSeqHover(null);},style:{
+              padding:"6px 12px",borderRadius:6,border:"1px solid "+(active?c:T.border),cursor:"pointer",
+              background:active?c+"12":"transparent",color:active?c:T.textTertiary,
+              fontSize:12,fontWeight:active?700:500,fontFamily:T.mono,transition:"all 0.2s",
+              display:"flex",alignItems:"center",gap:4}},
+              k, hasClaude ? e("span",{style:{width:6,height:6,borderRadius:"50%",background:T.purple}}) : null);
+          })
+        ),
+        e("div",{style:{display:"flex",gap:12,marginBottom:16,fontSize:12,color:T.textTertiary,flexWrap:"wrap"}},
+          e("span",null,"Legend:"),
+          e("span",{style:{color:T.textSecondary}},"\u2500\u2500\u25B6 request"),
+          e("span",{style:{color:T.textSecondary}},"\u2504\u2504\u25B6 response"),
+          e("span",{style:{color:T.textSecondary}},"\u21BB self"),
+          e("span",{style:{display:"flex",alignItems:"center",gap:3}},e("span",{style:{width:6,height:6,borderRadius:"50%",background:T.purple}}),"Claude")
+        ),
+        e(Card,{style:{padding:24,marginBottom:16}},
+          e("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:8}},
+            e("div",{style:{fontSize:18,fontWeight:700,color:T.text}},wf.title),
+            ["PR-03","PR-05","PR-06"].includes(seqWorkflow)?e(Badge,{color:T.purple,bg:T.purpleLight},"Claude AI"):null),
+          e("div",{style:{fontSize:13,color:T.textSecondary,lineHeight:1.6,marginBottom:12}},wf.desc),
+          e("div",{style:{fontSize:12,color:T.textTertiary,marginBottom:8}},"Hover arrows for implementation details."),
+          SeqDiagram({actors:wf.actors,steps:wf.steps,width:wf.width||720,height:wf.height||400})
+        ),
+        e(Card,{style:{padding:20}},
+          e(SectionLabel,null,"Step-by-Step"),
+          e("div",{style:{display:"flex",flexDirection:"column",gap:3,marginTop:8}},
+            wf.steps.map((s,i)=>
+              e("div",{key:i,style:{display:"flex",gap:10,padding:"6px 10px",borderRadius:6,background:i%2===0?T.bg:T.surfaceAlt+"60",border:s.highlight?"1px solid "+T.accent+"20":"1px solid transparent"}},
+                e("div",{style:{width:22,height:22,borderRadius:5,background:(s.color||T.accent)+"0C",border:"1px solid "+(s.color||T.accent)+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,fontWeight:700,color:s.color||T.accent,fontFamily:T.mono}},i+1),
+                e("div",{style:{flex:1}},
+                  e("div",{style:{fontSize:12,color:T.text}},
+                    e("span",{style:{fontWeight:700,color:T.accent}},s.from),
+                    s.type==="self"?" ":e("span",{style:{color:T.textTertiary}}," \u2192 "),
+                    s.type!=="self"?e("span",{style:{fontWeight:700,color:T.teal}},s.to):null,
+                    "  ",e("span",{style:{color:T.textSecondary}},s.label)),
+                  s.note?e("div",{style:{fontSize:12,color:T.textTertiary,marginTop:2,fontFamily:T.mono,lineHeight:1.4}},s.note):null))
+            )
+          )
+        )
+      ) : null,
+
+      // ── SYSTEM DIAGRAM ──
+      archTab==="diagram" ? e("div",null,
+        e(Card,{style:{padding:28,marginBottom:16}},
+          e(SectionLabel,{color:T.accent},"System Relationship Diagram"),
+          e("div",{style:{fontSize:12,color:T.textTertiary,marginBottom:16}},"How all tools connect. SharePoint is both source and destination. Make.com orchestrates everything. Claude handles AI reasoning in 3 of 7 workflows."),
+          SystemRelationshipDiagram()
+        ),
+        // Role summary
+        e("div",{style:{display:"grid",gridTemplateColumns:"repeat(3, 1fr)",gap:12,marginBottom:16}},
+          [{t:"SharePoint",r:"Source + Destination",d:"Reads: RFPs, boilerplate, past proposals, resumes. Writes: Kickoff Packs, Content Packs, status files, triggers, errors.",c:T.teal,ic:"folder"},
+           {t:"Make.com",r:"Orchestration Hub",d:"All 7 scenarios. Watches SP triggers. Routes to Claude, Plumsail, CloudConvert, Teams. Controls all logic.",c:T.accent,ic:"workflow"},
+           {t:"Claude API",r:"AI Engine (3 of 7 workflows)",d:"PR-03: extract compliance. PR-05: draft sections. PR-06: revise with compliance context. System prompt: PR_CORE_V1.",c:T.purple,ic:"cpu"}].map((r,i)=>
+            e(Card,{key:i,hover:true,style:{padding:18}},
+              e("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+                e("div",{style:{width:34,height:34,borderRadius:8,background:r.c+"0C",border:"1px solid "+r.c+"18",display:"flex",alignItems:"center",justifyContent:"center"}},e(Icon,{name:r.ic,size:15,color:r.c})),
+                e("div",null,e("div",{style:{fontSize:13,fontWeight:700,color:r.c}},r.t),e("div",{style:{fontSize:12,color:T.textTertiary}},r.r))),
+              e("div",{style:{fontSize:12,color:T.textSecondary,lineHeight:1.6}},r.d)))
+        ),
+        // Which workflows use what
+        e(Card,{style:{padding:24}},
+          e(SectionLabel,null,"Service Usage by Workflow"),
+          e("div",{style:{borderRadius:10,border:"1px solid "+T.border,overflow:"hidden",marginTop:8}},
+            e("div",{style:{display:"grid",gridTemplateColumns:"100px repeat(6, 1fr)",background:T.surfaceAlt,borderBottom:"2px solid "+T.border}},
+              e("div",{style:{padding:"10px 12px",fontSize:12,fontWeight:700,color:T.textTertiary}},""),
+              ["SharePoint","Make.com","Claude","Plumsail","CloudConvert","Teams"].map(h=>
+                e("div",{key:h,style:{padding:"10px 8px",fontSize:12,fontWeight:700,color:T.textTertiary,textAlign:"center"}},h))),
+            ["PR-01","PR-02","PR-03","PR-04","PR-05","PR-06","PR-07"].map((wfk,i)=>{
+              const usage={"PR-01":[1,1,0,0,0,1],"PR-02":[1,1,0,0,1,1],"PR-03":[1,1,1,1,0,1],"PR-04":[1,1,0,0,0,1],"PR-05":[1,1,1,1,0,1],"PR-06":[1,1,1,1,0,1],"PR-07":[1,1,0,0,0,1]};
+              return e("div",{key:wfk,style:{display:"grid",gridTemplateColumns:"100px repeat(6, 1fr)",background:i%2===0?T.bg:T.surfaceAlt+"60",borderBottom:"1px solid "+T.borderLight}},
+                e("div",{style:{padding:"8px 12px",fontSize:12,fontWeight:700,fontFamily:T.mono,color:wfColors[wfk]}},wfk),
+                usage[wfk].map((u,j)=>
+                  e("div",{key:j,style:{padding:"8px",display:"flex",justifyContent:"center",alignItems:"center"}},
+                    u ? e("div",{style:{width:18,height:18,borderRadius:4,background:[T.teal,T.accent,T.purple,T.green,T.orange,T.purple][j]+"15",display:"flex",alignItems:"center",justifyContent:"center"}},e(Icon,{name:"check",size:10,color:[T.teal,T.accent,T.purple,T.green,T.orange,T.purple][j]}))
+                      : e("span",{style:{color:T.border}},"\u2014")))
+              );
+            })
+          )
+        )
+      ) : null,
+
+      // ── PROTOTYPE → PRODUCTION MAPPING ──
+      archTab==="mapping" ? e("div",null,
+        e(Card,{style:{padding:24}},
+          e(SectionLabel,{color:T.purple},"Prototype \u2192 Manage AI Production Mapping"),
+          e("div",{style:{fontSize:12,color:T.textTertiary,marginBottom:16}},"How each prototype component maps to the Manage AI three-zone architecture."),
+          e("div",{style:{borderRadius:10,border:"1px solid "+T.border,overflow:"hidden"}},
+            e("div",{style:{display:"grid",gridTemplateColumns:"1fr 40px 1fr 90px 90px",background:T.surfaceAlt,padding:"10px 16px",borderBottom:"2px solid "+T.border}},
+              e("div",{style:{fontSize:12,fontWeight:700,color:T.red,letterSpacing:"0.06em"}},"PROTOTYPE"),
+              e("div",null),
+              e("div",{style:{fontSize:12,fontWeight:700,color:T.green,letterSpacing:"0.06em"}},"PRODUCTION"),
+              e("div",{style:{fontSize:12,fontWeight:700,color:T.textTertiary,textAlign:"center"}},"ZONE"),
+              e("div",{style:{fontSize:12,fontWeight:700,color:T.textTertiary,textAlign:"center"}},"WEIGHT")),
+            [{p:"Make.com Scenarios",m:"Orchestrator + MCP Servers",z:"1",w:"Heavy",wc:T.red},
+             {p:"Claude HTTP Calls",m:"OpenAI Agents SDK",z:"3",w:"Light",wc:T.green},
+             {p:"SharePoint Direct Access",m:"Airbyte \u2192 Pinecone + MCP",z:"2/3",w:"Medium",wc:T.amber},
+             {p:"Plumsail + CloudConvert",m:"n8n Workflow Engine",z:"1",w:"Medium",wc:T.amber},
+             {p:"Teams Modules",m:"n8n Notification Nodes",z:"1",w:"Light",wc:T.green},
+             {p:"Trigger Files (HITL)",m:"Remote Control Chat UI",z:"1",w:"Medium",wc:T.amber},
+             {p:"Make.com Variables",m:"Config YAML + Secrets Manager",z:"1/2",w:"Light",wc:T.green},
+             {p:"Supabase",m:"RDS PostgreSQL",z:"2",w:"Light",wc:T.green}].map((r,i)=>
+              e("div",{key:i,style:{display:"grid",gridTemplateColumns:"1fr 40px 1fr 90px 90px",padding:"10px 16px",background:i%2===0?T.bg:T.surfaceAlt+"60",borderBottom:"1px solid "+T.borderLight,alignItems:"center"}},
+                e("div",{style:{fontSize:12,fontWeight:600,color:T.text}},r.p),
+                e("div",{style:{textAlign:"center",color:T.accent,fontWeight:700}},"\u2192"),
+                e("div",{style:{fontSize:12,fontWeight:600,color:T.accent}},r.m),
+                e("div",{style:{textAlign:"center"}},e(Badge,{color:T.textTertiary,bg:T.surfaceAlt},"Z"+r.z)),
+                e("div",{style:{textAlign:"center"}},e(Badge,{color:r.wc,bg:r.wc+"10"},r.w)))
+            )
+          )
+        )
+      ) : null
+    );
+  }
+
+  // ═══════════════ RENDER ═══════════════
+  const viewMap = {overview:overviewView,howitworks:howItWorksView,implementation:implementationView,configuration:configurationView,bestpractices:bestPracticesView,architecture:architectureView};
+  const content = (viewMap[activeView]||overviewView)();
+
+return e("div",{style:{minHeight:"100vh",background:T.bg}},
+  renderHeader(),
+  e("main",{style:{maxWidth:1200,margin:"0 auto",padding:"32px 0px 60px"}},content),
+  e("footer",{style:{padding:"16px 40px",borderTop:"1px solid "+T.border,display:"flex",justifyContent:"space-between",alignItems:"center",maxWidth:1200,margin:"0 auto",flexWrap:"wrap",gap:12}},
+    e("div",{style:{fontSize:12,color:T.textTertiary,display:"flex",alignItems:"center",gap:6}},
+      e("img",{
+        src:"https://manageai.io/wp-content/uploads/2026/03/manage_aiArtboard-1.webp",
+        style:{height:14}
+      }),
+      e("span",null,"· Proposal & Resume Drafting · Skillset Training Manual v3.2 · March 2026")),
+    e("div",{style:{fontSize:12,color:T.textTertiary,fontFamily:T.sans}},"CONFIDENTIAL — Prepared for Cornerstone General Contractors")
+  )
+);
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  var rootEl = document.getElementById("root");
+  if (rootEl) {
+    if (ReactDOM.createRoot) {
+      ReactDOM.createRoot(rootEl).render(e(App));
+    } else {
+      ReactDOM.render(e(App), rootEl);
+    }
+  }
+});
+</script>
+

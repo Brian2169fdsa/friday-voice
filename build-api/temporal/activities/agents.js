@@ -1,0 +1,167 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { spawn, execSync } from 'child_process';
+import { getContractFocus } from '../../orchestrator.js';
+
+const CLAUDE = '/usr/bin/claude';
+const AGENT_TIMEOUT = 600000;
+const AGENT_01_TIMEOUT = 600000;
+
+let AGENT_UID, AGENT_GID;
+try {
+  AGENT_UID = parseInt(execSync('id -u claudeagent').toString().trim());
+  AGENT_GID = parseInt(execSync('id -g claudeagent').toString().trim());
+} catch (e) {
+  AGENT_UID = null;
+  AGENT_GID = null;
+}
+
+function runClaudeAgent(promptFile, agentDir, timeoutMs) {
+  timeoutMs = timeoutMs || AGENT_TIMEOUT;
+  return new Promise((resolve, reject) => {
+    const proc = spawn('bash', ['-c', CLAUDE + ' --dangerously-skip-permissions -p "$(cat ' + promptFile + ')"'], {
+      cwd: agentDir,
+      uid: AGENT_UID, gid: AGENT_GID,
+      env: { ...process.env, HOME: '/home/claudeagent', USER: 'claudeagent', CLAUDECODE: undefined },
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let stderr = '';
+    proc.stderr.on('data', d => { stderr += d.toString(); });
+    const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
+    proc.on('close', code => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error('Exit ' + code + ': ' + stderr.slice(0, 300)));
+    });
+    proc.on('error', err => { clearTimeout(timer); reject(err); });
+  });
+}
+
+// Import the agent definitions from server.js would create circular deps,
+// so we accept the agent config as a parameter from the workflow
+async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
+  const agentDir = path.join(outputDir, agentConfig.output_subdir);
+  await fs.mkdir(agentDir, { recursive: true });
+  if (AGENT_UID) {
+    try { await fs.chown(agentDir, AGENT_UID, AGENT_GID); } catch(e) {}
+  }
+  const contractFocus = contract ? getContractFocus(agentConfig.agent_id, contract) : '';
+  let phase1Context = '';
+  if (contract && contract.phase1Results) {
+    try {
+      const p1 = contract.phase1Results;
+      const safe = (v, max) => { try { const s = JSON.stringify(v, null, 2); return s.slice(0, max || 4000); } catch(e) { return String(v).slice(0, 500); } };
+
+      const schemaBlock = [
+        'Status: ' + (p1.schema?.status || 'unknown'),
+        'Tables Verified: ' + safe(p1.schema?.tables_verified || p1.schema?.tables_created || [], 3000),
+        'Tables Count: ' + (p1.schema?.tables_count || p1.schema?.tables_verified?.length || 0),
+        'Full Schema Output: ' + safe(p1.schema, 4000)
+      ].join('\n');
+
+      const workflowBlock = [
+        'Status: ' + (p1.workflow?.status || 'unknown'),
+        'Manifest: ' + safe(p1.workflow?.manifest || {}, 4000),
+        'Imported Workflows: ' + safe(p1.workflow?.imported || p1.workflow?.manifest?.workflows || [], 3000),
+        'Total Imported: ' + (p1.workflow?.manifest?.total_imported || 0),
+        'Total Activated: ' + (p1.workflow?.manifest?.total_activated || 0)
+      ].join('\n');
+
+      const llmBlock = [
+        'Status: ' + (p1.llm?.status || 'unknown'),
+        'Files Produced: ' + safe(p1.llm?.files_produced || [], 2000),
+        'Full LLM Output: ' + safe(p1.llm, 4000)
+      ].join('\n');
+
+      const externalBlock = [
+        'Status: ' + (p1.external?.status || 'unknown'),
+        'Platforms: ' + safe(p1.external?.platforms || [], 2000),
+        'Full External Output: ' + safe(p1.external, 3000)
+      ].join('\n');
+
+      const platformBlock = [
+        'Status: ' + (p1.platform?.status || 'unknown'),
+        'Repo URL: ' + (p1.platform?.manifest?.repo_url || 'N/A'),
+        'Tech Stack: ' + safe(p1.platform?.manifest?.tech_stack || [], 1000),
+        'Environment Variables: ' + safe(p1.platform?.manifest?.environment_variables || [], 2000),
+        'Full Platform Output: ' + safe(p1.platform, 4000)
+      ].join('\n');
+
+      const qaBlock = [
+        'Status: ' + (p1.qa?.status || 'unknown'),
+        'Pass Rate: ' + (p1.qa?.pass_rate || 0) + '%',
+        'Passed: ' + (p1.qa?.passed || 0) + ' / Total: ' + (p1.qa?.total || 0) + ' / Failed: ' + (p1.qa?.failed || 0),
+        'Duration: ' + (p1.qa?.duration || 0) + 's',
+        'Failures: ' + safe(p1.qa?.failures || [], 3000),
+        'Test Results: ' + safe(p1.qa?.test_results, 4000),
+        'Iteration Cycles: ' + (p1.iteration_cycles || 0)
+      ].join('\n');
+
+      phase1Context = '\n\n══════════════════════════════════════════════════════\n' +
+        'PHASE 1 BUILD RESULTS — Use this data to populate your document with ACTUAL names, values, and details.\n' +
+        '══════════════════════════════════════════════════════\n\n' +
+        '── Schema (BUILD-006 output) ──\n' + schemaBlock + '\n\n' +
+        '── Workflow (BUILD-002 output) ──\n' + workflowBlock + '\n\n' +
+        '── LLM/Prompts (BUILD-004 output) ──\n' + llmBlock + '\n\n' +
+        '── External Integrations (BUILD-007 output) ──\n' + externalBlock + '\n\n' +
+        '── Platform/GitHub (BUILD-005 output) ──\n' + platformBlock + '\n\n' +
+        '── QA Results (BUILD-003 output) ──\n' + qaBlock;
+    } catch(e) { phase1Context = ''; }
+  }
+  const prompt = agentConfig.task + '\n\nOUTPUT DIRECTORY: ' + agentDir +
+    '\n\nWrite ALL files directly to ' + agentDir + '. Use exact filenames specified. Work autonomously. Do not ask questions.' + contractFocus + phase1Context;
+  const promptFile = '/tmp/friday-temporal-' + jobData.job_id + '-' + agentConfig.agent_id + '.txt';
+  await fs.writeFile(promptFile, prompt);
+  console.log('[TEMPORAL][' + agentConfig.agent_id + '] Starting: ' + agentConfig.specialist);
+  const t = Date.now();
+  try {
+    const timeoutMs = agentConfig.agent_id === 'agent_01' ? AGENT_01_TIMEOUT : AGENT_TIMEOUT;
+    await runClaudeAgent(promptFile, agentDir, timeoutMs);
+    const dur = Math.round((Date.now() - t) / 1000);
+    console.log('[TEMPORAL][' + agentConfig.agent_id + '] Done in ' + dur + 's');
+    await fs.rm(promptFile, { force: true });
+    return { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'complete', duration: dur, output_subdir: agentConfig.output_subdir };
+  } catch (err) {
+    const dur = Math.round((Date.now() - t) / 1000);
+    console.error('[TEMPORAL][' + agentConfig.agent_id + '] Error:', err.message.slice(0, 300));
+    await fs.rm(promptFile, { force: true });
+    return { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'error', error: err.message.slice(0, 200), duration: dur, output_subdir: agentConfig.output_subdir };
+  }
+}
+
+export async function agent01Activity(jobData, contract) {
+  const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
+  // We need to dynamically import the agent definitions - pass them through jobData._agentConfigs
+  // or reconstruct them here. For now, use the config passed from workflow
+  const agentConfig = jobData._agentConfigs?.[0];
+  if (!agentConfig) throw new Error('No agent config for agent_01');
+  return runSingleAgent(agentConfig, jobData, contract, outputDir);
+}
+
+export async function agent02Activity(jobData, contract) {
+  const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
+  const agentConfig = jobData._agentConfigs?.[1];
+  if (!agentConfig) throw new Error('No agent config for agent_02');
+  return runSingleAgent(agentConfig, jobData, contract, outputDir);
+}
+
+export async function agent03Activity(jobData, contract) {
+  const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
+  const agentConfig = jobData._agentConfigs?.[2];
+  if (!agentConfig) throw new Error('No agent config for agent_03');
+  return runSingleAgent(agentConfig, jobData, contract, outputDir);
+}
+
+export async function agent04Activity(jobData, contract) {
+  const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
+  const agentConfig = jobData._agentConfigs?.[3];
+  if (!agentConfig) throw new Error('No agent config for agent_04');
+  return runSingleAgent(agentConfig, jobData, contract, outputDir);
+}
+
+export async function agent05Activity(jobData, contract) {
+  const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
+  const agentConfig = jobData._agentConfigs?.[4];
+  if (!agentConfig) throw new Error('No agent config for agent_05');
+  return runSingleAgent(agentConfig, jobData, contract, outputDir);
+}

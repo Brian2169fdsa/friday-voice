@@ -1,0 +1,23 @@
+module.exports = {
+  apps: [{
+    name: 'manageai-build-api',
+    script: './build-api/server.js',
+    cwd: '/opt/manageai',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+      ANTHROPIC_API_KEY: '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',
+      AZURE_TENANT_ID: 'b09a1fba-3225-4ea8-9e4f-8a7bf4f41fef',
+      AZURE_CLIENT_ID: '46883fdc-e018-4b5e-9250-76037f1ab8e0',
+      AZURE_CLIENT_SECRET: '2qt8Q~SKWOrgmg7Bhnq0_QDtyjrO4tntHfE_1a27',
+      ONEDRIVE_USER_EMAIL: 'brian@manageai.io',
+      SUPABASE_URL: 'https://abqwambiblgjztzkrbzg.supabase.co',
+      MAKE_TEAM_ID: '1158744',
+      FRIDAY_2001_URL: 'https://hook.us2.make.com/2u6wwq4m0ebujbp7avv8xpgg9dacsddm',
+      FRIDAY_2004_URL: 'https://hook.us2.make.com/fe2k62vzud7sdz8gnqgxm7qcapg4iofc',
+      FRIDAY_2006A_URL: 'https://hook.us2.make.com/mcj6xu7isdtfmaeb1di4go6td7bnvblz',
+      FRIDAY_2006B_URL: 'https://hook.us2.make.com/mi6dvdcaz1vcs252xf2052xd7pau0979',
+      BUILD_INTAKE_URL: 'https://hook.us2.make.com/juxx7atjl13udz9vp633f86ec7ihj5ml'
+    }
+  }]
+}

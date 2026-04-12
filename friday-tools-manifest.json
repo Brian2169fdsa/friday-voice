@@ -1,0 +1,70 @@
+{
+  "deployed_at": "2026-03-17T02:14:58.300Z",
+  "instance": "https://manageai2026.app.n8n.cloud",
+  "workflows": {
+    "T1-BRIEFING": {
+      "id": "RQyXBF2ir8ypqMqO",
+      "name": "manageai-friday-pipeline-briefing",
+      "path": "friday-tool-briefing",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-briefing",
+      "env_key": "N8N_TOOL_BRIEFING",
+      "active": true
+    },
+    "T2-ACTIVE": {
+      "id": "GPVRzYI7EnfSQM9N",
+      "name": "manageai-friday-active-builds",
+      "path": "friday-tool-active-builds",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-active-builds",
+      "env_key": "N8N_TOOL_ACTIVE_BUILDS",
+      "active": true
+    },
+    "T3-CLIENT": {
+      "id": "0yAz5mAaLWE5Dmlj",
+      "name": "manageai-friday-client-build-history",
+      "path": "friday-tool-client-builds",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-client-builds",
+      "env_key": "N8N_TOOL_CLIENT_HISTORY",
+      "active": true
+    },
+    "T4-STATUS": {
+      "id": "LXaky5WF3ayX67ZU",
+      "name": "manageai-friday-build-status",
+      "path": "friday-tool-build-status",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-build-status",
+      "env_key": "N8N_TOOL_BUILD_STATUS",
+      "active": true
+    },
+    "T5-QUEUE": {
+      "id": "wmdzraWCMfn9ZSUQ",
+      "name": "manageai-friday-ticket-queue",
+      "path": "friday-tool-ticket-queue",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-ticket-queue",
+      "env_key": "N8N_TOOL_TICKET_QUEUE",
+      "active": true
+    },
+    "T6-HEALTH": {
+      "id": "bjiJu11ZYDLVZT1e",
+      "name": "manageai-friday-workflow-health",
+      "path": "friday-tool-wf-health",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-wf-health",
+      "env_key": "N8N_TOOL_WF_HEALTH",
+      "active": true
+    },
+    "T7-SCORE": {
+      "id": "kveLymy5rRLUwQBz",
+      "name": "manageai-friday-build-score-detail",
+      "path": "friday-tool-score-detail",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-score-detail",
+      "env_key": "N8N_TOOL_SCORE_DETAIL",
+      "active": true
+    },
+    "T8-CLIENT-LIST": {
+      "id": "yp1G64rQKmcyNYaV",
+      "name": "manageai-friday-client-list",
+      "path": "friday-tool-client-list",
+      "url": "https://manageai2026.app.n8n.cloud/webhook/friday-tool-client-list",
+      "env_key": "N8N_TOOL_CLIENT_LIST",
+      "active": true
+    }
+  }
+}
