@@ -38,6 +38,7 @@ async function run() {
       ...(await import('./activities/decision-agent.js')),
       ...(await import('./activities/temporal-specialist.js')),
       ...(await import('./activities/prompt-quality-agent.js')),
+      ...(await import('./activities/teams-notify.js')),
     },
     taskQueue: 'friday-builds',
   });

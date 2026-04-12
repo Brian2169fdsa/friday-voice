@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
 import { getGraphToken, uploadFile } from './onedrive.js';
+import { Context } from '@temporalio/activity';
 
 const execFileAsync = promisify(execFile);
 
@@ -181,6 +182,10 @@ Do not ask questions. Do not request more information. Everything you need is in
   const claudePath = '/usr/bin/claude';
   const args = ['--print', '--dangerously-skip-permissions', prompt];
 
+  const heartbeatInterval = setInterval(() => {
+    try { Context.current().heartbeat('claude-code-running'); } catch(e) {}
+  }, 30000);
+
   try {
     const sudoArgs = ['-u', 'claudeagent', claudePath, ...args];
     const { stdout, stderr } = await execFileAsync('sudo', sudoArgs, {
@@ -193,6 +198,7 @@ Do not ask questions. Do not request more information. Everything you need is in
       }
     });
 
+    clearInterval(heartbeatInterval);
     if (stderr) console.warn('[BUILD-001] stderr:', stderr.slice(0, 500));
 
     // Read the contract file
@@ -267,6 +273,7 @@ Do not ask questions. Do not request more information. Everything you need is in
     return contract;
 
   } catch(e) {
+    clearInterval(heartbeatInterval);
     console.warn('[BUILD-001] Claude Code agent failed, using fallback:', e.message);
     const contract = buildFallbackContract(jobData);
     contract.mustNeverAsk = mustNeverAsk;

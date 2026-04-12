@@ -3,6 +3,7 @@ import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { createClient } from '@supabase/supabase-js';
 import { getGraphToken, uploadFile } from './onedrive.js';
+import { Context } from '@temporalio/activity';
 
 const CLAUDE = '/usr/bin/claude';
 const LLM_TIMEOUT = 900000;
@@ -22,15 +23,19 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
       env: { ...process.env, HOME: '/home/claudeagent', USER: 'claudeagent', CLAUDECODE: undefined },
       stdio: ['ignore', 'pipe', 'pipe']
     });
+    const heartbeatInterval = setInterval(() => {
+      try { Context.current().heartbeat('claude-code-running'); } catch(e) {}
+    }, 30000);
     let stderr = '';
     proc.stderr.on('data', d => { stderr += d.toString(); });
     const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
     proc.on('close', code => {
+      clearInterval(heartbeatInterval);
       clearTimeout(timer);
       if (code === 0) resolve();
       else reject(new Error('Exit ' + code + ': ' + stderr.slice(0, 500)));
     });
-    proc.on('error', err => { clearTimeout(timer); reject(err); });
+    proc.on('error', err => { clearInterval(heartbeatInterval); clearTimeout(timer); reject(err); });
   });
 }
 
@@ -96,7 +101,7 @@ export async function llmSpecialistActivity(jobData, contract, priorResults) {
           liveSignals.push(payload.new);
         })
         .subscribe();
-      setTimeout(() => { channel.unsubscribe(); resolve(); }, 2000);
+      setTimeout(() => { channel.unsubscribe(); resolve(); }, 10000);
     });
 
     if (liveSignals.length > 0) {

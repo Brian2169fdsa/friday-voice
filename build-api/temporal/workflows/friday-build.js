@@ -622,6 +622,19 @@ export async function FridayBuildWorkflow(jobData) {
     console.warn('[FRIDAY] Phase 1 review email failed (non-blocking):', e.message);
   }
 
+  // Send Phase 1 Teams notification (non-blocking)
+  try {
+    await shortActivities.sendFridayTeamsCard({
+      ticketId: jobData.ticket_id,
+      title: 'Phase 1 Build Complete — Review Required',
+      summary: `${clientName} — ${jobData.project_name} is ready for Phase 1 review`,
+      details: `Platform: ${jobData.platform} | QA Score: pending | Agents: BUILD-001 through BUILD-011 complete`,
+      actionType: 'phase1'
+    });
+  } catch(e) {
+    console.warn('[FRIDAY] Teams Phase 1 notification failed (non-blocking):', e.message);
+  }
+
   // Wait for Brian's Phase 1 approval before starting Phase 2 (FR-GAP-023)
   let phase1Decision = null;
   setHandler(phase1ApprovedSignal, (p) => { phase1Decision = p; });
@@ -690,6 +703,19 @@ export async function FridayBuildWorkflow(jobData) {
   }
 
   await updateBuildStatus(ticketId, 'complete', 100);
+
+  // Send build complete Teams notification (non-blocking)
+  try {
+    await shortActivities.sendFridayTeamsCard({
+      ticketId: jobData.ticket_id,
+      title: 'Build Complete — Ready for Delivery',
+      summary: `${clientName} — ${jobData.project_name} fully built and approved`,
+      details: `Platform: ${jobData.platform} | Build complete and ready for client delivery`,
+      actionType: 'complete'
+    });
+  } catch(e) {
+    console.warn('[FRIDAY] Teams complete notification failed (non-blocking):', e.message);
+  }
 
   // Record total duration
   const totalDurationMs = Date.now() - buildStartTime;
