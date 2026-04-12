@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { createClient } from '@supabase/supabase-js';
+import { getGraphToken, uploadFile } from './onedrive.js';
 
 const CLAUDE = '/usr/bin/claude';
 const DEPLOY_TIMEOUT = 900000;
@@ -35,6 +36,7 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
 }
 
 export async function platformBuilderActivity(jobData, contract, buildOutputs) {
+  const startTime = Date.now();
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
   const agentDir = path.join(outputDir, 'platform');
   await fs.mkdir(agentDir, { recursive: true });
@@ -241,10 +243,26 @@ OUTPUT DIRECTORY: ${agentDir}`;
     const filesPushed = manifest?.files_pushed?.length || 0;
     console.log('[BUILD-005] Done in ' + dur + 's | Files pushed: ' + filesPushed + ' | Repo: ' + (manifest?.repo_url || 'unknown'));
 
+    const p5Status = manifest?.success ? 'complete' : 'partial';
+    let onedriveUrl = null;
+    try {
+      const token = await getGraphToken();
+      const fileContent = await fs.readFile(path.join(agentDir, 'deployment-manifest.json'), 'utf8');
+      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/platform`, 'deployment-manifest.json', fileContent, 'application/json');
+      console.log('[BUILD-005] OneDrive upload:', onedriveUrl);
+    } catch(upErr) { console.warn('[BUILD-005] OneDrive upload failed (non-blocking):', upErr.message); }
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-005', agent_name: 'Platform Builder', status: p5Status, output: { repo_url: manifest?.repo_url, repo_name: manifest?.repo_name, files_pushed: filesPushed, success: manifest?.success || false, notes: manifest?.notes?.slice(0, 200), onedrive_url: onedriveUrl }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-005] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'platform_builder',
       specialist: 'BUILD-005 Platform Builder',
-      status: manifest?.success ? 'complete' : 'partial',
+      status: p5Status,
       duration: dur,
       output_subdir: 'platform',
       deployment_manifest: manifest,
@@ -255,6 +273,15 @@ OUTPUT DIRECTORY: ${agentDir}`;
     const dur = Math.round((Date.now() - t) / 1000);
     console.error('[BUILD-005] Error:', err.message.slice(0, 300));
     await fs.rm(promptFile, { force: true });
+
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-005', agent_name: 'Platform Builder', status: 'error', output: { error: err.message.slice(0, 200), files_pushed: 0, repo_url: null }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-005] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'platform_builder',
       specialist: 'BUILD-005 Platform Builder',

@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { createClient } from '@supabase/supabase-js';
+import { getGraphToken, uploadFile } from './onedrive.js';
 
 const CLAUDE = '/usr/bin/claude';
 const WORKFLOW_TIMEOUT = 900000;
@@ -35,6 +36,7 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
 }
 
 export async function workflowBuilderActivity(jobData, contract) {
+  const startTime = Date.now();
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
   const agentDir = path.join(outputDir, 'workflows');
   await fs.mkdir(agentDir, { recursive: true });
@@ -236,10 +238,26 @@ OUTPUT DIRECTORY: ${agentDir}`;
       console.warn('[BUILD-002] WARNING: Zero workflows imported — flagging as QA concern');
     }
 
+    const wfStatus = wfCount === 0 ? 'warning' : (manifest?.success ? 'complete' : 'partial');
+    let onedriveUrl = null;
+    try {
+      const token = await getGraphToken();
+      const fileContent = await fs.readFile(path.join(agentDir, 'workflow-manifest.json'), 'utf8');
+      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/workflows`, 'workflow-manifest.json', fileContent, 'application/json');
+      console.log('[BUILD-002] OneDrive upload:', onedriveUrl);
+    } catch(upErr) { console.warn('[BUILD-002] OneDrive upload failed (non-blocking):', upErr.message); }
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-002', agent_name: 'Workflow Builder', status: wfStatus, output: { workflows_deployed: active, workflows_total: wfCount, workflow_names: manifest?.workflows?.map(w => w.name) || [], success: manifest?.success || false, zero_workflow_warning: zeroWorkflowWarning, onedrive_url: onedriveUrl }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-002] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'workflow_builder',
       specialist: 'BUILD-002 Workflow Builder',
-      status: wfCount === 0 ? 'warning' : (manifest?.success ? 'complete' : 'partial'),
+      status: wfStatus,
       duration: dur,
       output_subdir: 'workflows',
       workflow_manifest: manifest,
@@ -252,6 +270,15 @@ OUTPUT DIRECTORY: ${agentDir}`;
     console.error('[BUILD-002] Error:', err.message.slice(0, 300));
     console.warn('[BUILD-002] WARNING: Agent failed — zero workflows will be imported');
     await fs.rm(promptFile, { force: true });
+
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-002', agent_name: 'Workflow Builder', status: 'error', output: { error: err.message.slice(0, 200), workflows_deployed: 0, workflows_total: 0 }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-002] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'workflow_builder',
       specialist: 'BUILD-002 Workflow Builder',

@@ -227,9 +227,8 @@ export async function uploadPhase1ManifestsActivity(jobData, phase1Results) {
       continue;
     }
     try {
-      const filePath = `${basePath}/${manifest.name}`;
       const content = JSON.stringify(manifest.data, null, 2);
-      const url = await uploadFile(token, filePath, content);
+      const url = await uploadFile(token, basePath, manifest.name, content, 'application/json');
       results.push({ name: manifest.name, url, status: 'uploaded' });
       console.log(`[FRIDAY] Uploaded ${manifest.label} manifest:`, manifest.name);
     } catch(e) {

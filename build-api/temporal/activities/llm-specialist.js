@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { createClient } from '@supabase/supabase-js';
+import { getGraphToken, uploadFile } from './onedrive.js';
 
 const CLAUDE = '/usr/bin/claude';
 const LLM_TIMEOUT = 900000;
@@ -34,6 +35,7 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
 }
 
 export async function llmSpecialistActivity(jobData, contract, priorResults) {
+  const startTime = Date.now();
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
   const agentDir = path.join(outputDir, 'llm');
   await fs.mkdir(agentDir, { recursive: true });
@@ -244,6 +246,21 @@ Do not ask questions. Everything you need is above.`;
 
     console.log('[BUILD-004] Done in ' + dur + 's | Files: ' + verified.length + '/3 verified');
 
+    let onedriveUrl = null;
+    try {
+      const token = await getGraphToken();
+      const fileContent = await fs.readFile(path.join(agentDir, 'ai-integration.js'), 'utf8');
+      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/llm`, 'ai-integration.js', fileContent, 'application/javascript');
+      console.log('[BUILD-004] OneDrive upload:', onedriveUrl);
+    } catch(upErr) { console.warn('[BUILD-004] OneDrive upload failed (non-blocking):', upErr.message); }
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-004', agent_name: 'LLM Specialist', status: verified.length >= 2 ? 'complete' : 'partial', output: { files_produced: verified, primary_model: manifest?.primary_model, system_prompt_length: manifest?.system_prompt_length, prompt_templates: manifest?.prompt_templates, edge_cases_handled: manifest?.edge_cases_handled, onedrive_url: onedriveUrl }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-004] DB write failed (non-blocking):', dbErr.message); }
+
     // Emit test_pairs signal to Supabase so QA tester can evaluate LLM accuracy
     try {
       const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -287,6 +304,15 @@ Do not ask questions. Everything you need is above.`;
   } catch(err) {
     const dur = ((Date.now() - start) / 1000).toFixed(1);
     console.error('[BUILD-004] Error:', err.message.slice(0, 300));
+
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-004', agent_name: 'LLM Specialist', status: 'error', output: { error: err.message.slice(0, 200), files_produced: [] }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-004] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'BUILD-004',
       specialist: 'BUILD-004 LLM Integration Specialist',

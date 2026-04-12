@@ -16,6 +16,30 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY ||
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 import { getTemporalClient } from './temporal/client.js';
+import { z } from 'zod';
+const BriefSchema = z.object({
+  client: z.string().min(1),
+  customer_id: z.string().uuid(),
+  project_name: z.string().min(1),
+  request_description: z.string().min(1),
+  platform: z.string().min(1),
+  workflow_steps: z.string().min(1),
+  decision_authority: z.string().min(1),
+  success_metrics: z.string().min(1),
+  data_sources: z.string().min(1),
+  guardrails: z.string().min(1),
+  edge_cases: z.string().min(1),
+  acceptance_criteria: z.string().min(1),
+  section_a: z.object({
+    client_profile: z.object({ confidence_score: z.string(), content: z.string() }),
+    current_state: z.object({ confidence_score: z.string(), content: z.string() }),
+    prototype_scope: z.object({ confidence_score: z.string(), content: z.string() }),
+    success_metrics: z.object({ confidence_score: z.string(), content: z.string() }),
+    workforce_vision: z.object({ confidence_score: z.string(), content: z.string() }),
+    technical_constraints: z.object({ confidence_score: z.string(), content: z.string() }),
+    opportunity_assessment: z.object({ confidence_score: z.string(), content: z.string() }),
+  }),
+});
 
 // ── Activity Logger ──────────────────────────────────────────────────────────
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2151,60 +2175,133 @@ app.get('/build-review/:ticketId/phase1', async (req, res) => {
       agentConfigs = ac || [];
     }
 
+    // Query build_agent_runs for Phase 1 agent output and OneDrive links
+    let agentRunsData = [];
+    try {
+      const sbUrl = process.env.SUPABASE_URL;
+      const sbKey = process.env.SUPABASE_SERVICE_KEY;
+      const arRes = await fetch(`${sbUrl}/rest/v1/build_agent_runs?ticket_id=eq.${encodeURIComponent(ticketId)}&select=agent_id,agent_name,status,output,duration_ms,started_at,completed_at&order=started_at.asc`, {
+        headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+      });
+      if (arRes.ok) agentRunsData = await arRes.json();
+    } catch(e) { console.warn('[FRIDAY] build_agent_runs query failed:', e.message); }
+
+    // Query friday_builds for build metadata
+    let buildMeta = null;
+    try {
+      const sbUrl = process.env.SUPABASE_URL;
+      const sbKey = process.env.SUPABASE_SERVICE_KEY;
+      const bmRes = await fetch(`${sbUrl}/rest/v1/friday_builds?ticket_id=eq.${encodeURIComponent(ticketId)}&select=status,progress_pct,client_name,project_name,platform&limit=1`, {
+        headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` }
+      });
+      if (bmRes.ok) { const rows = await bmRes.json(); buildMeta = rows[0] || null; }
+    } catch(e) { console.warn('[FRIDAY] friday_builds query failed:', e.message); }
+
+    // Build agent run map keyed by agent_id
+    const agentRunMap = {};
+    for (const run of agentRunsData) { agentRunMap[run.agent_id] = run; }
+
     // Agent mapping: BUILD-001=planner, BUILD-002=workflow, BUILD-003=QA, BUILD-004=LLM, BUILD-005=platform, BUILD-006=schema, BUILD-007=external
     const agentCard = (id, label, icon, content) => `<div class="card"><h2>${icon} ${id} &mdash; ${label}</h2>${content}</div>`;
 
-    // BUILD-001: Planner (build-contract.json)
+    // BUILD-001: Planner — prefer agentRunMap, fallback to output_links
+    const plannerRun = agentRunMap['BUILD-001'];
+    const plannerOdUrl = plannerRun?.output?.onedrive_url;
     const contractLink = data.output_links.find(l => (l.name || '').includes('build-contract'));
-    const plannerContent = contractLink
-      ? `<p>Build contract generated</p><a href="${contractLink.url || '#'}" target="_blank" class="file-link">build-contract.json</a>`
-      : '<p class="muted">No build contract found</p>';
+    const plannerContent = plannerOdUrl
+      ? `<p>Build contract generated</p><a href="${plannerOdUrl}" target="_blank" class="file-link">build-contract.json</a>`
+      : (contractLink
+        ? `<p>Build contract generated</p><a href="${contractLink.url || '#'}" target="_blank" class="file-link">build-contract.json</a>`
+        : '<p class="muted">No build contract found</p>');
 
-    // BUILD-006: Schema (confirmed-schema.json + schema/ files)
+    // BUILD-006: Schema — prefer agentRunMap, fallback to output_links
+    const schemaRun = agentRunMap['BUILD-006'];
+    const schemaOdUrl = schemaRun?.output?.onedrive_url;
+    const schemaTableNames = schemaRun?.output?.table_names || [];
     const schemaLink = data.output_links.find(l => (l.name || '').includes('confirmed-schema'));
     const schemaFiles = data.output_links.filter(l => (l.name || '').startsWith('schema/'));
-    const schemaContent = schemaFiles.length > 0
-      ? '<table><thead><tr><th>Table/File</th><th>Status</th></tr></thead><tbody>' + schemaFiles.map(f => '<tr><td><a href="' + (f.url || '#') + '" target="_blank">' + (f.name || '').replace('schema/', '') + '</a></td><td><span class="badge badge-ok">Created</span></td></tr>').join('') + '</tbody></table>'
-      : (schemaLink ? '<a href="' + (schemaLink.url || '#') + '" target="_blank" class="file-link">confirmed-schema.json</a>' : '<p class="muted">No schema files</p>');
+    let schemaContent = '';
+    if (schemaTableNames.length > 0) {
+      schemaContent = '<table><thead><tr><th>Table</th><th>Status</th></tr></thead><tbody>' +
+        schemaTableNames.map(t => '<tr><td>' + t + '</td><td><span class="badge badge-ok">Created</span></td></tr>').join('') +
+        '</tbody></table>' +
+        (schemaOdUrl ? '<a href="' + schemaOdUrl + '" target="_blank" class="file-link" style="margin-top:8px">confirmed-schema.json</a>' : '');
+    } else if (schemaFiles.length > 0) {
+      schemaContent = '<table><thead><tr><th>Table/File</th><th>Status</th></tr></thead><tbody>' + schemaFiles.map(f => '<tr><td><a href="' + (f.url || '#') + '" target="_blank">' + (f.name || '').replace('schema/', '') + '</a></td><td><span class="badge badge-ok">Created</span></td></tr>').join('') + '</tbody></table>';
+    } else {
+      const schemaFallbackUrl = schemaOdUrl || schemaLink?.url;
+      schemaContent = schemaFallbackUrl ? '<a href="' + schemaFallbackUrl + '" target="_blank" class="file-link">confirmed-schema.json</a>' : '<p class="muted">No schema files</p>';
+    }
 
-    // BUILD-002: Workflow Architect (workflow/ + workflows/ files + build_scenarios)
+    // BUILD-002: Workflow Architect — prefer agentRunMap, fallback to output_links
+    const wfRun = agentRunMap['BUILD-002'];
+    const wfOdUrl = wfRun?.output?.onedrive_url;
+    const wfWorkflowNames = wfRun?.output?.workflow_names || [];
     const wfNamedFiles = data.output_links.filter(l => { const n = (l.name || '').toLowerCase(); return (n.startsWith('workflow/') || n.startsWith('workflows/')) && n.endsWith('.json') && !n.includes('manifest'); });
     let wfContent = '';
     if (scenarios.length > 0) {
       wfContent = '<table><thead><tr><th>Workflow</th><th>Platform</th><th>Status</th></tr></thead><tbody>' +
         scenarios.map(s => '<tr><td>' + s.scenario_name + '</td><td>' + s.platform + '</td><td><span class="badge badge-ok">' + s.status + '</span></td></tr>').join('') +
         '</tbody></table>';
+    } else if (wfWorkflowNames.length > 0) {
+      wfContent = '<table><thead><tr><th>Workflow</th><th>Status</th></tr></thead><tbody>' +
+        wfWorkflowNames.map(n => '<tr><td>' + n + '</td><td><span class="badge badge-ok">Ready</span></td></tr>').join('') +
+        '</tbody></table>' +
+        (wfOdUrl ? '<a href="' + wfOdUrl + '" target="_blank" class="file-link" style="margin-top:8px">workflow-manifest.json</a>' : '');
     } else if (wfNamedFiles.length > 0) {
       wfContent = '<table><thead><tr><th>Workflow File</th><th>Status</th></tr></thead><tbody>' +
         wfNamedFiles.map(f => '<tr><td><a href="' + (f.url || '#') + '" target="_blank">' + (f.name || '').replace(/^(workflow|workflows)\//, '').replace('.json', '') + '</a></td><td><span class="badge badge-ok">Ready</span></td></tr>').join('') +
         '</tbody></table>';
     } else {
-      wfContent = '<p class="muted">No workflow files detected</p>';
+      wfContent = wfOdUrl ? '<a href="' + wfOdUrl + '" target="_blank" class="file-link">workflow-manifest.json</a>' : '<p class="muted">No workflow files detected</p>';
     }
 
-    // BUILD-004: LLM / Prompts (llm/ files)
+    // BUILD-004: LLM / Prompts — prefer agentRunMap, fallback to output_links
+    const llmRun = agentRunMap['BUILD-004'];
+    const llmOdUrl = llmRun?.output?.onedrive_url;
+    const llmFilesProduced = llmRun?.output?.files_produced || [];
     const llmFiles = data.output_links.filter(l => (l.name || '').startsWith('llm/') && !(l.name || '').includes('manifest'));
-    const llmContent = llmFiles.length > 0
-      ? '<ul>' + llmFiles.map(f => '<li><a href="' + (f.url || '#') + '" target="_blank">' + (f.name || '').replace('llm/', '') + '</a></li>').join('') + '</ul>'
-      : '<p class="muted">No LLM/prompt files detected</p>';
+    let llmContent = '';
+    if (llmFilesProduced.length > 0) {
+      llmContent = '<ul>' + llmFilesProduced.map(f => '<li>' + f + '</li>').join('') + '</ul>' +
+        (llmOdUrl ? '<a href="' + llmOdUrl + '" target="_blank" class="file-link" style="margin-top:8px">ai-integration.js</a>' : '');
+    } else if (llmFiles.length > 0) {
+      llmContent = '<ul>' + llmFiles.map(f => '<li><a href="' + (f.url || '#') + '" target="_blank">' + (f.name || '').replace('llm/', '') + '</a></li>').join('') + '</ul>';
+    } else {
+      llmContent = llmOdUrl ? '<a href="' + llmOdUrl + '" target="_blank" class="file-link">ai-integration.js</a>' : '<p class="muted">No LLM/prompt files detected</p>';
+    }
 
-    // BUILD-007: External Integrations (external/ files)
+    // BUILD-007: External Integrations (output_links only — no dedicated agentRunMap key yet)
     const extFiles = data.output_links.filter(l => (l.name || '').startsWith('external/') && !(l.name || '').includes('manifest'));
     const extContent = extFiles.length > 0
       ? '<ul>' + extFiles.map(f => '<li><a href="' + (f.url || '#') + '" target="_blank">' + (f.name || '').replace('external/', '') + '</a></li>').join('') + '</ul>'
       : '<p class="muted">No external integrations</p>';
 
-    // BUILD-005: Platform / GitHub (platform/deployment-manifest.json)
+    // BUILD-005: Platform / GitHub — prefer agentRunMap, fallback to output_links
+    const platformRun = agentRunMap['BUILD-005'];
+    const platformOdUrl = platformRun?.output?.onedrive_url;
+    const platformRepoUrl = platformRun?.output?.repo_url;
     const platformLink = data.output_links.find(l => (l.name || '').includes('deployment-manifest') || (l.name || '').includes('platform-manifest'));
-    const platformContent = platformLink
-      ? `<a href="${platformLink.url || '#'}" target="_blank" class="file-link">${(platformLink.name || '').replace(/^(platform|external)\//, '')}</a>`
-      : '<p class="muted">No platform manifest</p>';
+    let platformContent = '';
+    if (platformOdUrl || platformLink) {
+      const linkUrl = platformOdUrl || platformLink?.url || '#';
+      platformContent = `<a href="${linkUrl}" target="_blank" class="file-link">deployment-manifest.json</a>`;
+      if (platformRepoUrl) platformContent += `<p style="margin-top:8px;font-size:.8rem"><a href="${platformRepoUrl}" target="_blank">&#x1f517; ${platformRepoUrl}</a></p>`;
+    } else if (platformRepoUrl) {
+      platformContent = `<p style="font-size:.8rem"><a href="${platformRepoUrl}" target="_blank">&#x1f517; ${platformRepoUrl}</a></p>`;
+    } else {
+      platformContent = '<p class="muted">No platform manifest</p>';
+    }
 
-    // BUILD-003: QA (qa-tests/test-results.json)
+    // BUILD-003: QA — prefer agentRunMap score, fallback to progress_pct
+    const qaRun = agentRunMap['BUILD-003'];
+    const qaOdUrl = qaRun?.output?.onedrive_url;
+    const effectiveQaScore = qaRun?.output?.score ?? qaRun?.output?.pass_rate ?? qaScore;
     const qaLink = data.output_links.find(l => (l.name || '').includes('test-results'));
-    const qaContent = qaLink
-      ? `<div class="score-ring" style="border:4px solid ${qaScore >= 80 ? '#22c55e' : qaScore >= 50 ? '#eab308' : '#ef4444'}">${qaScore}%</div><div class="score-label">QA pass rate</div><a href="${qaLink.url || '#'}" target="_blank" class="file-link">test-results.json</a>`
-      : `<div class="score-ring" style="border:4px solid #94a3b8">${qaScore}%</div><div class="score-label">QA score</div>`;
+    const qaResultUrl = qaOdUrl || qaLink?.url;
+    const qaContent = qaResultUrl
+      ? `<div class="score-ring" style="border:4px solid ${effectiveQaScore >= 80 ? '#22c55e' : effectiveQaScore >= 50 ? '#eab308' : '#ef4444'}">${effectiveQaScore}%</div><div class="score-label">QA pass rate</div><a href="${qaResultUrl}" target="_blank" class="file-link">test-results.json</a>`
+      : `<div class="score-ring" style="border:4px solid #94a3b8">${effectiveQaScore}%</div><div class="score-label">QA score</div>`;
 
     // Deliverables (build-docs/ + deliverables/)
     const docFiles = data.output_links.filter(l => { const n = (l.name || ''); return n.startsWith('build-docs/') || n.startsWith('deliverables/'); });
@@ -2212,20 +2309,24 @@ app.get('/build-review/:ticketId/phase1', async (req, res) => {
       ? docFiles.map(f => '<a href="' + (f.url || '#') + '" target="_blank" class="file-link">' + (f.name || '').replace(/^(build-docs|deliverables)\//, '') + '</a>').join('')
       : '<p class="muted">No documents generated</p>';
 
-    // ── Quality scorecard (reuses existing parsed vars) ──
+    // Files count: agent runs with onedrive_url + legacy output_links
+    const runsWithOdUrl = agentRunsData.filter(r => r.output?.onedrive_url).length;
+    const filesWithLinks = runsWithOdUrl > 0 ? runsWithOdUrl + data.output_links.length : data.output_links.length;
+
+    // ── Quality scorecard ──
     const p1BuildLog = data.build_log || [];
     const p1TestCats = {
-      schema:      { pass: schemaFiles.length > 0, count: schemaFiles.length, label: 'Schema' },
-      workflow:    { pass: wfNamedFiles.length > 0 || scenarios.length > 0, count: wfNamedFiles.length + scenarios.length, label: 'Workflow' },
-      llm:         { pass: llmFiles.length > 0, count: llmFiles.length, label: 'LLM / Prompts' },
-      integration: { pass: extFiles.length > 0 || !!platformLink, count: extFiles.length + (platformLink ? 1 : 0), label: 'Integration' }
+      schema:      { pass: schemaTableNames.length > 0 || schemaFiles.length > 0 || !!schemaOdUrl, count: schemaTableNames.length || schemaFiles.length, label: 'Schema' },
+      workflow:    { pass: wfWorkflowNames.length > 0 || wfNamedFiles.length > 0 || scenarios.length > 0 || !!wfOdUrl, count: wfWorkflowNames.length || wfNamedFiles.length + scenarios.length, label: 'Workflow' },
+      llm:         { pass: llmFilesProduced.length > 0 || llmFiles.length > 0 || !!llmOdUrl, count: llmFilesProduced.length || llmFiles.length, label: 'LLM / Prompts' },
+      integration: { pass: extFiles.length > 0 || !!platformOdUrl || !!platformLink, count: extFiles.length + (platformOdUrl || platformLink ? 1 : 0), label: 'Integration' }
     };
     const p1PassCount = Object.values(p1TestCats).filter(c => c.pass).length;
     const p1RepoLog = p1BuildLog.find(l => l.detail && typeof l.detail === 'string' && l.detail.includes('github.com'));
-    const p1GithubUrl = p1RepoLog ? (p1RepoLog.detail.match(/https:\/\/github\.com\/[^\s"')]+/) || [''])[0] : '';
+    const p1GithubUrl = platformRepoUrl || (p1RepoLog ? (p1RepoLog.detail.match(/https:\/\/github\.com\/[^\s"')]+/) || [''])[0] : '');
     const p1Deferrals = p1BuildLog.filter(l => l.action === 'deferral' || (l.detail && typeof l.detail === 'string' && l.detail.toLowerCase().includes('defer')));
-    const p1QaColor = qaScore >= 80 ? '#22c55e' : qaScore >= 60 ? '#eab308' : '#ef4444';
-    const p1QaLabel = qaScore >= 80 ? 'PASS' : qaScore >= 60 ? 'REVIEW' : 'FAIL';
+    const p1QaColor = effectiveQaScore >= 80 ? '#22c55e' : effectiveQaScore >= 60 ? '#eab308' : '#ef4444';
+    const p1QaLabel = effectiveQaScore >= 80 ? 'PASS' : effectiveQaScore >= 60 ? 'REVIEW' : 'FAIL';
 
     res.setHeader('Content-Type', 'text/html');
     res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2313,7 +2414,7 @@ textarea{width:100%;min-height:80px;background:#0f172a;border:1px solid #475569;
 <div class="card" style="border-color:${p1QaColor}40">
   <h2>&#x1f4ca; Quality Scorecard</h2>
   <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-    <div class="score-ring" style="border:4px solid ${p1QaColor}">${qaScore}%</div>
+    <div class="score-ring" style="border:4px solid ${p1QaColor}">${effectiveQaScore}%</div>
     <div>
       <div style="font-size:1.1rem;font-weight:700;color:${p1QaColor}">${p1QaLabel}</div>
       <div style="color:#94a3b8;font-size:.8rem">${p1PassCount}/4 categories passed</div>
@@ -2326,7 +2427,7 @@ textarea{width:100%;min-height:80px;background:#0f172a;border:1px solid #475569;
     </tbody>
   </table>
   <div style="margin-top:12px;font-size:.8rem;color:#94a3b8">
-    Files produced: <strong style="color:#e2e8f0">${data.output_links.length}</strong> (min expected: 6)
+    Files produced: <strong style="color:#e2e8f0">${filesWithLinks}</strong> (min expected: 6)
     ${p1GithubUrl ? ' &middot; <a href="' + p1GithubUrl + '" target="_blank">GitHub Repo</a>' : ''}
   </div>
   ${p1Deferrals.length > 0 ? '<div style="margin-top:8px;padding:8px;background:#7f1d1d30;border-radius:6px;font-size:.8rem;color:#fca5a5"><strong>Deferrals (' + p1Deferrals.length + '):</strong><ul style="margin-top:4px">' + p1Deferrals.map(d => '<li>' + (d.detail || d.action || 'Deferred item') + '</li>').join('') + '</ul></div>' : ''}
@@ -3107,6 +3208,13 @@ app.get('/api/status/:ticketId', async (req, res) => {
 
 app.post('/api/build/brief', async (req, res) => {
   try {
+    const validation = BriefSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Brief validation failed',
+        fields: validation.error.flatten().fieldErrors
+      });
+    }
     const brief = req.body.brief || req.body.brief_sections;
     const client = req.body.client || req.body.client_name;
     const { ticket_id, project_name, platform, priority, submitter, submitter_email, version, section_a, customer_id, workflow_steps, decision_authority, success_metrics, data_sources, guardrails, edge_cases, acceptance_criteria } = req.body;
@@ -5783,23 +5891,54 @@ app.get('/api/voice/alerts', async (req, res) => {
 });
 
 
-import { scheduleWeeklyIntelligence } from './weekly-intelligence.js';
-import { startBuildWatcher } from './build-watcher.js';
-import { scheduleResearchAgent } from './research-agent.js';
-import { scheduleWeeklyReport } from './weekly-report.js';
-scheduleWeeklyIntelligence(app);
-startBuildWatcher();
-scheduleResearchAgent(app);
-scheduleWeeklyReport(app);
 
-import { scheduleCrossBuildLearning } from './cross-build-learning.js';
-scheduleCrossBuildLearning(app);
 
-import { scheduleIntelligenceReport } from './intelligence-report.js';
-scheduleIntelligenceReport(app);
+
+// ═══════════════════════════════════════════════
+// BUILD-015: PROMPT QUALITY AGENT — manual trigger
+// ═══════════════════════════════════════════════
+app.post('/api/prompt-quality/run', async (req, res) => {
+  const auth = req.headers['x-cockpit-key'];
+  if (auth !== COCKPIT_SECRET) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const { days_back = 7 } = req.body || {};
+    const temporalClient = await getTemporalClient();
+    const workflowId = 'prompt-quality-' + Date.now();
+    await temporalClient.workflow.start('promptQualityWorkflow', {
+      taskQueue: 'friday-builds',
+      workflowId,
+      args: [{ days_back }]
+    });
+    res.json({ success: true, workflow_id: workflowId, message: 'Prompt quality report started' });
+  } catch(e) {
+    console.error('[BUILD-015] Manual trigger error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log('FRIDAY Parallel Swarm API v3.5 on port ' + PORT);
   console.log('Platforms: Make.com | n8n | Zapier');
   console.log('Callback: ' + (N8N_CALLBACK_URL || '(not configured — set N8N_WF07_CALLBACK)'));
 });
+
+// Schedule BUILD-015 Prompt Quality Agent — every Monday at midnight UTC
+async function schedulePromptQualityAgent() {
+  try {
+    const client = await getTemporalClient();
+    await client.workflow.start('promptQualityWorkflow', {
+      taskQueue: 'friday-builds',
+      workflowId: 'prompt-quality-weekly',
+      cronSchedule: '0 0 * * 1',
+      args: [{ days_back: 7 }],
+    });
+    console.log('[BUILD-015] Prompt quality cron scheduled');
+  } catch(e) {
+    if (e.message?.includes('already exists')) {
+      console.log('[BUILD-015] Prompt quality cron already scheduled');
+    } else {
+      console.warn('[BUILD-015] Could not schedule prompt quality cron:', e.message);
+    }
+  }
+}
+schedulePromptQualityAgent();

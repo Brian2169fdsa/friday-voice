@@ -57,6 +57,20 @@ async function supabaseLog(ticketId, table, data) {
   } catch(e) { console.error('[FRIDAY WF] supabaseLog error:', e.message); }
 }
 
+// Update friday_builds status (best-effort, non-blocking)
+async function updateBuildStatus(ticketId, status, progressPct) {
+  try {
+    const sbUrl = process.env.SUPABASE_URL;
+    const sbKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!sbUrl || !sbKey || !ticketId) return;
+    await fetch(`${sbUrl}/rest/v1/friday_builds?ticket_id=eq.${ticketId}`, {
+      method: 'PATCH',
+      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status, progress_pct: progressPct, updated_at: new Date().toISOString() })
+    });
+  } catch(e) { console.error('[FRIDAY WF] updateBuildStatus error:', e.message); }
+}
+
 // GAP A-010: Read Supabase blackboard for supervisor routing signals
 async function readBlackboard(ticketId) {
   try {
@@ -193,6 +207,13 @@ export async function FridayBuildWorkflow(jobData) {
   // Emit planner complete
   await emitAgent('BUILD-001', 'Orchestrator', 'complete');
 
+  // ===== BUILD-013: Orchestration Decision Agent =====
+  // Decides whether automation needs n8n, Temporal, or both before build agents run.
+  console.log('[FRIDAY WF] Running BUILD-013 Orchestration Decision Agent');
+  const decisionResult = await shortActivities.orchestrationDecisionActivity(jobData);
+  jobData.orchestrationDecision = decisionResult.decision;
+  await emitAgent('BUILD-013', 'Orchestration Decision Agent', 'complete');
+
   // ===== PHASE 1: Sequential Build =====
   // BUILD-006 -> BUILD-002 -> BUILD-004 -> BUILD-005 -> BUILD-003 (test) -> iteration loop
 
@@ -224,13 +245,32 @@ export async function FridayBuildWorkflow(jobData) {
   jobData._qualitySignals = jobData._qualitySignals || {};
   jobData._qualitySignals['BUILD-006'] = schemaGateResult;
 
+  // ── BUILD-014: Temporal Specialist (fires when decision requires Temporal orchestration) ──
+  let temporalResult = null;
+  if (decisionResult.decision?.type === 'temporal' || decisionResult.decision?.type === 'both') {
+    console.log('[FRIDAY WF] Running BUILD-014 Temporal Specialist');
+    const temporalChildResult = await executeChild('temporalSpecialistWorkflow', {
+      workflowId: jobData.ticket_id + '-temporal',
+      taskQueue: 'friday-builds',
+      args: [jobData, contract],
+      workflowExecutionTimeout: '30 minutes',
+    });
+    temporalResult = temporalChildResult;
+    await emitAgent('BUILD-014', 'Temporal Specialist', 'complete');
+  }
+
   // ── BUILD-002: Workflow Builder (child workflow with self-contained revision loop) ──
-  const workflowChildResult = await executeChild('workflowBuilderWorkflow', {
-    args: [jobData, contract],
-    workflowId: `${jobData.job_id}-workflow`,
-    taskQueue: 'friday-builds'
-  });
-  const { result: workflowResult, gateResult: workflowGateResult, revisionCount: workflowRevisionCount } = workflowChildResult;
+  let workflowResult = null;
+  let workflowGateResult = null;
+  let workflowRevisionCount = 0;
+  if (decisionResult.decision?.type === 'n8n' || decisionResult.decision?.type === 'both') {
+    const workflowChildResult = await executeChild('workflowBuilderWorkflow', {
+      args: [jobData, contract],
+      workflowId: `${jobData.job_id}-workflow`,
+      taskQueue: 'friday-builds'
+    });
+    ({ result: workflowResult, gateResult: workflowGateResult, revisionCount: workflowRevisionCount } = workflowChildResult);
+  }
 
   if (workflowRevisionCount > 0) {
     console.log(`[FRIDAY WF] BUILD-008 signaled ${workflowRevisionCount} revision(s) to workflow-builder child workflow`);
@@ -383,11 +423,19 @@ export async function FridayBuildWorkflow(jobData) {
     // Route failures back to responsible agents
     for (const failure of qaTestResult.failures) {
       const agent = failure.responsible_agent;
+      const agentFailures = qaTestResult.failures.filter(f => f.responsible_agent === agent);
+      const failedTests = agentFailures.map(f => f.description || f.test_name || f.id || 'unknown').join('; ');
+      const fixJobData = {
+        ...jobData,
+        qaFailures: agentFailures,
+        fixInstructions: `QA failed with score ${qaTestResult.pass_rate || 0}. Failed tests: [${failedTests}]. Fix these specific issues before returning.`,
+        revisionAttempt: iterationCycle
+      };
 
       if (agent === 'BUILD-006' && schemaResult) {
         try {
           contract.schemaFixNotes = 'QA failure: ' + failure.description + '. Fix: ' + failure.remediation;
-          schemaResult = await agentActivities.schemaArchitectActivity(jobData, contract);
+          schemaResult = await agentActivities.schemaArchitectActivity(fixJobData, contract);
         } catch(e) {
           schemaResult = { ...schemaResult, iteration_error: e.message };
         }
@@ -395,7 +443,7 @@ export async function FridayBuildWorkflow(jobData) {
 
       if (agent === 'BUILD-002' && workflowResult) {
         try {
-          workflowResult = await shortActivities.importBlueprintActivity(jobData, null);
+          workflowResult = await shortActivities.importBlueprintActivity(fixJobData, null);
         } catch(e) {
           workflowResult = { ...workflowResult, iteration_error: e.message };
         }
@@ -404,7 +452,7 @@ export async function FridayBuildWorkflow(jobData) {
       if (agent === 'BUILD-005' && platformResult) {
         try {
           contract.platformFixNotes = 'QA failure: ' + failure.description + '. Fix: ' + failure.remediation;
-          platformResult = await agentActivities.platformBuilderActivity(jobData, contract, { schema: schemaResult, workflow: workflowResult });
+          platformResult = await agentActivities.platformBuilderActivity(fixJobData, contract, { schema: schemaResult, workflow: workflowResult });
         } catch(e) {
           platformResult = { ...platformResult, iteration_error: e.message };
         }
@@ -578,12 +626,15 @@ export async function FridayBuildWorkflow(jobData) {
   let phase1Decision = null;
   setHandler(phase1ApprovedSignal, (p) => { phase1Decision = p; });
   console.log('[FRIDAY WF] Waiting for Phase 1 approval from Brian');
+  await updateBuildStatus(ticketId, 'phase1-review', 25);
   await condition(() => phase1Decision !== null, '24 hours');
   if (phase1Decision?.decision === 'rejected') {
     console.log('[FRIDAY WF] Phase 1 rejected by Brian');
+    await updateBuildStatus(ticketId, 'phase1-rejected', 25);
     return { status: 'phase1_rejected', ticketId: jobData.ticket_id, reason: phase1Decision.reason };
   }
   console.log('[FRIDAY WF] Phase 1 approved -- starting Phase 2 docs');
+  await updateBuildStatus(ticketId, 'phase1-approved', 50);
 
   // ===== PHASE 2: Parallel Document Generation =====
   // Existing 4 agents run in parallel (Solution Demo, Training Manual, Deployment Summary, Blueprint)
@@ -617,6 +668,8 @@ export async function FridayBuildWorkflow(jobData) {
     const links = await uploadActivities.uploadToOnedriveActivity(jobData, agentResults);
     jobData.outputLinks = links;
 
+    await updateBuildStatus(ticketId, 'phase2-review', 75);
+
     // Human approval gate
     await shortActivities.humanApprovalGateActivity(jobData);
 
@@ -635,6 +688,8 @@ export async function FridayBuildWorkflow(jobData) {
       continue;
     }
   }
+
+  await updateBuildStatus(ticketId, 'complete', 100);
 
   // Record total duration
   const totalDurationMs = Date.now() - buildStartTime;
@@ -683,3 +738,5 @@ export { schemaArchitectWorkflow } from './schema-architect-workflow.js';
 export { workflowBuilderWorkflow } from './workflow-builder-workflow.js';
 export { llmSpecialistWorkflow } from './llm-specialist-workflow.js';
 export { platformBuilderWorkflow } from './platform-builder-workflow.js';
+export { temporalSpecialistWorkflow } from './temporal-specialist-workflow.js';
+export { promptQualityWorkflow } from '../../prompt-quality-workflow.js';

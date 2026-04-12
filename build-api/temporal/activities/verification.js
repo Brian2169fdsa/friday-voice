@@ -196,4 +196,3 @@ export async function finalOutputVerificationActivity({ jobData, ticketId, build
 }
 
 // Re-exported here so the worker picks it up without a new activity file.
-export { diagnoseAndHeal as diagnoseAndHealActivity } from '../../diagnostic-agent.js';

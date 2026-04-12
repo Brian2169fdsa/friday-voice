@@ -49,10 +49,19 @@ function detectPlatforms(contract, jobData) {
 }
 
 export async function externalPlatformActivity(jobData, contract) {
+  const startTime = Date.now();
+  const ticketId = jobData.ticket_id || jobData.ticketId;
   const platforms = detectPlatforms(contract, jobData);
 
   if (platforms.length === 0) {
     console.log('[BUILD-007] No external platforms detected -- skipping');
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-007', agent_name: 'External Platform', status: 'skipped', output: { reason: 'No external platforms required for this build', platforms: [] }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-007] DB write failed (non-blocking):', dbErr.message); }
     return {
       agent_id: 'BUILD-007',
       specialist: 'BUILD-007 External Platform Specialist',
@@ -116,10 +125,19 @@ Do not ask questions.`;
 
     console.log('[BUILD-007] Done in ' + dur + 's | Platforms: ' + verified.length + '/' + platforms.length);
 
+    const p7Status = verified.length > 0 ? 'success' : 'partial';
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-007', agent_name: 'External Platform', status: p7Status, output: { platforms, platforms_verified: verified, files_produced: verified.map(p => p + '-integration.js'), env_vars_needed: manifest?.environment_variables_needed }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-007] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'BUILD-007',
       specialist: 'BUILD-007 External Platform Specialist',
-      status: verified.length > 0 ? 'success' : 'partial',
+      status: p7Status,
       duration_seconds: parseFloat(dur),
       platforms,
       platforms_verified: verified,
@@ -131,6 +149,15 @@ Do not ask questions.`;
   } catch(err) {
     const dur = ((Date.now() - start) / 1000).toFixed(1);
     console.error('[BUILD-007] Error:', err.message.slice(0, 300));
+
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-007', agent_name: 'External Platform', status: 'error', output: { error: err.message.slice(0, 200), platforms, platforms_verified: [] }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-007] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'BUILD-007',
       specialist: 'BUILD-007 External Platform Specialist',

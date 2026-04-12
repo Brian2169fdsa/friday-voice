@@ -9,7 +9,8 @@ async function run() {
 
   const worker = await Worker.create({
     connection,
-    // Sprint 2: directory path registers all workflow files (friday-build + 4 child workflows)
+    // Points directly to friday-build.js; that file re-exports all 4 child workflows at its
+    // bottom, so Temporal's bundler picks them all up through this single entry point.
     workflowsPath: new URL('./workflows/friday-build.js', import.meta.url).pathname,
     activities: {
       ...(await import('./activities/completeness.js')),
@@ -34,6 +35,9 @@ async function run() {
       ...(await import('./activities/engagement-memory.js')),
       ...(await import('./activities/security-agent.js')),
       ...(await import('./activities/deployment-verifier.js')),
+      ...(await import('./activities/decision-agent.js')),
+      ...(await import('./activities/temporal-specialist.js')),
+      ...(await import('./activities/prompt-quality-agent.js')),
     },
     taskQueue: 'friday-builds',
   });

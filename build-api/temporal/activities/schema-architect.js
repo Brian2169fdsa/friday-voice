@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { createClient } from '@supabase/supabase-js';
+import { getGraphToken, uploadFile } from './onedrive.js';
 
 const CLAUDE = '/usr/bin/claude';
 const SCHEMA_TIMEOUT = 900000;
@@ -35,6 +36,7 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
 }
 
 export async function schemaArchitectActivity(jobData, contract) {
+  const startTime = Date.now();
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
   const agentDir = path.join(outputDir, 'schema');
   await fs.mkdir(agentDir, { recursive: true });
@@ -219,10 +221,26 @@ OUTPUT DIRECTORY: ${agentDir}`;
     const verified = confirmedSchema?.tables?.filter(t => t.verified)?.length || 0;
     console.log('[BUILD-006] Done in ' + dur + 's | Tables: ' + verified + '/' + tableCount + ' verified');
 
+    const schemaStatus = confirmedSchema?.success ? 'complete' : 'partial';
+    let onedriveUrl = null;
+    try {
+      const token = await getGraphToken();
+      const fileContent = await fs.readFile(path.join(agentDir, 'confirmed-schema.json'), 'utf8');
+      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/schema`, 'confirmed-schema.json', fileContent, 'application/json');
+      console.log('[BUILD-006] OneDrive upload:', onedriveUrl);
+    } catch(upErr) { console.warn('[BUILD-006] OneDrive upload failed (non-blocking):', upErr.message); }
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-006', agent_name: 'Schema Architect', status: schemaStatus, output: { tables_deployed: verified, tables_total: tableCount, table_names: confirmedSchema?.tables?.map(t => t.name) || [], success: confirmedSchema?.success || false, notes: confirmedSchema?.notes?.slice(0, 200), onedrive_url: onedriveUrl }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-006] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'schema_architect',
       specialist: 'BUILD-006 Schema Architect',
-      status: confirmedSchema?.success ? 'complete' : 'partial',
+      status: schemaStatus,
       duration: dur,
       output_subdir: 'schema',
       confirmed_schema: confirmedSchema,
@@ -233,6 +251,15 @@ OUTPUT DIRECTORY: ${agentDir}`;
     const dur = Math.round((Date.now() - t) / 1000);
     console.error('[BUILD-006] Error:', err.message.slice(0, 300));
     await fs.rm(promptFile, { force: true });
+
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-006', agent_name: 'Schema Architect', status: 'error', output: { error: err.message.slice(0, 200), tables_deployed: 0, tables_total: 0 }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-006] DB write failed (non-blocking):', dbErr.message); }
+
     return {
       agent_id: 'schema_architect',
       specialist: 'BUILD-006 Schema Architect',

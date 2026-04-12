@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { getGraphToken, uploadFile } from './onedrive.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -17,6 +18,8 @@ try {
 } catch(e) {}
 
 export async function runPlannerActivity(jobData) {
+  const startTime = Date.now();
+  const ticketId = jobData.ticket_id || jobData.job_id;
   console.log('[BUILD-001] Starting orchestrator for:', jobData.project_name);
 
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
@@ -247,6 +250,20 @@ Do not ask questions. Do not request more information. Everything you need is in
     await fs.writeFile(contractPath, JSON.stringify(contract, null, 2));
 
     console.log('[BUILD-001] Complete. Planner: BUILD-001-claude-code');
+    let onedriveUrl = null;
+    try {
+      const token = await getGraphToken();
+      const fileContent = await fs.readFile(contractPath, 'utf8');
+      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/planner`, 'build-contract.json', fileContent, 'application/json');
+      console.log('[BUILD-001] OneDrive upload:', onedriveUrl);
+    } catch(upErr) { console.warn('[BUILD-001] OneDrive upload failed (non-blocking):', upErr.message); }
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-001', agent_name: 'Planner', status: 'complete', output: { system_summary: contract.system_summary?.slice(0, 200), tables_planned: (contract.BUILD_006?.tables_required || []).length, workflow_name: contract.BUILD_002?.workflow_name, planner_used: contract.plannerUsed, estimated_cost_usd: contract.cost_estimate?.estimated_cost_usd, onedrive_url: onedriveUrl }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-001] DB write failed (non-blocking):', dbErr.message); }
     return contract;
 
   } catch(e) {
@@ -259,6 +276,13 @@ Do not ask questions. Do not request more information. Everything you need is in
     const contractPath = path.join(agentDir, 'build-contract.json');
     await fs.writeFile(contractPath, JSON.stringify(contract, null, 2));
 
+    try {
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/build_agent_runs`, {
+        method: 'POST',
+        headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify({ ticket_id: ticketId, agent_id: 'BUILD-001', agent_name: 'Planner', status: 'complete', output: { system_summary: contract.system_summary?.slice(0, 200), planner_used: 'fallback', error: e.message.slice(0, 200) }, duration_ms: Date.now() - startTime, started_at: new Date(startTime).toISOString(), completed_at: new Date().toISOString() })
+      });
+    } catch(dbErr) { console.warn('[BUILD-001] DB write failed (non-blocking):', dbErr.message); }
     return contract;
   }
 }
