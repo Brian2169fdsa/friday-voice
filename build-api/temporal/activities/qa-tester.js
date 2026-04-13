@@ -541,7 +541,8 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
     const score = (tests) => {
       const total = tests.filter(t => t.name !== 'llm_overall_pass_rate').length || tests.length;
       const passed = tests.filter(t => t.passed).length;
-      return total > 0 ? Math.round((passed / total) * 100) : 0;
+      const raw = total > 0 ? Math.round((passed / total) * 100) : 0;
+      return Math.min(raw, 100); // FIX 10: Cap scores at 100
     };
 
     const scores = {
@@ -550,9 +551,9 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
       github_repo: score(github),
       llm_accuracy: score(llm)
     };
-    scores.overall = Math.round(
+    scores.overall = Math.min(Math.round(
       (scores.n8n_workflows + scores.database_schema + scores.github_repo + scores.llm_accuracy) / 4
-    );
+    ), 100);
 
     const allTests = [
       ...n8n.map(t => ({ ...t, category: 'n8n' })),
@@ -652,6 +653,33 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
             }
           }
         });
+
+        // FIX 2: If routing to BUILD-002 for n8n issues, directly reactivate inactive workflows
+        if (agent === 'BUILD-002') {
+          try {
+            const n8nUrl = process.env.N8N_LOCAL_URL || process.env.N8N_URL || 'http://localhost:5678';
+            const n8nKey = process.env.N8N_LOCAL_API_KEY || process.env.N8N_API_KEY || '';
+            const wfListRes = await fetch(`${n8nUrl}/api/v1/workflows?limit=250`, {
+              headers: { 'X-N8N-API-KEY': n8nKey }
+            });
+            if (wfListRes.ok) {
+              const { data: allWfs } = await wfListRes.json();
+              const slug = clientName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+              const inactiveClientWfs = (allWfs || []).filter(w =>
+                !w.active && (w.name.toLowerCase().includes(slug) || w.tags?.some(t => t.name === ticketId))
+              );
+              for (const wf of inactiveClientWfs) {
+                await fetch(`${n8nUrl}/api/v1/workflows/${wf.id}/activate`, {
+                  method: 'PATCH',
+                  headers: { 'X-N8N-API-KEY': n8nKey, 'Content-Type': 'application/json' }
+                });
+                console.log(`[BUILD-003] Reactivated n8n workflow: ${wf.name} (${wf.id})`);
+              }
+            }
+          } catch (n8nErr) {
+            console.warn(`[BUILD-003] n8n reactivation failed (non-blocking): ${n8nErr.message}`);
+          }
+        }
       }
 
       console.log(`[BUILD-003] Waiting 15s for agent fixes (iteration ${iterationCount} failed: ${failedTests.length} tests)`);

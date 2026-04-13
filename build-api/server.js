@@ -1685,7 +1685,23 @@ app.post('/api/build/:id/phase1-approve', async (req, res) => {
     const temporalClient = await getTemporalClient();
     const handle = temporalClient.workflow.getHandle(ticketId);
     await handle.signal('phase1-approved', { decision, reason });
-    console.log(`[FRIDAY] Phase 1 approved for ticket ${ticketId}`);
+    console.log(`[FRIDAY] Phase 1 ${decision} for ticket ${ticketId}`);
+
+    // FIX 12: Update review_status in Supabase when Brian manually approves/rejects
+    try {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      await supabase.from('friday_builds')
+        .update({
+          review_status: decision === 'approved' ? 'approved' : decision,
+          reviewed_by: 'brian',
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('ticket_id', ticketId);
+    } catch (dbErr) {
+      console.warn('[FRIDAY] review_status update failed:', dbErr.message);
+    }
+
     fireBuildWebhooks(ticketId, 'phase1_' + decision, { decision, reason: reason || '' });
     res.json({ success: true, ticketId, decision });
   } catch(e) {

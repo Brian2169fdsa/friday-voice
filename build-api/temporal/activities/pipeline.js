@@ -502,15 +502,25 @@ export async function postBuildPipelineActivity(jobData) {
       buildLog.push({ step: '10c', action: 'changelog', detail: 'FAILED: ' + clErr.message, ts: new Date().toISOString() });
     }
 
-    // Step 10d: Save OneDrive folder URL to build record
+    // Step 10d: Save OneDrive folder URL and all output_links to build record (FIX 14)
     try {
       const aitm2 = jobData.aitm_name || projectName;
       const folderPath = 'ManageAI/Clients/' + sanitize(clientName) + '/' + sanitize(aitm2);
       const encodedPath = folderPath.split('/').map(p => encodeURIComponent(p)).join('/');
       const onedriveFolderUrl = 'https://managepartners-my.sharepoint.com/personal/brian_manageai_io/Documents/' + encodedPath;
-      const folderPatchOk = await sbPatch('friday_builds?id=eq.' + buildId, { onedrive_folder_url: onedriveFolderUrl, updated_at: new Date().toISOString() });
+
+      // FIX 14: Write both onedrive_folder_url AND output_links in a single patch
+      // to ensure all OneDrive URLs are persisted to the friday_builds record
+      const folderPatchOk = await sbPatch('friday_builds?id=eq.' + buildId, {
+        onedrive_folder_url: onedriveFolderUrl,
+        output_links: outputLinks,
+        updated_at: new Date().toISOString()
+      });
+      // Also set on jobData so downstream callbacks have it
+      jobData.onedriveFolderUrl = onedriveFolderUrl;
+
       if (folderPatchOk) {
-        console.log('[TEMPORAL PIPELINE] OneDrive folder URL saved:', onedriveFolderUrl);
+        console.log('[TEMPORAL PIPELINE] OneDrive folder URL + output_links saved:', onedriveFolderUrl, '(' + outputLinks.length + ' links)');
       } else {
         console.warn('[TEMPORAL PIPELINE] OneDrive folder URL patch failed');
         errors.push('onedrive_folder_url');

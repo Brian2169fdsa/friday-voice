@@ -12,8 +12,24 @@ export async function finalOutputVerificationActivity({ jobData, ticketId, build
   const customerName = jobData.client || jobData.client_name || '';
   const aitmName = jobData.aitm_name || jobData.project_name || ticketId;
 
-  // ── CHECK 1: QA Score ─────────────────────────────────────────────────────
-  const qaScore = jobData.qaScore || jobData._qaScore || 0;
+  // ── CHECK 1: QA Score (read from build_quality_signals in Supabase) ──────
+  let qaScore = jobData.qaScore || jobData._qaScore || 0;
+  try {
+    const supabase = createClient(SB_URL, SB_KEY);
+    const { data: qaSignal } = await supabase
+      .from('build_quality_signals')
+      .select('payload')
+      .eq('ticket_id', ticketId)
+      .eq('signal_type', 'qa_results')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (qaSignal?.payload?.scores?.overall) {
+      qaScore = qaSignal.payload.scores.overall;
+    }
+  } catch (e) {
+    // Fallback to jobData value
+  }
   if (qaScore >= 70) {
     checks.push({ check: 'qa_score', passed: true, score: qaScore });
   } else {
@@ -135,19 +151,37 @@ export async function finalOutputVerificationActivity({ jobData, ticketId, build
     }
   }
 
-  // ── CHECK 5: GitHub repo accessible ──────────────────────────────────────
-  const githubRepo = jobData._githubRepo || ticketId;
+  // ── CHECK 5: GitHub repo accessible (read deployment-manifest.json) ──────
+  let githubRepo = jobData._githubRepo || null;
   const githubToken = process.env.GITHUB_TOKEN;
+
+  // FIX 7: Read deployment-manifest.json from build output dir for repo_url
+  if (!githubRepo && buildDir) {
+    try {
+      const { readFile } = await import('fs/promises');
+      const manifestRaw = await readFile(buildDir + '/platform/deployment-manifest.json', 'utf8');
+      const manifest = JSON.parse(manifestRaw);
+      githubRepo = manifest.repo_url || manifest.repo_name || null;
+    } catch (e) {
+      // Fallback
+    }
+  }
+  if (!githubRepo) githubRepo = ticketId;
+
   const skipGithub = jobData._skipGithub || !githubToken;
 
   if (skipGithub) {
     checks.push({ check: 'github_repo', passed: true, reason: 'GitHub repo creation was skipped' });
   } else {
     try {
-      // Support both "owner/repo" and bare repo name (default org: manageai-io)
-      const fullRepo = githubRepo.includes('/')
-        ? githubRepo
-        : `manageai-io/${githubRepo.replace(/[^a-zA-Z0-9-_.]/g, '-')}`;
+      // Support full URL, "owner/repo", and bare repo name
+      let fullRepo = githubRepo;
+      if (githubRepo.startsWith('https://github.com/')) {
+        fullRepo = githubRepo.replace('https://github.com/', '');
+      }
+      if (!fullRepo.includes('/')) {
+        fullRepo = `manageai-io/${fullRepo.replace(/[^a-zA-Z0-9-_.]/g, '-')}`;
+      }
       const res = await fetch(`https://api.github.com/repos/${fullRepo}`, {
         headers: {
           'Authorization': 'Bearer ' + githubToken,

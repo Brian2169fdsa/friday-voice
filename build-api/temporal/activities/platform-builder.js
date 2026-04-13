@@ -173,6 +173,26 @@ curl -s -X POST -H "Authorization: token ${githubToken}" -H "Content-Type: appli
   "https://api.github.com/${githubOrg ? 'orgs/' + githubOrg + '/repos' : 'user/repos'}" \\
   -d '{"name": "${repoName}", "description": "AI Teammate: ${jobData.project_name} for ${jobData.client || jobData.client_name}", "private": true, "auto_init": true}'
 
+### Step 2b: Generate and push package.json
+Generate a valid package.json based on the tech stack. At minimum include:
+\`\`\`json
+{
+  "name": "${repoName}",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@supabase/supabase-js": "^2.49.0"
+  }
+}
+\`\`\`
+Add any additional dependencies from the build contract tech_stack (e.g. express, node-fetch).
+Push this as the FIRST file to the repo using the Contents API.
+
 ### Step 3: Push code files using the Contents API
 For each file, base64 encode and push:
 CONTENT=$(base64 -w0 filepath)

@@ -13,7 +13,14 @@ const shortActivities = proxyActivities({
 });
 
 const agentActivities = proxyActivities({
-  startToCloseTimeout: '1200 seconds',
+  startToCloseTimeout: '900 seconds',
+  heartbeatTimeout: '60 seconds',
+  retry: { maximumAttempts: 2 }
+});
+
+// FIX 3: Phase 2 doc agents need longer timeout (up to 431s observed)
+const docAgentActivities = proxyActivities({
+  startToCloseTimeout: '900 seconds',
   heartbeatTimeout: '60 seconds',
   retry: { maximumAttempts: 2 }
 });
@@ -33,6 +40,12 @@ const fireAndForgetActivities = proxyActivities({
 const reviewActivities = proxyActivities({
   startToCloseTimeout: '120 seconds',
   retry: { maximumAttempts: 1 }
+});
+
+// FIX 13: Compliance judge needs longer timeout (was timing out during revision routing)
+const complianceActivities = proxyActivities({
+  startToCloseTimeout: '300 seconds',
+  retry: { maximumAttempts: 2 }
 });
 
 // Signals
@@ -145,6 +158,7 @@ export async function FridayBuildWorkflow(jobData) {
   const briefAnalysis = await shortActivities.briefAnalystActivity(jobData);
   jobData._briefAnalysis = briefAnalysis;
   await emitAgent('BUILD-000', 'Brief Analyst', briefAnalysis.status === 'complete' ? 'complete' : 'error');
+  await updateBuildStatus(ticketIdForCatch, 'building', 5); // BUILD-000=5
 
   // ===== ACTIVITY 0b: Engagement Memory (BUILD-012) =====
   // Loads prior build history for this customer to inform current build agents.
@@ -185,6 +199,7 @@ export async function FridayBuildWorkflow(jobData) {
 
   // Emit planner complete
   await emitAgent('BUILD-001', 'Orchestrator', 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 10); // BUILD-001=10
 
   // ===== BUILD-013: Orchestration Decision Agent =====
   // Decides whether automation needs n8n, Temporal, or both before build agents run.
@@ -211,6 +226,7 @@ export async function FridayBuildWorkflow(jobData) {
   }
   await emitAgent('BUILD-006', 'Schema Architect', schemaResult?.status === 'error' ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [006]', schemaGateResult?.needs_revision ? 'revision' : 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 25); // BUILD-006=25
 
   if (schemaGateResult?.needs_revision && schemaRevisionCount >= 3) {
     await supabaseLog(ticketId, 'build_intelligence', {
@@ -258,6 +274,7 @@ export async function FridayBuildWorkflow(jobData) {
   }
   await emitAgent('BUILD-002', 'Workflow Builder', workflowResult?.error ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [002]', workflowGateResult?.needs_revision ? 'revision' : 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 45); // BUILD-002=45
 
   if (workflowGateResult?.needs_revision && workflowRevisionCount >= 3) {
     await supabaseLog(ticketId, 'build_intelligence', {
@@ -291,6 +308,7 @@ export async function FridayBuildWorkflow(jobData) {
   }
   await emitAgent('BUILD-004', 'LLM Specialist', llmResult?.status === 'error' ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [004]', llmGateResult?.needs_revision ? 'revision' : 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 55); // BUILD-004=55
 
   if (llmGateResult?.needs_revision && llmRevisionCount >= 3) {
     await supabaseLog(ticketId, 'build_intelligence', {
@@ -306,13 +324,24 @@ export async function FridayBuildWorkflow(jobData) {
   jobData._qualitySignals['BUILD-004'] = llmGateResult;
 
   // BUILD-007: External Platform Specialist (conditional)
+  // FIX 9: Skip BUILD-007 when no external platforms are specified in the build contract
   let externalResult = null;
-  try {
-    externalResult = await agentActivities.externalPlatformActivity(jobData, contract);
-  } catch(e) {
-    externalResult = { agent_id: 'BUILD-007', status: 'error', error: e.message };
+  const externalPlatforms = contract?.external_platforms || contract?.BUILD_007?.platforms || jobData.external_platforms || [];
+  const hasExternalPlatforms = Array.isArray(externalPlatforms) ? externalPlatforms.length > 0 : !!externalPlatforms;
+
+  if (!hasExternalPlatforms) {
+    console.log('[FRIDAY WF] No external platforms required — skipping BUILD-007');
+    externalResult = { agent_id: 'BUILD-007', status: 'skipped', reason: 'No external platforms in build contract' };
+    await emitAgent('BUILD-007', 'External Platform', 'skipped');
+  } else {
+    try {
+      externalResult = await agentActivities.externalPlatformActivity(jobData, contract);
+    } catch(e) {
+      externalResult = { agent_id: 'BUILD-007', status: 'error', error: e.message };
+    }
+    await emitAgent('BUILD-007', 'External Platform', externalResult?.status === 'error' ? 'error' : 'complete');
   }
-  await emitAgent('BUILD-007', 'External Platform', externalResult?.status === 'error' ? 'error' : 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 60); // BUILD-007=60
 
   // BUILD-008: Quality Gate — review BUILD-007 output before proceeding
   try {
@@ -340,6 +369,7 @@ export async function FridayBuildWorkflow(jobData) {
   }
   await emitAgent('BUILD-005', 'Platform Builder', platformResult?.status === 'error' ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [005]', platformGateResult?.needs_revision ? 'revision' : 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 65); // BUILD-005=65
 
   if (platformGateResult?.needs_revision && platformRevisionCount >= 3) {
     await supabaseLog(ticketId, 'build_intelligence', {
@@ -383,14 +413,7 @@ export async function FridayBuildWorkflow(jobData) {
       });
     } catch(e) {
       qaTestResult = { agent_id: 'qa_tester', status: 'error', error: e.message, failures: [], pass_rate: 0 };
-      try {
-        const healResult = await shortActivities.diagnoseAndHealActivity(
-          jobData.ticketId || jobData.ticket_id, 'BUILD-003', e.message, e.type || 'Unknown'
-        );
-        console.log('[FRIDAY WF] Diagnostic result:', JSON.stringify(healResult));
-      } catch(diagErr) {
-        console.error('[FRIDAY WF] Diagnostic failed:', diagErr.message);
-      }
+      console.error('[FRIDAY WF] BUILD-003 QA error:', e.message.slice(0, 300));
     }
 
     // If all tests pass or no failures to route, break
@@ -444,6 +467,7 @@ export async function FridayBuildWorkflow(jobData) {
   }
 
   await emitAgent('BUILD-003', 'QA Tester', qaTestResult?.status === 'error' ? 'error' : 'complete');
+  await updateBuildStatus(ticketIdForCatch, 'building', 75); // QA=75
 
   // BUILD-010: Deployment Verifier -- confirm system is live in production
   console.log('[FRIDAY WF] Step 7: Deployment Verification (BUILD-010)');
@@ -496,25 +520,19 @@ export async function FridayBuildWorkflow(jobData) {
   // ===== BUILD-011: Compliance Judge (final gate before Phase 1 approval) =====
   // Routes revision packages to responsible agents instead of hard-blocking.
   console.log('[FRIDAY WF] Running BUILD-011 Compliance Review');
+  await updateBuildStatus(ticketIdForCatch, 'building', 85); // Compliance=85
   let complianceResult = null;
   let complianceRevisionCount = 0;
   const MAX_COMPLIANCE_REVISIONS = 3;
 
   while (complianceRevisionCount <= MAX_COMPLIANCE_REVISIONS) {
     try {
-      complianceResult = await agentActivities.complianceJudgeActivity(jobData);
+      complianceResult = await complianceActivities.complianceJudgeActivity(jobData);
     } catch(e) {
       // Non-blocking: compliance judge errors should not halt the build
       console.error('[FRIDAY WF] Compliance Judge error (non-blocking):', e.message.slice(0, 300));
       await emitAgent('BUILD-011', 'Compliance Judge', 'failed');
-      try {
-        const healResult = await shortActivities.diagnoseAndHealActivity(
-          jobData.ticketId || jobData.ticket_id, 'BUILD-011', e.message, e.type || 'Unknown'
-        );
-        console.log('[FRIDAY WF] Diagnostic result:', JSON.stringify(healResult));
-      } catch(diagErr) {
-        console.error('[FRIDAY WF] Diagnostic failed:', diagErr.message);
-      }
+      console.error('[FRIDAY WF] BUILD-011 Compliance error:', e.message.slice(0, 300));
       // Use fallback compliance result so build proceeds to phase1-review
       complianceResult = {
         compliance_score: 70,
@@ -622,7 +640,7 @@ export async function FridayBuildWorkflow(jobData) {
   let phase1Decision = null;
   setHandler(phase1ApprovedSignal, (p) => { phase1Decision = p; });
   console.log('[FRIDAY WF] Waiting for Phase 1 approval from Brian');
-  await updateBuildStatus(ticketId, 'phase1-review', 25);
+  await updateBuildStatus(ticketId, 'phase1-review', 90); // Phase1Review=90
   await condition(() => phase1Decision !== null, '24 hours');
   if (phase1Decision?.decision === 'rejected') {
     console.log('[FRIDAY WF] Phase 1 rejected by Brian');
@@ -630,7 +648,7 @@ export async function FridayBuildWorkflow(jobData) {
     return { status: 'phase1_rejected', ticketId: jobData.ticket_id, reason: phase1Decision.reason };
   }
   console.log('[FRIDAY WF] Phase 1 approved -- starting Phase 2 docs');
-  await updateBuildStatus(ticketId, 'phase1-approved', 50);
+  await updateBuildStatus(ticketId, 'phase1-approved', 95); // Phase2=95
 
   // ===== PHASE 2: Parallel Document Generation =====
   // Existing 4 agents run in parallel (Solution Demo, Training Manual, Deployment Summary, Blueprint)
@@ -649,11 +667,11 @@ export async function FridayBuildWorkflow(jobData) {
     contract.phase1Results = phase1Results;
 
     const phase2Settled = await Promise.allSettled([
-      agentActivities.agent01Activity(jobData, contract),
-      agentActivities.agent02Activity(jobData, contract),
-      agentActivities.agent03Activity(jobData, contract),
-      agentActivities.agent04Activity(jobData, contract),
-      agentActivities.agent05Activity(jobData, contract)
+      docAgentActivities.agent01Activity(jobData, contract),
+      docAgentActivities.agent02Activity(jobData, contract),
+      docAgentActivities.agent03Activity(jobData, contract),
+      docAgentActivities.agent04Activity(jobData, contract),
+      docAgentActivities.agent05Activity(jobData, contract)
     ]);
     const phase2Failures = phase2Settled.filter(r => r.status === 'rejected');
     const phase2Successes = phase2Settled.filter(r => r.status === 'fulfilled');

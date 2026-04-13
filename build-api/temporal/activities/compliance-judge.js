@@ -91,15 +91,24 @@ ${JSON.stringify(successCriteria, null, 2)}
 WHAT WAS BUILT (Evidence Package):
 ${JSON.stringify(evidencePackage, null, 2)}
 
+IMPORTANT: Only evaluate BUILD-TIME VERIFIABLE criteria. Do NOT evaluate runtime metrics like "95% accuracy on 200 historical matters" or "30 day pilot results" — those cannot be measured at build time.
+
 Your task:
-1. For EACH requirement in the brief, determine if it was delivered
-2. For EACH success criterion, determine if it was met based on the evidence
+1. For EACH requirement in the brief, determine if it was delivered based on build-time evidence:
+   - Do the required database tables exist? (check schema architect output)
+   - Does the webhook respond? (check workflow builder smoke_test_results)
+   - Are edge cases handled in the code? (check LLM specialist output for handleEdgeCase logic)
+   - Are guardrails implemented? (check for confidence thresholds, audit logging)
+   - Is the GitHub repo created with all files? (check platform builder output)
+   - Are n8n workflows imported and activated? (check workflow builder output)
+2. For EACH success criterion, determine if it was met based on the build evidence
 3. Identify any requirement that was requested but NOT delivered
 4. Identify any requirement that was partially delivered
 5. Generate specific revision instructions for anything not fully met
 
-Be STRICT. If a requirement was requested and there is no evidence it was built, mark it as not_met.
-Only mark as "met" if there is clear evidence in the agent outputs.
+Be FAIR. Only mark as "not_met" if the requirement is build-time verifiable AND there is no evidence it was built.
+Mark runtime-only criteria (accuracy percentages, pilot results, SLA metrics) as "met" with evidence "runtime metric — not verifiable at build time".
+Only mark as "met" if there is clear evidence in the agent outputs or if the criterion is a runtime metric.
 
 Return ONLY valid JSON (no markdown):
 {

@@ -107,10 +107,26 @@ export async function deploymentVerifierActivity(jobData) {
     results.push({ check: 'supabase_production_check', passed: false, error: e.message });
   }
 
+  // FIX 6: Read deployment-manifest.json from build output to get repo info
+  let manifestRepoName = null;
+  let manifestRepoUrl = null;
+  try {
+    const buildDir = '/tmp/friday-temporal-' + (jobData.job_id || '');
+    const manifestPath = buildDir + '/platform/deployment-manifest.json';
+    const { readFile } = await import('fs/promises');
+    const manifestRaw = await readFile(manifestPath, 'utf8');
+    const manifest = JSON.parse(manifestRaw);
+    manifestRepoName = manifest.repo_name || null;
+    manifestRepoUrl = manifest.repo_url || null;
+    console.log(`[BUILD-010] Read deployment manifest: repo=${manifestRepoName}, url=${manifestRepoUrl}`);
+  } catch (e) {
+    console.log('[BUILD-010] Could not read deployment-manifest.json:', e.message);
+  }
+
   // 3. Verify GitHub repo is accessible with recent commit
   const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
   const repoOwner = process.env.GITHUB_ORG || process.env.GITHUB_USERNAME;
-  const repoName = buildContract?.repoName || jobData._buildContract?.repoName;
+  const repoName = manifestRepoName || buildContract?.repoName || jobData._buildContract?.repoName;
 
   if (repoName && githubToken && repoOwner) {
     try {
