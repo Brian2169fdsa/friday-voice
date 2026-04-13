@@ -39,6 +39,7 @@ async function run() {
       ...(await import('./activities/temporal-specialist.js')),
       ...(await import('./activities/prompt-quality-agent.js')),
       ...(await import('./activities/teams-notify.js')),
+      ...(await import('./activities/build-status.js')),
     },
     taskQueue: 'friday-builds',
     maxConcurrentActivityTaskExecutions: 10,

@@ -30,6 +30,12 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
     const timer = setTimeout(() => { proc.kill('SIGKILL'); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
     proc.on('close', code => {
       clearTimeout(timer);
+      // Kill any orphaned child processes from this agent run
+      try {
+        if (proc.pid) {
+          execSync('pkill -9 -P ' + proc.pid + ' 2>/dev/null || true');
+        }
+      } catch(e) { /* already dead */ }
       if (code === 0) resolve();
       else reject(new Error('Exit ' + code + ': ' + stderr.slice(0, 300)));
     });
@@ -164,4 +170,14 @@ export async function agent05Activity(jobData, contract) {
   const agentConfig = jobData._agentConfigs?.[4];
   if (!agentConfig) throw new Error('No agent config for agent_05');
   return runSingleAgent(agentConfig, jobData, contract, outputDir);
+}
+
+// Cleanup: kill all orphaned claudeagent processes after a build completes
+export async function cleanupAgentProcessesActivity() {
+  try {
+    execSync('pkill -9 -u claudeagent 2>/dev/null || true');
+    console.log('[TEMPORAL] Cleaned up orphaned claudeagent processes');
+  } catch(e) {
+    // No processes to kill — that's fine
+  }
 }

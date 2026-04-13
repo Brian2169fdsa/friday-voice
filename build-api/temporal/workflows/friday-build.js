@@ -1,5 +1,11 @@
 import { proxyActivities, executeChild, defineSignal, setHandler, condition, sleep } from '@temporalio/workflow';
 
+// Build-status activities (best-effort, fire-and-forget)
+const buildStatusActivities = proxyActivities({
+  startToCloseTimeout: '15 seconds',
+  retry: { maximumAttempts: 2 }
+});
+
 // Timeout configs by activity type
 const shortActivities = proxyActivities({
   startToCloseTimeout: '120 seconds',
@@ -44,49 +50,16 @@ const MAX_ITERATION_CYCLES = 3;
 const APPROVAL_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 const ANSWERS_TIMEOUT_MS = 14 * 24 * 60 * 60 * 1000;
 
-// Helper: write a record to a Supabase table (best-effort, non-blocking)
+// supabaseLog, updateBuildStatus, readBlackboard moved to activities/build-status.js
+// (Temporal sandboxes workflow code and strips process.env)
 async function supabaseLog(ticketId, table, data) {
-  try {
-    const sbUrl = process.env.SUPABASE_URL;
-    const sbKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!sbUrl || !sbKey) return;
-    await fetch(`${sbUrl}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ ...data, ticket_id: ticketId, created_at: new Date().toISOString() })
-    });
-  } catch(e) { console.error('[FRIDAY WF] supabaseLog error:', e.message); }
+  try { await buildStatusActivities.supabaseLogActivity(ticketId, table, data); } catch(e) {}
 }
-
-// Update friday_builds status (best-effort, non-blocking)
 async function updateBuildStatus(ticketId, status, progressPct) {
-  try {
-    const sbUrl = process.env.SUPABASE_URL;
-    const sbKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!sbUrl || !sbKey || !ticketId) return;
-    await fetch(`${sbUrl}/rest/v1/friday_builds?ticket_id=eq.${ticketId}`, {
-      method: 'PATCH',
-      headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ status, progress_pct: progressPct, updated_at: new Date().toISOString() })
-    });
-  } catch(e) { console.error('[FRIDAY WF] updateBuildStatus error:', e.message); }
+  try { await buildStatusActivities.updateBuildStatusActivity(ticketId, status, progressPct); } catch(e) {}
 }
-
-// GAP A-010: Read Supabase blackboard for supervisor routing signals
 async function readBlackboard(ticketId) {
-  try {
-    const sbUrl = process.env.SUPABASE_URL;
-    const sbKey = process.env.SUPABASE_SERVICE_KEY;
-    if (!sbUrl || !sbKey) return null;
-    const res = await fetch(
-      `${sbUrl}/rest/v1/build_quality_signals?ticket_id=eq.${ticketId}&signal_type=in.(engagement_context,build_mode_override)&order=created_at.desc&limit=5`,
-      { headers: { 'apikey': sbKey, 'Authorization': `Bearer ${sbKey}` } }
-    );
-    return res.ok ? await res.json() : null;
-  } catch(e) {
-    console.warn('[FRIDAY WF] readBlackboard error:', e.message);
-    return null;
-  }
+  try { return await buildStatusActivities.readBlackboardActivity(ticketId); } catch(e) { return null; }
 }
 
 export async function FridayBuildWorkflow(jobData) {
@@ -229,7 +202,9 @@ export async function FridayBuildWorkflow(jobData) {
     workflowId: `${jobData.job_id}-schema`,
     taskQueue: 'friday-builds'
   });
-  const { result: schemaResult, gateResult: schemaGateResult, revisionCount: schemaRevisionCount } = schemaChildResult;
+  let schemaGateResult, schemaRevisionCount;
+  let schemaResult;
+  ({ result: schemaResult, gateResult: schemaGateResult, revisionCount: schemaRevisionCount } = schemaChildResult);
 
   if (schemaRevisionCount > 0) {
     console.log(`[FRIDAY WF] BUILD-008 signaled ${schemaRevisionCount} revision(s) to schema-architect child workflow`);
@@ -308,7 +283,8 @@ export async function FridayBuildWorkflow(jobData) {
     workflowId: `${jobData.job_id}-llm`,
     taskQueue: 'friday-builds'
   });
-  const { result: llmResult, gateResult: llmGateResult, revisionCount: llmRevisionCount } = llmChildResult;
+  let llmResult, llmGateResult, llmRevisionCount;
+  ({ result: llmResult, gateResult: llmGateResult, revisionCount: llmRevisionCount } = llmChildResult);
 
   if (llmRevisionCount > 0) {
     console.log(`[FRIDAY WF] BUILD-008 signaled ${llmRevisionCount} revision(s) to llm-specialist child workflow`);
@@ -356,7 +332,8 @@ export async function FridayBuildWorkflow(jobData) {
     workflowId: `${jobData.job_id}-platform`,
     taskQueue: 'friday-builds'
   });
-  const { result: platformResult, gateResult: platformGateResult, revisionCount: platformRevisionCount } = platformChildResult;
+  let platformResult, platformGateResult, platformRevisionCount;
+  ({ result: platformResult, gateResult: platformGateResult, revisionCount: platformRevisionCount } = platformChildResult);
 
   if (platformRevisionCount > 0) {
     console.log(`[FRIDAY WF] BUILD-008 signaled ${platformRevisionCount} revision(s) to platform-builder child workflow`);
@@ -742,6 +719,9 @@ export async function FridayBuildWorkflow(jobData) {
   // ===== POST-BUILD PIPELINE =====
   await uploadActivities.postBuildPipelineActivity(jobData);
 
+  // Cleanup orphaned claudeagent processes
+  try { await fireAndForgetActivities.cleanupAgentProcessesActivity(); } catch(e) {}
+
   await updateBuildStatus(ticketId, 'complete', 100);
 
   // ===== UPDATE ENGAGEMENT MEMORY (BUILD-012) =====
@@ -775,6 +755,7 @@ export async function FridayBuildWorkflow(jobData) {
   } catch (err) {
     console.error('[FRIDAY WF] Unhandled workflow error:', err.message);
     try { await updateBuildStatus(ticketIdForCatch, 'failed', 0); } catch (_) {}
+    try { await fireAndForgetActivities.cleanupAgentProcessesActivity(); } catch (_) {}
     throw err;
   }
 }

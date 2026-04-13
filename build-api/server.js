@@ -5985,7 +5985,7 @@ async function schedulePromptQualityAgent() {
     });
     console.log('[BUILD-015] Prompt quality cron scheduled');
   } catch(e) {
-    if (e.message?.includes('already exists')) {
+    if (e.message?.includes('already started') || e.message?.includes('already exists')) {
       console.log('[BUILD-015] Prompt quality cron already scheduled');
     } else {
       console.warn('[BUILD-015] Could not schedule prompt quality cron:', e.message);
