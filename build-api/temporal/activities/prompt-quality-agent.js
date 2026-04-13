@@ -2,8 +2,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs/promises';
 import { getGraphToken, uploadFile } from './onedrive.js';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fmemdogudiolevqsfuvd.supabase.co';
 const GRAPH_USER = process.env.ONEDRIVE_USER_EMAIL || 'brian@manageai.io';
 
@@ -51,6 +49,7 @@ function extractPromptText(source) {
 }
 
 export async function promptQualityAssessmentActivity(options = {}) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const daysBack = options.days_back || 7;
   const since = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000).toISOString();
   const weekStart = new Date();

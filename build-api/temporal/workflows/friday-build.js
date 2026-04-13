@@ -7,7 +7,8 @@ const shortActivities = proxyActivities({
 });
 
 const agentActivities = proxyActivities({
-  startToCloseTimeout: '720 seconds',
+  startToCloseTimeout: '1200 seconds',
+  heartbeatTimeout: '60 seconds',
   retry: { maximumAttempts: 2 }
 });
 
@@ -107,6 +108,11 @@ export async function FridayBuildWorkflow(jobData) {
   setHandler(charlieContextSignal, (ctx) => { charlieContext = ctx; });
   setHandler(designInputSignal, (input) => { designInput = input; });
   setHandler(integrationInputSignal, (input) => { integrationInput = input; });
+
+  const ticketIdForCatch = jobData.ticket_id || jobData.ticketId;
+  try {
+  // Set initial building status
+  await updateBuildStatus(ticketIdForCatch, 'building', 5);
 
   // ===== ACTIVITY 0: Fetch prior engagement context from OneDrive =====
   const clientName = jobData.client || jobData.client_name || '';
@@ -606,7 +612,7 @@ export async function FridayBuildWorkflow(jobData) {
   // Store phase1_duration in build record
   try {
     await shortActivities.updateBuildDurationActivity(jobData.supabaseBuildId, { phase1_duration_ms: phase1DurationMs });
-  } catch(e) {}
+  } catch(e) { console.error('[FRIDAY WF] Non-critical error:', e.message); }
 
   // Upload Phase 1 manifests to OneDrive (non-blocking)
   try {
@@ -665,13 +671,21 @@ export async function FridayBuildWorkflow(jobData) {
     // Pass Phase 1 results into contract so doc agents have build context
     contract.phase1Results = phase1Results;
 
-    agentResults = await Promise.all([
+    const phase2Settled = await Promise.allSettled([
       agentActivities.agent01Activity(jobData, contract),
       agentActivities.agent02Activity(jobData, contract),
       agentActivities.agent03Activity(jobData, contract),
       agentActivities.agent04Activity(jobData, contract),
       agentActivities.agent05Activity(jobData, contract)
     ]);
+    const phase2Failures = phase2Settled.filter(r => r.status === 'rejected');
+    const phase2Successes = phase2Settled.filter(r => r.status === 'fulfilled');
+    if (phase2Failures.length > 0) {
+      console.error('[FRIDAY WF] Phase 2 partial failures:', phase2Failures.length, 'of 5 agents failed');
+      phase2Failures.forEach(f => console.error('[FRIDAY WF] Phase 2 failure:', f.reason?.message));
+    }
+    console.log('[FRIDAY WF] Phase 2 complete:', phase2Successes.length, 'of 5 agents succeeded');
+    agentResults = phase2Settled.map(r => r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message });
 
     // QA scoring on documents
     const qaResult = await shortActivities.qaScoreActivity(agentResults, jobData, contract);
@@ -702,8 +716,6 @@ export async function FridayBuildWorkflow(jobData) {
     }
   }
 
-  await updateBuildStatus(ticketId, 'complete', 100);
-
   // Send build complete Teams notification (non-blocking)
   try {
     await shortActivities.sendFridayTeamsCard({
@@ -725,10 +737,12 @@ export async function FridayBuildWorkflow(jobData) {
   // Store total_duration in build record
   try {
     await shortActivities.updateBuildDurationActivity(jobData.supabaseBuildId, { phase1_duration_ms: phase1DurationMs, total_duration_ms: totalDurationMs });
-  } catch(e) {}
+  } catch(e) { console.error('[FRIDAY WF] Non-critical error:', e.message); }
 
   // ===== POST-BUILD PIPELINE =====
   await uploadActivities.postBuildPipelineActivity(jobData);
+
+  await updateBuildStatus(ticketId, 'complete', 100);
 
   // ===== UPDATE ENGAGEMENT MEMORY (BUILD-012) =====
   // Records QA outcomes and compliance gaps so future builds learn from this one.
@@ -757,6 +771,12 @@ export async function FridayBuildWorkflow(jobData) {
       iteration_cycles: iterationCycle
     }
   };
+
+  } catch (err) {
+    console.error('[FRIDAY WF] Unhandled workflow error:', err.message);
+    try { await updateBuildStatus(ticketIdForCatch, 'failed', 0); } catch (_) {}
+    throw err;
+  }
 }
 
 // Child workflow exports

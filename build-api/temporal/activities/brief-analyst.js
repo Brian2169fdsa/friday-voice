@@ -2,10 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { ApplicationFailure } from '@temporalio/activity';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 export async function briefAnalystActivity(jobData) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   // Normalize field names (workflow uses snake_case, some callers use camelCase)
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
@@ -73,6 +73,7 @@ ${briefText}`
     const clean = raw.replace(/```json\n?|\n?```/g, '').trim();
     analysis = JSON.parse(clean);
   } catch (e) {
+    try { await supabase.from('build_agent_runs').update({ status: 'failed', completed_at: new Date().toISOString(), errors: [{ message: e.message }] }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-000'); } catch (_) {}
     throw ApplicationFailure.create({
       message: `[BUILD-000] Failed to parse brief analysis JSON: ${e.message}`,
       nonRetryable: false
@@ -217,6 +218,7 @@ ${briefText}`
       .map(b => `- ${b.issue}\n  Agent affected: ${b.agent_affected}\n  Question for Charlie: ${b.question_for_charlie}`)
       .join('\n');
 
+    try { await supabase.from('build_agent_runs').update({ status: 'failed', completed_at: new Date().toISOString(), output: { blocking_issues: scoring.blocking_issues, overall_score: scoring.scores?.overall }, errors: [{ message: 'Brief not buildable' }] }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-000'); } catch (_) {}
     throw ApplicationFailure.create({
       message: `[BUILD-000] BRIEF NOT BUILDABLE\n\nBlocking issues must be resolved before build can start:\n${blockerSummary}\n\nOverall score: ${scoring.scores?.overall}/100\nSummary: ${scoring.summary}`,
       type: 'BriefNotBuildable',

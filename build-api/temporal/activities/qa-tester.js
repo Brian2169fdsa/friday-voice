@@ -6,7 +6,6 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { heartbeat, ApplicationFailure } from '@temporalio/activity';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const N8N_URL = process.env.N8N_LOCAL_URL || 'http://localhost:5678';
 const N8N_KEY = process.env.N8N_LOCAL_API_KEY || process.env.N8N_API_KEY || '';
@@ -374,7 +373,7 @@ async function testGitHubRepo(ticketId, clientName, repoName) {
 }
 
 // ── LLM Accuracy Testing ──────────────────────────────────────────────────────
-async function testLLMAccuracy(ticketId) {
+async function testLLMAccuracy(anthropic, ticketId) {
   // Pull gold standard test pairs stored by BUILD-004
   const { data: signals, error: signalErr } = await supabase
     .from('build_quality_signals')
@@ -497,6 +496,7 @@ function generateFixInstructions(agent, failures) {
 
 // ── Main activity ─────────────────────────────────────────────────────────────
 export async function qaTesterActivity(jobData, contract, buildResults) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   // Normalize field names (workflow passes snake_case; some paths use camelCase)
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
@@ -526,7 +526,7 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
       testN8nWorkflows(ticketId, clientName),
       testSupabaseSchema(ticketId, clientName),
       testGitHubRepo(ticketId, clientName, buildContract?.repoName || buildResults?.platform?.repo_url?.split('/').pop() || buildResults?.platform?.deployment_manifest?.repo_url?.split('/').pop()),
-      testLLMAccuracy(ticketId)
+      testLLMAccuracy(anthropic, ticketId)
     ]);
 
     const n8n = n8nResult.status === 'fulfilled' ? n8nResult.value

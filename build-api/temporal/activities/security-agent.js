@@ -2,7 +2,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { ApplicationFailure } from '@temporalio/activity';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 const CRITICAL_PATTERNS = [
@@ -29,6 +28,7 @@ const HIGH_PATTERNS = [
 ];
 
 export async function securityAgentActivity(jobData) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
   const clientName = jobData.client || jobData.client_name || jobData.clientName || 'Unknown';
@@ -262,6 +262,7 @@ Return ONLY JSON (no markdown):
       .map(f => `- ${f.file || 'system'}: ${f.issue}`)
       .join('\n');
 
+    try { await supabase.from('build_agent_runs').update({ status: 'failed', completed_at: new Date().toISOString(), errors: [{ message: 'Critical security vulnerabilities found' }] }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-009'); } catch (_) {}
     throw ApplicationFailure.create({
       message: `[BUILD-009] SECURITY SCAN FAILED -- Critical vulnerabilities found:\n${criticalSummary}`,
       type: 'SecurityFailure',

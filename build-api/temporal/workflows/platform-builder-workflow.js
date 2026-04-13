@@ -3,7 +3,8 @@
 import { proxyActivities } from '@temporalio/workflow';
 
 const agentActivities = proxyActivities({
-  startToCloseTimeout: '10 minutes',
+  startToCloseTimeout: '20 minutes',
+  heartbeatTimeout: '60 seconds',
   retry: { maximumAttempts: 2 }
 });
 

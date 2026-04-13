@@ -26,7 +26,7 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
     });
     let stderr = '';
     proc.stderr.on('data', d => { stderr += d.toString(); });
-    const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
+    const timer = setTimeout(() => { proc.kill('SIGKILL'); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
     proc.on('close', code => {
       clearTimeout(timer);
       if (code === 0) resolve();

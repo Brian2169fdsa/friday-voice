@@ -41,6 +41,16 @@ async function run() {
       ...(await import('./activities/teams-notify.js')),
     },
     taskQueue: 'friday-builds',
+    maxConcurrentActivityTaskExecutions: 10,
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('[WORKER] SIGTERM received — shutting down gracefully');
+    worker.shutdown();
+  });
+  process.on('SIGINT', () => {
+    console.log('[WORKER] SIGINT received — shutting down gracefully');
+    worker.shutdown();
   });
 
   console.log('FRIDAY Temporal worker started — task queue: friday-builds');

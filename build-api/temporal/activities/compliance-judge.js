@@ -2,12 +2,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { ApplicationFailure } from '@temporalio/activity';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 const COMPLIANCE_THRESHOLD = 0.90; // 90% of criteria must be met
 
 export async function complianceJudgeActivity(jobData) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   // Normalize field names
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
@@ -73,7 +73,9 @@ export async function complianceJudgeActivity(jobData) {
       / Math.max((qualitySignals || []).length, 1)
   };
 
-  const complianceResponse = await anthropic.messages.create({
+  let complianceResponse;
+  try {
+    complianceResponse = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8000,
     messages: [{
@@ -144,6 +146,10 @@ Return ONLY valid JSON (no markdown):
 }`
     }]
   });
+  } catch (apiErr) {
+    try { await supabase.from('build_agent_runs').update({ status: 'failed', completed_at: new Date().toISOString(), errors: [{ message: apiErr.message }] }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-011'); } catch (_) {}
+    throw apiErr;
+  }
 
   let compliance;
   try {

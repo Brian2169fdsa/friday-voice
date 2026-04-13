@@ -1,8 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function orchestrationDecisionActivity(jobData) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const startTime = Date.now();
   const ticketId = jobData.ticket_id || jobData.ticketId;
 

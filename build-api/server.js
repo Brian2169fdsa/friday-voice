@@ -69,6 +69,21 @@ async function evaluateCompleteness(job) {
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
+// Simple in-memory rate limiter for build endpoints
+const buildRateLimit = new Map();
+const RATE_WINDOW_MS = 60000;
+const RATE_MAX = 5;
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const key = `${ip}:${Math.floor(now / RATE_WINDOW_MS)}`;
+  const count = (buildRateLimit.get(key) || 0) + 1;
+  buildRateLimit.set(key, count);
+  for (const [k] of buildRateLimit) {
+    if (!k.endsWith(`:${Math.floor(now / RATE_WINDOW_MS)}`)) buildRateLimit.delete(k);
+  }
+  return count <= RATE_MAX;
+}
+
 const PORT = process.env.PORT || 3000;
 const N8N_CALLBACK_URL = process.env.N8N_WF07_CALLBACK || null;
 // Make.com callback removed — replaced by n8n WF-07 (not yet deployed)
@@ -1660,6 +1675,10 @@ app.post('/api/build/:id/comment-email', async (req, res) => {
 
 // Phase 1 approval endpoint (FR-GAP-023)
 app.post('/api/build/:id/phase1-approve', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'];
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const ticketId = req.params.id;
   const { decision = 'approved', reason } = req.body || {};
   try {
@@ -1676,6 +1695,10 @@ app.post('/api/build/:id/phase1-approve', async (req, res) => {
 
 // Auto-approve Phase 1 for testing
 app.post('/api/build/:id/auto-approve-phase1', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'];
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   const ticketId = req.params.id;
   try {
     const temporalClient = await getTemporalClient();
@@ -3044,6 +3067,10 @@ a{color:#38bdf8;text-decoration:none}
 
 // POST reject route
 app.post('/api/build/:id/reject', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'];
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const temporalClient = await getTemporalClient();
     const handle = temporalClient.workflow.getHandle(req.params.id);
@@ -3207,6 +3234,10 @@ app.get('/api/status/:ticketId', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 app.post('/api/build/brief', async (req, res) => {
+  const clientIp = req.ip || req.connection?.remoteAddress || 'unknown';
+  if (!checkRateLimit(clientIp)) {
+    return res.status(429).json({ error: 'Too many builds. Maximum 5 per minute.' });
+  }
   try {
     const validation = BriefSchema.safeParse(req.body);
     if (!validation.success) {
@@ -3265,6 +3296,10 @@ app.post('/api/build/brief', async (req, res) => {
 });
 
 app.post('/api/build/:id/approve', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'];
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const temporalClient = await getTemporalClient();
     const handle = temporalClient.workflow.getHandle(req.params.id);
@@ -3279,6 +3314,10 @@ app.post('/api/build/:id/approve', async (req, res) => {
 });
 
 app.post('/api/build/:id/request-changes', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'];
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const temporalClient = await getTemporalClient();
     const handle = temporalClient.workflow.getHandle(req.params.id);
@@ -3293,6 +3332,10 @@ app.post('/api/build/:id/request-changes', async (req, res) => {
 });
 
 app.post('/api/build/:id/cancel', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'];
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const temporalClient = await getTemporalClient();
     const handle = temporalClient.workflow.getHandle(req.params.id);
@@ -4967,6 +5010,10 @@ document.getElementById('bf').addEventListener('submit', async function(e){
 
 // ── GET /admin — FRIDAY admin dashboard ──────────────────────────────────────
 app.get('/admin', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'] || req.query.key;
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const { data: builds } = await supabase.from('friday_builds')
       .select('id,ticket_id,client_name,project_name,status,progress_pct,phase1_duration_ms,total_duration_ms,created_at,updated_at')
@@ -5660,6 +5707,10 @@ app.post('/api/build/estimate', async (req, res) => {
 
 // ── GET /api/metrics — Build system metrics ──────────────────────────────────
 app.get('/api/metrics', async (req, res) => {
+  const cockpitKey = req.headers['x-cockpit-key'] || req.query.key;
+  if (cockpitKey !== process.env.COCKPIT_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   try {
     const { data: all } = await supabase.from('friday_builds')
       .select('id,status,progress_pct,client_name,created_at')

@@ -2,10 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { ApplicationFailure } from '@temporalio/activity';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 export async function deploymentVerifierActivity(jobData) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
   const clientName = jobData.client || jobData.client_name || jobData.clientName || 'Unknown';
@@ -242,6 +242,7 @@ Return ONLY JSON (no markdown):
   console.log(`[BUILD-010] Deployment verification complete | Ready: ${validation.production_ready} | Checks: ${results.filter(r => r.passed).length}/${results.length} | Duration: ${duration}ms`);
 
   if (!overallPassed && (validation.blockers || []).length > 0) {
+    try { await supabase.from('build_agent_runs').update({ status: 'failed', completed_at: new Date().toISOString(), errors: [{ message: 'Deployment not production ready' }] }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-010'); } catch (_) {}
     throw ApplicationFailure.create({
       message: `[BUILD-010] DEPLOYMENT NOT PRODUCTION READY:\n${validation.blockers.join('\n')}\n\nSummary: ${validation.summary}`,
       type: 'DeploymentVerificationFailure',

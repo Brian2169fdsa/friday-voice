@@ -6,7 +6,7 @@ import { getGraphToken, uploadFile } from './onedrive.js';
 import { Context } from '@temporalio/activity';
 
 const CLAUDE = '/usr/bin/claude';
-const WORKFLOW_TIMEOUT = 900000;
+const WORKFLOW_TIMEOUT = 1100000;
 
 let AGENT_UID, AGENT_GID;
 try {
@@ -29,7 +29,7 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
     }, 30000);
     let stderr = '';
     proc.stderr.on('data', d => { stderr += d.toString(); });
-    const timer = setTimeout(() => { proc.kill(); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
+    const timer = setTimeout(() => { proc.kill('SIGKILL'); reject(new Error('Timeout ' + Math.round(timeoutMs/1000) + 's')); }, timeoutMs);
     proc.on('close', code => {
       clearInterval(heartbeatInterval);
       clearTimeout(timer);
