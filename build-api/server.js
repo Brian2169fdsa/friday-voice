@@ -3255,6 +3255,16 @@ app.post('/api/build/brief', async (req, res) => {
     return res.status(429).json({ error: 'Too many builds. Maximum 5 per minute.' });
   }
   try {
+    // BUILD-016: Check maintenance mode before accepting new builds
+    try {
+      const { createClient: createSbClient } = await import('@supabase/supabase-js');
+      const sbCheck = createSbClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+      const { data: sysConfig } = await sbCheck.from('system_config').select('value').eq('key', 'system_status').maybeSingle();
+      if (sysConfig?.value === 'maintenance') {
+        return res.status(503).json({ success: false, error: 'System in maintenance mode', retry_after: '15 minutes' });
+      }
+    } catch (_) { /* system_config table may not exist yet — allow builds */ }
+
     const validation = BriefSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
@@ -6009,3 +6019,24 @@ async function schedulePromptQualityAgent() {
   }
 }
 schedulePromptQualityAgent();
+
+// BUILD-016: Schedule maintenance cron — 2 AM UTC daily
+async function scheduleMaintenanceCron() {
+  try {
+    const client = await getTemporalClient();
+    await client.workflow.start('maintenanceWorkflow', {
+      taskQueue: 'friday-builds',
+      workflowId: 'friday-maintenance-nightly',
+      cronSchedule: '0 2 * * *',
+      args: [{}],
+    });
+    console.log('[BUILD-016] Maintenance cron scheduled (2 AM UTC daily)');
+  } catch(e) {
+    if (e.message?.includes('already started') || e.message?.includes('already exists')) {
+      console.log('[BUILD-016] Maintenance cron already scheduled');
+    } else {
+      console.log('[BUILD-016] Maintenance cron skip:', e.message);
+    }
+  }
+}
+scheduleMaintenanceCron();

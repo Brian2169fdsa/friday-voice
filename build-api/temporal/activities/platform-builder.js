@@ -238,6 +238,14 @@ Generate and push a README with project name, client, description, and setup ins
   "notes": "Any deployment decisions"
 }
 
+## Pre-Push Secret Scanning
+BEFORE pushing any file, scan its content for these patterns:
+- API keys: /sk-[a-zA-Z0-9_-]{20,}/
+- Supabase keys: /sb_[a-zA-Z0-9_-]{20,}/
+- Generic secrets: /(password|secret|token)\s*[:=]\s*['"][^'"]{8,}['"]/i
+If ANY secret is found, replace the value with process.env.{APPROPRIATE_VAR_NAME} (e.g., process.env.SUPABASE_KEY, process.env.ANTHROPIC_API_KEY).
+Log: "[BUILD-005] Secret detected in {filename} — replacing with env var reference"
+
 ## Rules
 - Repository MUST be private
 - Use the GitHub Contents API for all file operations (not git clone)

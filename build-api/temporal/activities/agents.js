@@ -119,6 +119,9 @@ async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
   const promptFile = '/tmp/friday-temporal-' + jobData.job_id + '-' + agentConfig.agent_id + '.txt';
   await fs.writeFile(promptFile, prompt);
   console.log('[TEMPORAL][' + agentConfig.agent_id + '] Starting: ' + agentConfig.specialist);
+  // H6: Blocked paths — check after agent exits
+  const blockedPaths = ['/root/.ssh', '/root/.aws', '/etc/shadow', '/opt/manageai/build-api/.env'];
+
   const t = Date.now();
   try {
     const timeoutMs = agentConfig.agent_id === 'agent_01' ? AGENT_01_TIMEOUT : AGENT_TIMEOUT;
@@ -126,6 +129,18 @@ async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
     const dur = Math.round((Date.now() - t) / 1000);
     console.log('[TEMPORAL][' + agentConfig.agent_id + '] Done in ' + dur + 's');
     await fs.rm(promptFile, { force: true });
+
+    // H6: Post-agent filesystem integrity check
+    for (const p of blockedPaths) {
+      try {
+        const stat = await fs.stat(p);
+        const mtime = stat.mtimeMs;
+        if (mtime > t) {
+          console.warn(`[SECURITY] Agent ${agentConfig.agent_id} modified blocked path: ${p}`);
+        }
+      } catch (_) { /* path doesn't exist — fine */ }
+    }
+
     return { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'complete', duration: dur, output_subdir: agentConfig.output_subdir };
   } catch (err) {
     const dur = Math.round((Date.now() - t) / 1000);

@@ -7,7 +7,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 const COMPLIANCE_THRESHOLD = 0.90; // 90% of criteria must be met
 
 export async function complianceJudgeActivity(jobData) {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
   // Normalize field names
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;

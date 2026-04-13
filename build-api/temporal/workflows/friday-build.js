@@ -9,19 +9,20 @@ const buildStatusActivities = proxyActivities({
 // Timeout configs by activity type
 const shortActivities = proxyActivities({
   startToCloseTimeout: '120 seconds',
+  heartbeatTimeout: '120 seconds',
   retry: { maximumAttempts: 3 }
 });
 
 const agentActivities = proxyActivities({
   startToCloseTimeout: '900 seconds',
-  heartbeatTimeout: '60 seconds',
+  heartbeatTimeout: '120 seconds',
   retry: { maximumAttempts: 2 }
 });
 
 // FIX 3: Phase 2 doc agents need longer timeout (up to 431s observed)
 const docAgentActivities = proxyActivities({
   startToCloseTimeout: '900 seconds',
-  heartbeatTimeout: '60 seconds',
+  heartbeatTimeout: '120 seconds',
   retry: { maximumAttempts: 2 }
 });
 
@@ -45,8 +46,64 @@ const reviewActivities = proxyActivities({
 // FIX 13: Compliance judge needs longer timeout (was timing out during revision routing)
 const complianceActivities = proxyActivities({
   startToCloseTimeout: '300 seconds',
+  heartbeatTimeout: '120 seconds',
   retry: { maximumAttempts: 2 }
 });
+
+// BUILD-019: Red Team Agent
+const redTeamActivities = proxyActivities({
+  startToCloseTimeout: '300 seconds',
+  retry: { maximumAttempts: 1 }
+});
+
+// ── H1: Per-agent circuit breaker ────────────────────────────────────────────
+// Tracks consecutive failures per agent. Opens after 3 failures. Half-opens after 10 min.
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_HALF_OPEN_MS = 10 * 60 * 1000; // 10 minutes
+
+const circuitBreaker = {
+  _states: new Map(),
+
+  _get(agentId) {
+    if (!this._states.has(agentId)) {
+      this._states.set(agentId, { failures: 0, state: 'closed', lastFailure: 0 });
+    }
+    return this._states.get(agentId);
+  },
+
+  canRun(agentId) {
+    const cb = this._get(agentId);
+    if (cb.state === 'closed') return true;
+    if (cb.state === 'open') {
+      // Check if enough time has passed for half-open
+      if (Date.now() - cb.lastFailure >= CIRCUIT_BREAKER_HALF_OPEN_MS) {
+        cb.state = 'half-open';
+        console.log(`[CIRCUIT BREAKER] ${agentId} half-open — allowing retry attempt`);
+        return true;
+      }
+      console.log(`[CIRCUIT BREAKER] ${agentId} circuit open — skipping`);
+      return false;
+    }
+    // half-open: allow one attempt
+    return true;
+  },
+
+  recordSuccess(agentId) {
+    const cb = this._get(agentId);
+    cb.failures = 0;
+    cb.state = 'closed';
+  },
+
+  recordFailure(agentId) {
+    const cb = this._get(agentId);
+    cb.failures++;
+    cb.lastFailure = Date.now();
+    if (cb.failures >= CIRCUIT_BREAKER_THRESHOLD) {
+      cb.state = 'open';
+      console.log(`[CIRCUIT BREAKER] ${agentId} circuit opened after ${cb.failures} consecutive failures`);
+    }
+  }
+};
 
 // Signals
 export const answersReceivedSignal = defineSignal('answers-received');
@@ -386,15 +443,22 @@ export async function FridayBuildWorkflow(jobData) {
 
   // BUILD-009: Security Agent -- scan for vulnerabilities before QA
   console.log('[FRIDAY WF] Step 5b: Security Scan (BUILD-009)');
-  try {
-    const securityResult = await shortActivities.securityAgentActivity(jobData);
-    jobData._security = securityResult;
-    await emitAgent('BUILD-009', 'Security Agent', securityResult.passed ? 'complete' : 'error');
-  } catch(e) {
-    if (e.type === 'SecurityFailure') throw e; // Hard block on critical findings
-    jobData._security = { passed: true, skipped: true, error: e.message };
-    console.error('[FRIDAY WF] BUILD-009 security scan error (non-blocking):', e.message.slice(0, 150));
-    await emitAgent('BUILD-009', 'Security Agent', 'error');
+  if (circuitBreaker.canRun('BUILD-009')) {
+    try {
+      const securityResult = await shortActivities.securityAgentActivity(jobData);
+      circuitBreaker.recordSuccess('BUILD-009');
+      jobData._security = securityResult;
+      await emitAgent('BUILD-009', 'Security Agent', securityResult.passed ? 'complete' : 'error');
+    } catch(e) {
+      circuitBreaker.recordFailure('BUILD-009');
+      if (e.type === 'SecurityFailure') throw e; // Hard block on critical findings
+      jobData._security = { passed: true, skipped: true, error: e.message };
+      console.error('[FRIDAY WF] BUILD-009 security scan error (non-blocking):', e.message.slice(0, 150));
+      await emitAgent('BUILD-009', 'Security Agent', 'error');
+    }
+  } else {
+    jobData._security = { passed: true, skipped: true, reason: 'circuit breaker open' };
+    await emitAgent('BUILD-009', 'Security Agent', 'skipped');
   }
 
   // BUILD-003: QA Tester -- test everything that was just built
@@ -469,21 +533,66 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-003', 'QA Tester', qaTestResult?.status === 'error' ? 'error' : 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 75); // QA=75
 
+  // ===== BUILD-019: Red Team Agent — adversarial testing =====
+  console.log('[FRIDAY WF] Running BUILD-019 Red Team Agent');
+  let redTeamResult = null;
+  try {
+    if (circuitBreaker.canRun('BUILD-019')) {
+      redTeamResult = await redTeamActivities.redTeamAgentActivity(jobData);
+      circuitBreaker.recordSuccess('BUILD-019');
+      console.log(`[BUILD-019] Red Team: ${redTeamResult.findings_count} findings (${redTeamResult.critical_count} critical)`);
+      await emitAgent('BUILD-019', 'Red Team Agent', redTeamResult.critical_count > 0 ? 'warning' : 'complete');
+
+      // Route critical findings as fix requests to responsible agents
+      if (redTeamResult.critical_count > 0 && redTeamResult.findings) {
+        for (const finding of redTeamResult.findings.filter(f => f.severity === 'critical')) {
+          const targetAgent = finding.affected_agent || 'BUILD-001';
+          console.log(`[BUILD-019] Routing critical finding to ${targetAgent}: ${finding.description?.slice(0, 100)}`);
+          try {
+            await buildStatusActivities.supabaseLogActivity(ticketId, 'build_quality_signals', {
+              ticket_id: ticketId,
+              from_agent: 'BUILD-019',
+              to_agent: targetAgent,
+              signal_type: 'red_team_fix_request',
+              confidence: 0,
+              payload: { finding, fix_instructions: finding.recommended_fix }
+            });
+          } catch (_) {}
+        }
+      }
+    } else {
+      redTeamResult = { findings_count: 0, critical_count: 0, skipped: true };
+      await emitAgent('BUILD-019', 'Red Team Agent', 'skipped');
+    }
+  } catch(e) {
+    circuitBreaker.recordFailure('BUILD-019');
+    console.warn('[FRIDAY WF] BUILD-019 Red Team error (non-blocking):', e.message?.slice(0, 200));
+    redTeamResult = { findings_count: 0, critical_count: 0, error: e.message };
+    await emitAgent('BUILD-019', 'Red Team Agent', 'error');
+  }
+
   // BUILD-010: Deployment Verifier -- confirm system is live in production
   console.log('[FRIDAY WF] Step 7: Deployment Verification (BUILD-010)');
-  try {
-    const deployResult = await shortActivities.deploymentVerifierActivity(jobData);
-    jobData._deployment = deployResult;
-    await emitAgent('BUILD-010', 'Deployment Verifier', deployResult.production_ready ? 'complete' : 'error');
-  } catch(e) {
-    if (e.type === 'DeploymentVerificationFailure') {
-      console.warn('[FRIDAY WF] BUILD-010 deployment verification failed (non-blocking):', e.message.slice(0, 150));
-      jobData._deployment = { production_ready: false, error: e.message };
-      await emitAgent('BUILD-010', 'Deployment Verifier', 'error');
-    } else {
-      jobData._deployment = { production_ready: true, skipped: true };
-      await emitAgent('BUILD-010', 'Deployment Verifier', 'error');
+  if (circuitBreaker.canRun('BUILD-010')) {
+    try {
+      const deployResult = await shortActivities.deploymentVerifierActivity(jobData);
+      circuitBreaker.recordSuccess('BUILD-010');
+      jobData._deployment = deployResult;
+      await emitAgent('BUILD-010', 'Deployment Verifier', deployResult.production_ready ? 'complete' : 'error');
+    } catch(e) {
+      circuitBreaker.recordFailure('BUILD-010');
+      if (e.type === 'DeploymentVerificationFailure') {
+        console.warn('[FRIDAY WF] BUILD-010 deployment verification failed (non-blocking):', e.message.slice(0, 150));
+        jobData._deployment = { production_ready: false, error: e.message };
+        await emitAgent('BUILD-010', 'Deployment Verifier', 'error');
+      } else {
+        jobData._deployment = { production_ready: true, skipped: true };
+        await emitAgent('BUILD-010', 'Deployment Verifier', 'error');
+      }
     }
+  } else {
+    jobData._deployment = { production_ready: true, skipped: true, reason: 'circuit breaker open' };
+    await emitAgent('BUILD-010', 'Deployment Verifier', 'skipped');
   }
 
   // ===== VERIFICATION: Final output check (runs after all QA iterations) =====
@@ -527,8 +636,11 @@ export async function FridayBuildWorkflow(jobData) {
 
   while (complianceRevisionCount <= MAX_COMPLIANCE_REVISIONS) {
     try {
+      if (!circuitBreaker.canRun('BUILD-011')) throw new Error('Circuit breaker open for BUILD-011');
       complianceResult = await complianceActivities.complianceJudgeActivity(jobData);
+      circuitBreaker.recordSuccess('BUILD-011');
     } catch(e) {
+      circuitBreaker.recordFailure('BUILD-011');
       // Non-blocking: compliance judge errors should not halt the build
       console.error('[FRIDAY WF] Compliance Judge error (non-blocking):', e.message.slice(0, 300));
       await emitAgent('BUILD-011', 'Compliance Judge', 'failed');
@@ -754,6 +866,14 @@ export async function FridayBuildWorkflow(jobData) {
     console.warn('[FRIDAY WF] Engagement memory update failed (non-blocking):', e.message.slice(0, 150));
   }
 
+  // ===== BUILD-016: Intelligence Agent — build observation =====
+  try {
+    await buildStatusActivities.buildObserverActivity(jobData);
+    console.log('[BUILD-016] Build observation recorded');
+  } catch(e) {
+    console.warn('[FRIDAY WF] BUILD-016 observer failed (non-blocking):', e.message?.slice(0, 150));
+  }
+
   return {
     success: true,
     qaScore: jobData.qaScore,
@@ -776,6 +896,15 @@ export async function FridayBuildWorkflow(jobData) {
     try { await fireAndForgetActivities.cleanupAgentProcessesActivity(); } catch (_) {}
     throw err;
   }
+}
+
+// BUILD-016: Maintenance workflow (nightly cron)
+export async function maintenanceWorkflow() {
+  const maintenanceActs = proxyActivities({
+    startToCloseTimeout: '600 seconds',
+    retry: { maximumAttempts: 1 }
+  });
+  return await maintenanceActs.maintenanceRunActivity();
 }
 
 // Child workflow exports

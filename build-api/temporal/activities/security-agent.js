@@ -28,7 +28,7 @@ const HIGH_PATTERNS = [
 ];
 
 export async function securityAgentActivity(jobData) {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
   const clientName = jobData.client || jobData.client_name || jobData.clientName || 'Unknown';

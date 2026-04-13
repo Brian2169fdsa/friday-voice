@@ -496,7 +496,7 @@ function generateFixInstructions(agent, failures) {
 
 // ── Main activity ─────────────────────────────────────────────────────────────
 export async function qaTesterActivity(jobData, contract, buildResults) {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
   // Normalize field names (workflow passes snake_case; some paths use camelCase)
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const customerId = jobData.customerId || jobData.customer_id;
@@ -506,6 +506,7 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
   console.log(`[BUILD-003] Starting real functional QA for ${clientName} / ${ticketId}`);
   const startTime = Date.now();
   let iterationCount = 0;
+  let previousOverallScore = -1;
   const MAX_ITERATIONS = 5;
 
   await supabase.from('build_agent_runs').upsert({
@@ -564,6 +565,25 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
     const failedTests = allTests.filter(t => !t.passed);
 
     console.log(`[BUILD-003] Iteration ${iterationCount}: n8n=${scores.n8n_workflows} db=${scores.database_schema} github=${scores.github_repo} llm=${scores.llm_accuracy} overall=${scores.overall}`);
+
+    // H4: Convergence detection — stop early if score plateaus
+    if (iterationCount >= 2 && previousOverallScore >= 0) {
+      const improvement = scores.overall - previousOverallScore;
+      if (improvement < 2) {
+        console.log(`[BUILD-003] Converged at iteration ${iterationCount} — score plateau at ${scores.overall} (improvement: ${improvement})`);
+        previousOverallScore = scores.overall;
+        // Store signal and break out with current results
+        await supabase.from('build_quality_signals').insert({
+          ticket_id: ticketId,
+          from_agent: 'BUILD-003',
+          signal_type: 'qa_results',
+          confidence: scores.overall / 100,
+          payload: { scores, all_tests: allTests, iteration: iterationCount, converged: true }
+        });
+        break;
+      }
+    }
+    previousOverallScore = scores.overall;
 
     // Store QA signal for this iteration
     await supabase.from('build_quality_signals').insert({

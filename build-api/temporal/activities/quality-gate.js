@@ -5,7 +5,7 @@ import { ApplicationFailure } from '@temporalio/activity';
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 export async function qualityGateActivity(jobData, reviewingAgent, agentOutput) {
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 0 });
   // Normalize field names
   const ticketId = jobData.ticket_id || jobData.ticketId;
   const clientName = jobData.client || jobData.client_name || jobData.clientName || 'Unknown';
