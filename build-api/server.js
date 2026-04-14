@@ -68,7 +68,13 @@ async function evaluateCompleteness(job) {
 }
 
 const app = express();
-app.use((req, res, next) => { res.header("Access-Control-Allow-Origin", "*"); res.header("Access-Control-Allow-Headers", "Content-Type"); res.header("Access-Control-Allow-Methods", "POST, OPTIONS"); if (req.method === "OPTIONS") return res.sendStatus(200); next(); });
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(path.dirname(new URL(import.meta.url).pathname), 'public')));
 
@@ -1654,7 +1660,7 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 4096,
         system: FRIDAY_SYSTEM,
         messages,
         tools
@@ -1785,7 +1791,7 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          max_tokens: 4096,
           system: FRIDAY_SYSTEM,
           messages: [...messages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }],
           tools
@@ -3915,7 +3921,7 @@ async function mapOpportunityAssessment(ticket, customerId, clientName, buildId)
       const cr = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1000, messages: [{ role: 'user', content: 'Extract opportunities from this assessment for client "' + clientName + '". Return JSON only, no markdown. Format: [{"name":"...","description":"2-3 sentences","score":0-100,"value_tier":"high|medium|low","phase":"Phase 1|Phase 2|backlog"}]\n\nText:\n' + text }] })
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, messages: [{ role: 'user', content: 'Extract opportunities from this assessment for client "' + clientName + '". Return JSON only, no markdown. Format: [{"name":"...","description":"2-3 sentences","score":0-100,"value_tier":"high|medium|low","phase":"Phase 1|Phase 2|backlog"}]\n\nText:\n' + text }] })
       });
       const d = await cr.json();
       if (d.content && d.content[0]) { const rawOpps = d.content[0].text.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim(); structuredOpps = JSON.parse(rawOpps); }

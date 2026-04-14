@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>FRIDAY - Head of Build</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -15,6 +15,8 @@
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #E5D5C0; border-radius: 3px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes dotPulse { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
 </style>
 </head>
 <body>
@@ -28,8 +30,10 @@ You have access to tools to interact with the live system. Use them when Brian a
 
 Your agents: BUILD-000 through BUILD-019, 17 total. Stack: Temporal, Claude Code, n8n, Supabase, GitHub, OneDrive. Session 13: 4 builds, 25% to 95% QA. Red Team, Intelligence Agent, circuit breakers all live.`;
 
+const HAS_SPEECH = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+
 /* ── HUD Canvas ───────────────────────────────────────────────────────────── */
-function HUD({ status }) {
+function HUD({ status, size }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const timeRef = useRef(0);
@@ -37,11 +41,12 @@ function HUD({ status }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const S = 360;
+    const S = size;
     canvas.width = S * 2;
     canvas.height = S * 2;
     ctx.scale(2, 2);
     const cx = S / 2, cy = S / 2;
+    const scale = S / 360;
 
     const animate = () => {
       const spd = status === 'SPEAKING' ? 0.025 : status === 'LISTENING' ? 0.018 : status === 'PROCESSING' ? 0.014 : 0.006;
@@ -49,18 +54,18 @@ function HUD({ status }) {
       const t = timeRef.current;
       ctx.clearRect(0, 0, S, S);
 
-      // 5. CENTER GLOW
-      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+      // Center glow
+      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 * scale);
       cg.addColorStop(0, 'rgba(255,107,0,0.06)');
       cg.addColorStop(1, 'rgba(255,107,0,0)');
       ctx.fillStyle = cg;
       ctx.beginPath();
-      ctx.arc(cx, cy, 80, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 80 * scale, 0, Math.PI * 2);
       ctx.fill();
 
-      // 1. OUTER RING + TICK MARKS
+      // Outer ring + tick marks
       ctx.beginPath();
-      ctx.arc(cx, cy, 155, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 155 * scale, 0, Math.PI * 2);
       ctx.strokeStyle = '#FF6B00';
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -68,28 +73,25 @@ function HUD({ status }) {
       for (let i = 0; i < 72; i++) {
         const angle = (i * 5) * Math.PI / 180;
         const isLong = i % 6 === 0;
-        const len = isLong ? 12 : 6;
-        const w = isLong ? 2 : 1;
-        const r1 = 155;
-        const r2 = r1 + len;
+        const len = (isLong ? 12 : 6) * scale;
         ctx.beginPath();
-        ctx.moveTo(cx + r1 * Math.cos(angle), cy + r1 * Math.sin(angle));
-        ctx.lineTo(cx + r2 * Math.cos(angle), cy + r2 * Math.sin(angle));
+        ctx.moveTo(cx + 155 * scale * Math.cos(angle), cy + 155 * scale * Math.sin(angle));
+        ctx.lineTo(cx + (155 * scale + len) * Math.cos(angle), cy + (155 * scale + len) * Math.sin(angle));
         ctx.strokeStyle = isLong ? '#FF6B00' : 'rgba(255,107,0,0.5)';
-        ctx.lineWidth = w;
+        ctx.lineWidth = isLong ? 2 : 1;
         ctx.stroke();
       }
 
-      // 2. SECOND RING (dashed)
+      // Second ring (dashed)
       ctx.beginPath();
-      ctx.arc(cx, cy, 135, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 135 * scale, 0, Math.PI * 2);
       ctx.strokeStyle = '#CC5500';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 3. SEGMENT ARCS (4 rotating arcs)
+      // 4 rotating segment arcs
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#FF8C00';
       ctx.lineWidth = 3;
@@ -99,30 +101,26 @@ function HUD({ status }) {
       for (let i = 0; i < 4; i++) {
         const start = arcOffset + i * (arcSpan + gapSpan);
         ctx.beginPath();
-        ctx.arc(cx, cy, 145, start, start + arcSpan);
+        ctx.arc(cx, cy, 145 * scale, start, start + arcSpan);
         ctx.stroke();
       }
       ctx.lineCap = 'butt';
 
-      // 4. INNER MEASUREMENT RING
+      // Inner measurement ring
       for (let i = 0; i < 36; i++) {
         const angle = (i * 10) * Math.PI / 180;
-        const r1 = 115;
-        const r2 = r1 + 4;
         ctx.beginPath();
-        ctx.moveTo(cx + r1 * Math.cos(angle), cy + r1 * Math.sin(angle));
-        ctx.lineTo(cx + r2 * Math.cos(angle), cy + r2 * Math.sin(angle));
+        ctx.moveTo(cx + 115 * scale * Math.cos(angle), cy + 115 * scale * Math.sin(angle));
+        ctx.lineTo(cx + 119 * scale * Math.cos(angle), cy + 119 * scale * Math.sin(angle));
         ctx.strokeStyle = 'rgba(255,107,0,0.3)';
         ctx.lineWidth = 0.5;
         ctx.stroke();
       }
 
-      // 7. ANIMATED METER BAR(S)
+      // Animated meter bar(s)
       const meterSpeed = status === 'SPEAKING' ? 1.2 : status === 'LISTENING' ? 0.8 : 0.2;
       const meterAngle = t * meterSpeed;
       const meterSpan = (40 * Math.PI) / 180;
-
-      // Meter gradient helper
       const drawMeter = (startAngle) => {
         const steps = 30;
         for (let i = 0; i < steps; i++) {
@@ -130,83 +128,52 @@ function HUD({ status }) {
           const a2 = startAngle + ((i + 1) / steps) * meterSpan;
           const fade = Math.sin((i / steps) * Math.PI);
           ctx.beginPath();
-          ctx.arc(cx, cy, 100, a1, a2);
+          ctx.arc(cx, cy, 100 * scale, a1, a2);
           ctx.strokeStyle = `rgba(255,107,0,${fade * 0.9})`;
           ctx.lineWidth = 2.5;
           ctx.stroke();
         }
       };
       drawMeter(meterAngle);
-      if (status === 'SPEAKING') {
-        drawMeter(meterAngle + Math.PI);
-      }
+      if (status === 'SPEAKING') drawMeter(meterAngle + Math.PI);
 
-      // 8. CORNER DECORATIONS (targeting brackets at cardinal points)
-      const bracketSize = 8;
+      // Corner brackets
+      const bs = 8 * scale;
       ctx.strokeStyle = 'rgba(255,107,0,0.6)';
       ctx.lineWidth = 1.5;
-      const bracketR = 155 + 14;
-      // Top
-      ctx.beginPath();
-      ctx.moveTo(cx - bracketSize, cy - bracketR);
-      ctx.lineTo(cx, cy - bracketR);
-      ctx.lineTo(cx, cy - bracketR + bracketSize);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx + bracketSize, cy - bracketR);
-      ctx.lineTo(cx, cy - bracketR);
-      ctx.stroke();
-      // Right
-      ctx.beginPath();
-      ctx.moveTo(cx + bracketR, cy - bracketSize);
-      ctx.lineTo(cx + bracketR, cy);
-      ctx.lineTo(cx + bracketR - bracketSize, cy);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx + bracketR, cy + bracketSize);
-      ctx.lineTo(cx + bracketR, cy);
-      ctx.stroke();
-      // Bottom
-      ctx.beginPath();
-      ctx.moveTo(cx - bracketSize, cy + bracketR);
-      ctx.lineTo(cx, cy + bracketR);
-      ctx.lineTo(cx, cy + bracketR - bracketSize);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx + bracketSize, cy + bracketR);
-      ctx.lineTo(cx, cy + bracketR);
-      ctx.stroke();
-      // Left
-      ctx.beginPath();
-      ctx.moveTo(cx - bracketR, cy - bracketSize);
-      ctx.lineTo(cx - bracketR, cy);
-      ctx.lineTo(cx - bracketR + bracketSize, cy);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(cx - bracketR, cy + bracketSize);
-      ctx.lineTo(cx - bracketR, cy);
-      ctx.stroke();
+      const br = (155 + 14) * scale;
+      [[0,-1],[1,0],[0,1],[-1,0]].forEach(([dx,dy]) => {
+        const bx = cx + dx * br, by = cy + dy * br;
+        const px = dy !== 0 ? bs : 0, py = dx !== 0 ? bs : 0;
+        ctx.beginPath();
+        ctx.moveTo(bx - px, by - py);
+        ctx.lineTo(bx, by);
+        ctx.lineTo(bx + (dy !== 0 ? 0 : -dx * bs), by + (dx !== 0 ? 0 : -dy * bs));
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(bx + px, by + py);
+        ctx.lineTo(bx, by);
+        ctx.stroke();
+      });
 
-      // 6. CENTER TEXT
+      // Center text
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#FF6B00';
-      ctx.font = '800 18px Montserrat, sans-serif';
-      ctx.letterSpacing = '4px';
-      ctx.fillText('F.R.I.D.A.Y.', cx, cy - 6);
+      ctx.font = `800 ${18 * scale}px Montserrat, sans-serif`;
+      ctx.fillText('F.R.I.D.A.Y.', cx, cy - 6 * scale);
       ctx.fillStyle = '#CC5500';
-      ctx.font = '500 9px Inter, sans-serif';
-      ctx.letterSpacing = '2px';
+      ctx.font = `500 ${9 * scale}px Inter, sans-serif`;
       const label = status === 'LISTENING' ? 'LISTENING' : status === 'SPEAKING' ? 'SPEAKING' : status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
-      ctx.fillText(label, cx, cy + 14);
+      ctx.fillText(label, cx, cy + 14 * scale);
 
       animRef.current = requestAnimationFrame(animate);
     };
     animate();
     return () => cancelAnimationFrame(animRef.current);
-  }, [status]);
+  }, [status, size]);
 
-  return <canvas ref={canvasRef} style={{ width: 360, height: 360 }} />;
+  return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
 }
 
 /* ── Status Badge ─────────────────────────────────────────────────────────── */
@@ -244,56 +211,91 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [callEvents, setCallEvents] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const recognitionRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const chatEndRef = useRef(null);
   const shouldListenRef = useRef(false);
   const messagesRef = useRef([]);
-  const audioRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const audioUnlocked = useRef(false);
+  const activeSourceRef = useRef(null);
 
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, callEvents]);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
-  /* ── ElevenLabs TTS with browser fallback ─── */
-  const speak = useCallback((text) => {
-    return new Promise(async (resolve) => {
-      if (isMuted) { resolve(); return; }
-      try {
-        setStatus('SPEAKING');
-        const response = await fetch('/api/friday/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
-        });
-        if (!response.ok) throw new Error('TTS failed');
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
-        audio.onended = () => {
+  // Unlock audio on first user interaction (required for iOS Safari)
+  const unlockAudio = useCallback(() => {
+    if (audioUnlocked.current) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      audioCtxRef.current = ctx;
+      audioUnlocked.current = true;
+    } catch (e) {
+      console.warn('Audio unlock failed:', e);
+    }
+  }, []);
+
+  /* ── ElevenLabs TTS with AudioContext + browser fallback ─── */
+  const speak = useCallback(async (text) => {
+    if (isMuted) return;
+    setStatus('SPEAKING');
+    try {
+      const response = await fetch('/api/friday/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!response.ok) throw new Error('TTS ' + response.status);
+      const arrayBuffer = await response.arrayBuffer();
+
+      // Use AudioContext for mobile compatibility
+      const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)();
+      audioCtxRef.current = ctx;
+      if (ctx.state === 'suspended') await ctx.resume();
+
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+
+      return new Promise((resolve) => {
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        activeSourceRef.current = source;
+        source.onended = () => {
+          activeSourceRef.current = null;
           setStatus(shouldListenRef.current ? 'READY' : 'IDLE');
-          URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
           resolve();
         };
-        audio.onerror = () => {
-          setStatus('IDLE');
-          URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
-          resolve();
-        };
-        audio.play();
-      } catch (err) {
-        console.error('TTS error, falling back to browser:', err);
+        source.start(0);
+      });
+    } catch (err) {
+      console.warn('ElevenLabs failed, using browser TTS:', err.message);
+      return new Promise((resolve) => {
         const synth = window.speechSynthesis;
+        if (!synth) { setStatus('IDLE'); resolve(); return; }
         const utter = new SpeechSynthesisUtterance(text);
         utter.rate = 1.05;
-        utter.onstart = () => setStatus('SPEAKING');
+        utter.pitch = 0.95;
+        const voices = synth.getVoices();
+        const preferred = voices.find(v => v.name === 'Daniel')
+          || voices.find(v => v.name === 'Samantha')
+          || voices.find(v => v.lang.startsWith('en'));
+        if (preferred) utter.voice = preferred;
         utter.onend = () => { setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); };
         utter.onerror = () => { setStatus('IDLE'); resolve(); };
         synth.speak(utter);
-      }
-    });
+      });
+    }
   }, [isMuted]);
 
   /* ── Send to Claude ─── */
@@ -313,14 +315,14 @@ function App() {
       });
       const data = await res.json();
       const textBlocks = (data.content || []).filter(b => b.type === 'text');
-      const reply = textBlocks.map(b => b.text).join('\n') || 'No response.';
+      const reply = textBlocks.map(b => b.text).join('\n') || data.error || 'No response.';
       const assistantMsg = { role: 'assistant', content: reply };
       setMessages(prev => [...prev, assistantMsg]);
       setStatus('READY');
 
       if (shouldListenRef.current && !isMuted) {
         await speak(reply);
-        if (shouldListenRef.current && !isMuted) {
+        if (shouldListenRef.current && !isMuted && HAS_SPEECH) {
           startListening();
         }
       }
@@ -332,10 +334,7 @@ function App() {
 
   /* ── Speech Recognition ─── */
   const startListening = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition requires Chrome.');
-      return;
-    }
+    if (!HAS_SPEECH) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
@@ -377,8 +376,12 @@ function App() {
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
-    setStatus('LISTENING');
+    try {
+      recognition.start();
+      setStatus('LISTENING');
+    } catch (e) {
+      console.warn('Speech recognition start failed:', e);
+    }
   }, [sendToFriday]);
 
   /* ── Call Toggle ─── */
@@ -387,22 +390,23 @@ function App() {
       shouldListenRef.current = false;
       setIsCallActive(false);
       setStatus('IDLE');
-      window.speechSynthesis.cancel();
-      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (activeSourceRef.current) { try { activeSourceRef.current.stop(); } catch(e) {} activeSourceRef.current = null; }
       if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; }
       clearTimeout(silenceTimerRef.current);
       setTranscript('');
       setCallEvents(prev => [...prev, { type: 'ended', time: new Date() }]);
     } else {
+      unlockAudio();
       setIsCallActive(true);
       shouldListenRef.current = true;
       setCallEvents(prev => [...prev, { type: 'started', time: new Date() }]);
       const greeting = "FRIDAY online — what can I do for you, Brian?";
       setMessages(prev => [...prev, { role: 'assistant', content: greeting }]);
       await speak(greeting);
-      if (shouldListenRef.current && !isMuted) startListening();
+      if (shouldListenRef.current && !isMuted && HAS_SPEECH) startListening();
     }
-  }, [isCallActive, isMuted, speak, startListening]);
+  }, [isCallActive, isMuted, speak, startListening, unlockAudio]);
 
   /* ── Mute Toggle ─── */
   const toggleMute = useCallback(() => {
@@ -410,7 +414,7 @@ function App() {
       setIsMuted(false);
       if (isCallActive && (status === 'READY' || status === 'IDLE')) {
         shouldListenRef.current = true;
-        startListening();
+        if (HAS_SPEECH) startListening();
       }
     } else {
       setIsMuted(true);
@@ -429,39 +433,52 @@ function App() {
 
   const fmtTime = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const hudSize = isMobile ? 200 : 360;
+
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#FAFBFC' }}>
+    <div style={{
+      display: 'flex', height: '100vh', background: '#FAFBFC',
+      flexDirection: isMobile ? 'column' : 'row'
+    }}>
 
       {/* ── Left Panel ────────────────────────────────────────────────────── */}
       <div style={{
-        flex: '0 0 60%', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', position: 'relative'
+        flex: isMobile ? 'none' : '0 0 60%',
+        width: isMobile ? '100%' : undefined,
+        height: isMobile ? '50vh' : undefined,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', position: 'relative',
+        padding: isMobile ? '10px 0' : 0
       }}>
-        <HUD status={isCallActive ? status : 'IDLE'} />
+        <HUD status={isCallActive ? status : 'IDLE'} size={hudSize} />
 
         {/* Phone button */}
-        <button onClick={toggleCall} title={isCallActive ? 'End call' : 'Start call'} style={{
-          width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
-          marginTop: 24, color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: isCallActive ? '#DC2626' : 'linear-gradient(135deg, #FF6B00, #CC5500)',
-          boxShadow: isCallActive ? '0 4px 16px rgba(220,38,38,0.3)' : '0 4px 16px rgba(255,107,0,0.3)',
-          transition: 'all 0.25s ease'
-        }}>
-          {isCallActive ? (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-          ) : (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-            </svg>
-          )}
-        </button>
+        {HAS_SPEECH ? (
+          <button onClick={toggleCall} title={isCallActive ? 'End call' : 'Start call'} style={{
+            width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            marginTop: isMobile ? 12 : 24, color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: isCallActive ? '#DC2626' : 'linear-gradient(135deg, #FF6B00, #CC5500)',
+            boxShadow: isCallActive ? '0 4px 16px rgba(220,38,38,0.3)' : '0 4px 16px rgba(255,107,0,0.3)',
+            transition: 'all 0.25s ease'
+          }}>
+            {isCallActive ? (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+              </svg>
+            )}
+          </button>
+        ) : (
+          <p style={{ marginTop: 16, fontSize: 12, color: '#94a3b8' }}>Voice requires Chrome. Use text input below.</p>
+        )}
 
         {/* Mute + Settings row */}
-        <div style={{ display: 'flex', gap: 12, marginTop: 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, marginTop: isMobile ? 8 : 16, alignItems: 'center' }}>
           {isCallActive && (
             <button onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
               width: 44, height: 44, borderRadius: '50%', cursor: 'pointer',
@@ -500,13 +517,13 @@ function App() {
           </button>
         </div>
 
-        {/* Status badge */}
-        <div style={{ marginTop: 20 }}>
-          <StatusBadge status={isCallActive ? status : 'IDLE'} />
-        </div>
+        {!isMobile && (
+          <div style={{ marginTop: 20 }}>
+            <StatusBadge status={isCallActive ? status : 'IDLE'} />
+          </div>
+        )}
 
-        {/* Live transcript */}
-        {transcript && (
+        {!isMobile && transcript && (
           <p style={{
             marginTop: 14, fontSize: 13, color: '#CC5500',
             maxWidth: 340, textAlign: 'center', fontStyle: 'italic',
@@ -517,12 +534,18 @@ function App() {
 
       {/* ── Right Panel: Chat ─────────────────────────────────────────────── */}
       <div style={{
-        flex: '0 0 40%', minWidth: 380, display: 'flex', flexDirection: 'column',
-        borderLeft: '1px solid #F0E6D6', background: '#fff'
+        flex: isMobile ? 'none' : '0 0 40%',
+        width: isMobile ? '100%' : undefined,
+        height: isMobile ? '50vh' : undefined,
+        minWidth: isMobile ? undefined : 380,
+        display: 'flex', flexDirection: 'column',
+        borderLeft: isMobile ? 'none' : '1px solid #F0E6D6',
+        borderTop: isMobile ? '1px solid #F0E6D6' : 'none',
+        background: '#fff'
       }}>
         {/* Header */}
         <div style={{
-          padding: '14px 20px', borderBottom: '1px solid #F0E6D6',
+          padding: isMobile ? '10px 16px' : '14px 20px', borderBottom: '1px solid #F0E6D6',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -545,17 +568,17 @@ function App() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            New conversation
+            New
           </button>
         </div>
 
         {/* Messages */}
         <div style={{
-          flex: 1, overflowY: 'auto', padding: '14px 20px',
+          flex: 1, overflowY: 'auto', padding: isMobile ? '10px 12px' : '14px 20px',
           display: 'flex', flexDirection: 'column', gap: 4
         }}>
           {messages.length === 0 && callEvents.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: 100 }}>
+            <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: isMobile ? 20 : 100 }}>
               <div style={{
                 width: 52, height: 52, borderRadius: '50%',
                 background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
@@ -564,7 +587,7 @@ function App() {
                 fontWeight: 800, fontSize: 20, color: '#fff'
               }}>F</div>
               <p style={{ fontSize: 14, fontWeight: 500, color: '#475569', marginBottom: 4 }}>FRIDAY is ready</p>
-              <p style={{ fontSize: 12 }}>Start a voice call or type a message.</p>
+              <p style={{ fontSize: 12 }}>{HAS_SPEECH ? 'Start a voice call or type a message.' : 'Type a message below.'}</p>
             </div>
           )}
 
@@ -622,9 +645,9 @@ function App() {
                 background: '#FFF7ED', borderLeft: '3px solid #FF6B00',
                 display: 'flex', gap: 5, alignItems: 'center'
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', animation: 'dotPulse 1.4s infinite', animationDelay: '0s' }}/>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0s' }}/>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/>
               </div>
             </div>
           )}
@@ -633,7 +656,7 @@ function App() {
 
         {/* Text input */}
         <form onSubmit={handleTextSend} style={{
-          padding: '10px 20px 14px', borderTop: '1px solid #F0E6D6',
+          padding: isMobile ? '8px 12px 12px' : '10px 20px 14px', borderTop: '1px solid #F0E6D6',
           display: 'flex', gap: 8
         }}>
           <input
@@ -642,8 +665,9 @@ function App() {
             placeholder="Type a message..."
             style={{
               flex: 1, padding: '10px 14px', borderRadius: 10,
-              border: '1px solid #E5D5C0', fontSize: 13, outline: 'none',
-              background: '#FFFBF5', transition: 'border 0.2s, box-shadow 0.2s'
+              border: '1px solid #E5D5C0', fontSize: 14, outline: 'none',
+              background: '#FFFBF5', transition: 'border 0.2s, box-shadow 0.2s',
+              WebkitAppearance: 'none'
             }}
             onFocus={(e) => { e.target.style.borderColor = '#FF6B00'; e.target.style.boxShadow = '0 0 0 3px rgba(255,107,0,0.08)'; }}
             onBlur={(e) => { e.target.style.borderColor = '#E5D5C0'; e.target.style.boxShadow = 'none'; }}
@@ -651,8 +675,9 @@ function App() {
           <button type="submit" disabled={!input.trim()} style={{
             padding: '10px 16px', borderRadius: 10, border: 'none',
             background: input.trim() ? 'linear-gradient(135deg, #FF6B00, #CC5500)' : '#E5D5C0',
-            color: '#fff', fontWeight: 600, fontSize: 13,
-            cursor: input.trim() ? 'pointer' : 'default', transition: 'all 0.2s'
+            color: '#fff', fontWeight: 600, fontSize: 14,
+            cursor: input.trim() ? 'pointer' : 'default', transition: 'all 0.2s',
+            WebkitAppearance: 'none'
           }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -660,11 +685,6 @@ function App() {
           </button>
         </form>
       </div>
-
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes dotPulse { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-      `}</style>
     </div>
   );
 }
