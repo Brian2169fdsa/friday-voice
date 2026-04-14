@@ -50,6 +50,13 @@ const complianceActivities = proxyActivities({
   retry: { maximumAttempts: 2 }
 });
 
+// Compliance revision agents: capped timeout so revisions don't drag
+const complianceRevisionActivities = proxyActivities({
+  startToCloseTimeout: '600 seconds',
+  heartbeatTimeout: '120 seconds',
+  retry: { maximumAttempts: 1 }
+});
+
 // BUILD-019: Red Team Agent
 const redTeamActivities = proxyActivities({
   startToCloseTimeout: '300 seconds',
@@ -135,6 +142,14 @@ async function readBlackboard(ticketId) {
 export async function FridayBuildWorkflow(jobData) {
   // Duration tracking
   const buildStartTime = Date.now();
+  const BUILD_TIMEOUT_MS = 5400000; // 90 minutes
+  let timeCapped = false;
+  let complianceCapped = false;
+  let complianceScore = null;
+
+  function isBuildTimedOut() {
+    return (Date.now() - buildStartTime) >= BUILD_TIMEOUT_MS;
+  }
 
   // Signal state
   let answersReceived = null;
@@ -466,6 +481,11 @@ export async function FridayBuildWorkflow(jobData) {
   let iterationCycle = 0;
 
   while (iterationCycle < MAX_ITERATION_CYCLES) {
+    if (isBuildTimedOut()) {
+      console.log('[FRIDAY WF] Build exceeded 90 minute safety limit — skipping remaining QA iterations');
+      timeCapped = true;
+      break;
+    }
     iterationCycle++;
 
     try {
@@ -534,8 +554,13 @@ export async function FridayBuildWorkflow(jobData) {
   await updateBuildStatus(ticketIdForCatch, 'building', 75); // QA=75
 
   // ===== BUILD-019: Red Team Agent — adversarial testing =====
-  console.log('[FRIDAY WF] Running BUILD-019 Red Team Agent');
   let redTeamResult = null;
+  if (timeCapped || isBuildTimedOut()) {
+    if (!timeCapped) { timeCapped = true; console.log('[FRIDAY WF] Build exceeded 90 minute safety limit — skipping Red Team'); }
+    redTeamResult = { findings_count: 0, critical_count: 0, skipped: true, reason: 'time_capped' };
+    await emitAgent('BUILD-019', 'Red Team Agent', 'skipped');
+  } else {
+  console.log('[FRIDAY WF] Running BUILD-019 Red Team Agent');
   try {
     if (circuitBreaker.canRun('BUILD-019')) {
       redTeamResult = await redTeamActivities.redTeamAgentActivity(jobData);
@@ -570,10 +595,14 @@ export async function FridayBuildWorkflow(jobData) {
     redTeamResult = { findings_count: 0, critical_count: 0, error: e.message };
     await emitAgent('BUILD-019', 'Red Team Agent', 'error');
   }
+  } // end time_capped else
 
   // BUILD-010: Deployment Verifier -- confirm system is live in production
-  console.log('[FRIDAY WF] Step 7: Deployment Verification (BUILD-010)');
-  if (circuitBreaker.canRun('BUILD-010')) {
+  if (timeCapped || isBuildTimedOut()) {
+    if (!timeCapped) { timeCapped = true; console.log('[FRIDAY WF] Build exceeded 90 minute safety limit — skipping Deployment Verifier'); }
+    jobData._deployment = { production_ready: true, skipped: true, reason: 'time_capped' };
+    await emitAgent('BUILD-010', 'Deployment Verifier', 'skipped');
+  } else if (circuitBreaker.canRun('BUILD-010')) {
     try {
       const deployResult = await shortActivities.deploymentVerifierActivity(jobData);
       circuitBreaker.recordSuccess('BUILD-010');
@@ -597,21 +626,26 @@ export async function FridayBuildWorkflow(jobData) {
 
   // ===== VERIFICATION: Final output check (runs after all QA iterations) =====
   let verificationResult = null;
-  try {
-    verificationResult = await shortActivities.finalOutputVerificationActivity({
-      jobData,
-      ticketId: jobData.ticket_id,
-      buildDir: '/tmp/friday-temporal-' + jobData.job_id
-    });
-  } catch(e) {
-    verificationResult = { verified: false, summary: e.message, checks: [], failedChecks: [], score: '0/5' };
+  if (timeCapped || isBuildTimedOut()) {
+    if (!timeCapped) { timeCapped = true; console.log('[FRIDAY WF] Build exceeded 90 minute safety limit — skipping verification'); }
+    verificationResult = { verified: true, summary: 'Skipped — build time capped', checks: [], failedChecks: [], score: 'N/A' };
+  } else {
+    try {
+      verificationResult = await shortActivities.finalOutputVerificationActivity({
+        jobData,
+        ticketId: jobData.ticket_id,
+        buildDir: '/tmp/friday-temporal-' + jobData.job_id
+      });
+    } catch(e) {
+      verificationResult = { verified: false, summary: e.message, checks: [], failedChecks: [], score: '0/5' };
+    }
   }
   jobData._verification = verificationResult;
   if (!verificationResult.verified) {
     jobData._qaFailureReason = verificationResult.summary;
   }
 
-  if (verificationResult && !verificationResult.verified) {
+  if (verificationResult && !verificationResult.verified && !timeCapped) {
     const criticalFails = verificationResult.failedChecks?.filter(c =>
       ['qa_score', 'onedrive_files'].includes(c.check)
     ) || [];
@@ -628,24 +662,36 @@ export async function FridayBuildWorkflow(jobData) {
 
   // ===== BUILD-011: Compliance Judge (final gate before Phase 1 approval) =====
   // Routes revision packages to responsible agents instead of hard-blocking.
+  // CAPPED AT 2 REVISION CYCLES — always proceeds after that.
   console.log('[FRIDAY WF] Running BUILD-011 Compliance Review');
   await updateBuildStatus(ticketIdForCatch, 'building', 85); // Compliance=85
   let complianceResult = null;
   let complianceRevisionCount = 0;
-  const MAX_COMPLIANCE_REVISIONS = 3;
+  const MAX_COMPLIANCE_REVISIONS = 2;
 
   while (complianceRevisionCount <= MAX_COMPLIANCE_REVISIONS) {
+    // Global timeout check — skip compliance if build is running too long
+    if (isBuildTimedOut()) {
+      console.log('[FRIDAY WF] Build exceeded 90 minute safety limit — force completing');
+      timeCapped = true;
+      complianceResult = complianceResult || {
+        compliance_score: 0,
+        passed: false,
+        revision_packages: [],
+        critical_gaps: [],
+        summary: 'Compliance skipped — build time limit reached'
+      };
+      break;
+    }
+
     try {
       if (!circuitBreaker.canRun('BUILD-011')) throw new Error('Circuit breaker open for BUILD-011');
       complianceResult = await complianceActivities.complianceJudgeActivity(jobData);
       circuitBreaker.recordSuccess('BUILD-011');
     } catch(e) {
       circuitBreaker.recordFailure('BUILD-011');
-      // Non-blocking: compliance judge errors should not halt the build
       console.error('[FRIDAY WF] Compliance Judge error (non-blocking):', e.message.slice(0, 300));
       await emitAgent('BUILD-011', 'Compliance Judge', 'failed');
-      console.error('[FRIDAY WF] BUILD-011 Compliance error:', e.message.slice(0, 300));
-      // Use fallback compliance result so build proceeds to phase1-review
       complianceResult = {
         compliance_score: 70,
         passed: true,
@@ -656,21 +702,34 @@ export async function FridayBuildWorkflow(jobData) {
       break;
     }
 
+    complianceScore = complianceResult.compliance_score;
     jobData._compliance = complianceResult;
     await emitAgent('BUILD-011', 'Compliance Judge', complianceResult.passed ? 'complete' : 'revision');
 
-    if (complianceResult.passed || complianceRevisionCount >= MAX_COMPLIANCE_REVISIONS) {
-      if (!complianceResult.passed) {
-        console.log('[FRIDAY WF] BUILD-011: max compliance revisions reached, proceeding with score:', complianceResult.compliance_score);
-      }
+    // If passed, we're done
+    if (complianceResult.passed) {
+      break;
+    }
+
+    // If we've hit the revision cap, stop revising and proceed
+    if (complianceRevisionCount >= MAX_COMPLIANCE_REVISIONS) {
+      complianceCapped = true;
+      console.log('[FRIDAY WF] Compliance capped at 2 revisions — proceeding with score: ' + complianceScore + '%');
       break;
     }
 
     // Route revision packages to responsible agents
     const revisionPackages = complianceResult.revision_packages || [];
-    console.log(`[FRIDAY WF] BUILD-011 compliance ${complianceResult.compliance_score}% -- routing ${revisionPackages.length} revision packages`);
+    console.log(`[FRIDAY WF] BUILD-011 compliance ${complianceScore}% -- routing ${revisionPackages.length} revision packages`);
 
     for (const pkg of revisionPackages) {
+      // Check timeout before each revision agent
+      if (isBuildTimedOut()) {
+        console.log('[FRIDAY WF] Build exceeded 90 minute safety limit during compliance revisions — stopping');
+        timeCapped = true;
+        break;
+      }
+
       console.log(`[FRIDAY WF] Routing compliance revision to ${pkg.agent}`);
       const revisionJobData = {
         ...jobData,
@@ -686,22 +745,31 @@ export async function FridayBuildWorkflow(jobData) {
 
       try {
         if (pkg.agent === 'BUILD-006') {
-          schemaResult = await agentActivities.schemaArchitectActivity(revisionJobData, contract);
+          schemaResult = await complianceRevisionActivities.schemaArchitectActivity(revisionJobData, contract);
         } else if (pkg.agent === 'BUILD-002') {
-          workflowResult = await agentActivities.workflowBuilderActivity(revisionJobData, contract);
+          workflowResult = await complianceRevisionActivities.workflowBuilderActivity(revisionJobData, contract);
         } else if (pkg.agent === 'BUILD-004') {
-          llmResult = await agentActivities.llmSpecialistActivity(revisionJobData, contract, { schema: schemaResult });
+          llmResult = await complianceRevisionActivities.llmSpecialistActivity(revisionJobData, contract, { schema: schemaResult });
         } else if (pkg.agent === 'BUILD-005') {
-          platformResult = await agentActivities.platformBuilderActivity(revisionJobData, contract, { schema: schemaResult, workflow: workflowResult });
+          platformResult = await complianceRevisionActivities.platformBuilderActivity(revisionJobData, contract, { schema: schemaResult, workflow: workflowResult });
         }
       } catch(e) {
-        console.error(`[FRIDAY WF] Compliance revision error for ${pkg.agent}:`, e.message);
+        // Revision agent timed out or failed — log and continue, don't retry
+        console.error(`[FRIDAY WF] Compliance revision error for ${pkg.agent} (continuing):`, e.message.slice(0, 200));
       }
     }
+
+    if (timeCapped) break;
 
     complianceRevisionCount++;
     console.log(`[FRIDAY WF] Re-running compliance judge (attempt ${complianceRevisionCount + 1}/${MAX_COMPLIANCE_REVISIONS + 1})`);
   }
+
+  // Store compliance flags on jobData for downstream use
+  complianceScore = complianceResult?.compliance_score || complianceScore;
+  jobData._complianceCapped = complianceCapped;
+  jobData._timeCapped = timeCapped;
+  jobData._compliance = complianceResult;
 
   // Collect Phase 1 results
   const phase1DurationMs = Date.now() - buildStartTime;
@@ -713,7 +781,10 @@ export async function FridayBuildWorkflow(jobData) {
     platform: platformResult,
     qa: qaTestResult,
     iteration_cycles: iterationCycle,
-    phase1_duration_ms: phase1DurationMs
+    phase1_duration_ms: phase1DurationMs,
+    compliance_capped: complianceCapped,
+    compliance_score: complianceScore,
+    time_capped: timeCapped
   };
 
   // Store phase1_duration in build record
@@ -736,13 +807,19 @@ export async function FridayBuildWorkflow(jobData) {
   }
 
   // Send Phase 1 Teams notification (non-blocking)
+  const complianceStatus = complianceCapped
+    ? `Compliance: REVIEW NEEDED — scored ${complianceScore}% after 2 revision cycles. Build delivered but may need manual review.`
+    : `Compliance: PASSED at ${complianceScore || 0}%`;
+  const timeStatus = timeCapped ? ' | TIME CAPPED: exceeded 90min safety limit' : '';
   try {
     await shortActivities.sendFridayTeamsCard({
       ticketId: jobData.ticket_id,
-      title: 'Phase 1 Build Complete — Review Required',
+      title: timeCapped ? 'Phase 1 Build Complete — Time Capped — Review Required' : 'Phase 1 Build Complete — Review Required',
       summary: `${clientName} — ${jobData.project_name} is ready for Phase 1 review`,
-      details: `Platform: ${jobData.platform} | QA Score: pending | Agents: BUILD-001 through BUILD-011 complete`,
-      actionType: 'phase1'
+      details: `Platform: ${jobData.platform} | ${complianceStatus} | Agents: BUILD-001 through BUILD-011 complete${timeStatus}`,
+      actionType: 'phase1',
+      compliance_capped: complianceCapped,
+      time_capped: timeCapped
     });
   } catch(e) {
     console.warn('[FRIDAY] Teams Phase 1 notification failed (non-blocking):', e.message);

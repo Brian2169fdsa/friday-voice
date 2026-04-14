@@ -68,6 +68,7 @@ async function evaluateCompleteness(job) {
 }
 
 const app = express();
+app.use((req, res, next) => { res.header("Access-Control-Allow-Origin", "*"); res.header("Access-Control-Allow-Headers", "Content-Type"); res.header("Access-Control-Allow-Methods", "POST, OPTIONS"); if (req.method === "OPTIONS") return res.sendStatus(200); next(); });
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(path.dirname(new URL(import.meta.url).pathname), 'public')));
 
@@ -2082,7 +2083,7 @@ app.post('/api/build/record-approval-decision', async (req, res) => {
         headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
+          max_tokens: 4096,
           temperature: 0,
           messages: [{
             role: 'user',
@@ -3959,7 +3960,7 @@ async function extractCredentialsFromTicket(ticket, buildId) {
     const cr = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, messages: [{ role: 'user', content: 'Extract credentials and API references from this text. Return JSON only, no markdown. Format: [{"label":"name","cred_type":"api_key|login|webhook|oauth|other","masked_value":"mask all but last 4 chars with \u2022\u2022\u2022\u2022","notes":"context"}]\n\nIf none found return []\n\nText: ' + text }] })
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 4096, messages: [{ role: 'user', content: 'Extract credentials and API references from this text. Return JSON only, no markdown. Format: [{"label":"name","cred_type":"api_key|login|webhook|oauth|other","masked_value":"mask all but last 4 chars with \u2022\u2022\u2022\u2022","notes":"context"}]\n\nIf none found return []\n\nText: ' + text }] })
     });
     const d = await cr.json();
     if (!d.content || !d.content[0]) return;
