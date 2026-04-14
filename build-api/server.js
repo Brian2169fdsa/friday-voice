@@ -1521,7 +1521,7 @@ async function runSwarm(job) {
 }
 
 // ── FRIDAY Voice Chat — Full System Control ─────────────────────────────────
-app.post('/api/friday/chat', (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); },, async (req, res) => {
+app.post('/api/friday/chat', (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); }, async (req, res) => {
   try {
     const { messages } = req.body;
 
@@ -1808,7 +1808,7 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
 });
 
 // ── FRIDAY ElevenLabs TTS ────────────────────────────────────────────────────
-app.post('/api/friday/tts', (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); },, async (req, res) => {
+app.post('/api/friday/tts', (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); }, async (req, res) => {
   try {
     const { text } = req.body;
     const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/XcXEQzuLXRU9RcfWzEJt', {

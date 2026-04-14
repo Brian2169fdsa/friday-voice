@@ -9,7 +9,7 @@ module.exports = {
         "NODE_ENV": "production",
         "PORT": 3000,
         "COCKPIT_KEY": "friday-cockpit-2026",
-        "ANTHROPIC_API_KEY": "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",
+        "ANTHROPIC_API_KEY": "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",
         "SUPABASE_URL": "https://fmemdogudiolevqsfuvd.supabase.co",
         "SUPABASE_SERVICE_KEY": "sb_secret_2YsDL4w7MSDCofglnAw-3g_ptYtwWKy",
         "AZURE_TENANT_ID": "b09a1fba-3225-4ea8-9e4f-8a7bf4f41fef",
@@ -52,7 +52,7 @@ module.exports = {
       "env": {
         "NODE_OPTIONS": "--max-old-space-size=512",
         "NODE_ENV": "production",
-        "ANTHROPIC_API_KEY": "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",
+        "ANTHROPIC_API_KEY": "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",
         "SUPABASE_URL": "https://fmemdogudiolevqsfuvd.supabase.co",
         "SUPABASE_SERVICE_KEY": "sb_secret_2YsDL4w7MSDCofglnAw-3g_ptYtwWKy",
         "AZURE_TENANT_ID": "b09a1fba-3225-4ea8-9e4f-8a7bf4f41fef",
