@@ -68,6 +68,7 @@ async function evaluateCompleteness(job) {
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(path.dirname(new URL(import.meta.url).pathname), 'public')));
 
 // Simple in-memory rate limiter for build endpoints
 const buildRateLimit = new Map();
@@ -1510,6 +1511,205 @@ async function runSwarm(job) {
     console.warn('[FRIDAY] Cleanup failed (non-fatal):', cleanupErr.message);
   }
 }
+
+// ── FRIDAY Voice Chat with Tools ─────────────────────────────────────────────
+app.post('/api/friday/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    const FRIDAY_SYSTEM = `You are FRIDAY — Head of Build at ManageAI. You run a 17-agent AI build system on this server. You are talking to Brian, your operator. Be sharp, confident, conversational — like JARVIS for software factories. 2-3 sentences unless asked for detail.
+
+You have access to tools to interact with the live system. Use them when Brian asks about builds, status, agents, or wants to run commands. Always use tools to get real data — never guess.`;
+
+    const tools = [
+      {
+        name: 'query_builds',
+        description: 'Query Supabase for build records. Use when asked about build status, history, scores, or specific builds.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            filter: { type: 'string', description: "Supabase REST filter string, e.g. 'ticket_id=eq.MAI-123' or 'client_name=eq.Meridian Property Group'" },
+            select: { type: 'string', description: "Columns to select, e.g. 'ticket_id,client_name,status,progress_pct'" },
+            limit: { type: 'integer', description: 'Max rows to return', default: 5 }
+          },
+          required: ['select']
+        }
+      },
+      {
+        name: 'query_agent_runs',
+        description: 'Query build_agent_runs table for per-agent results. Use when asked about specific agent performance, Red Team findings, QA scores, or what happened during a build.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            filter: { type: 'string', description: "Filter string, e.g. 'ticket_id=eq.MAI-123'" },
+            select: { type: 'string', description: "Columns to select, e.g. 'agent_id,status,output'" }
+          },
+          required: ['select']
+        }
+      },
+      {
+        name: 'check_worker_status',
+        description: "Check the current PM2 worker status and recent logs. Use when asked what's running right now.",
+        input_schema: {
+          type: 'object',
+          properties: {
+            lines: { type: 'integer', description: 'Number of log lines to return', default: 10 }
+          }
+        }
+      },
+      {
+        name: 'trigger_build',
+        description: 'Start a new FRIDAY build. Only use when Brian explicitly asks to start or trigger a build. Requires confirmation.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            client: { type: 'string', description: 'Client name' },
+            project_name: { type: 'string', description: 'Project name' },
+            description: { type: 'string', description: 'Brief description of what to build' }
+          },
+          required: ['client', 'project_name', 'description']
+        }
+      },
+      {
+        name: 'check_n8n_workflows',
+        description: 'Query n8n for active workflows. Use when asked about workflow status.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            filter: { type: 'string', description: 'Optional name filter' }
+          }
+        }
+      },
+      {
+        name: 'run_server_command',
+        description: 'Execute a safe server command. ONLY for: pm2 restart, pm2 list, git status, git log, disk usage, memory check. Never for destructive commands.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            command: { type: 'string', description: 'The command to run' }
+          },
+          required: ['command']
+        }
+      }
+    ];
+
+    // First Claude call with tools
+    const firstRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: FRIDAY_SYSTEM,
+        messages,
+        tools
+      })
+    });
+
+    let data = await firstRes.json();
+
+    // Process tool calls if any
+    const toolUseBlocks = (data.content || []).filter(b => b.type === 'tool_use');
+
+    if (toolUseBlocks.length > 0) {
+      const toolResults = [];
+
+      for (const toolCall of toolUseBlocks) {
+        let result = '';
+        try {
+          if (toolCall.name === 'query_builds') {
+            const { filter, select, limit } = toolCall.input;
+            let url = SUPABASE_URL + '/rest/v1/friday_builds?select=' + encodeURIComponent(select || '*');
+            if (filter) url += '&' + filter;
+            url += '&order=created_at.desc&limit=' + (limit || 5);
+            const sbRes = await fetch(url, {
+              headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            });
+            result = JSON.stringify(await sbRes.json());
+          }
+
+          else if (toolCall.name === 'query_agent_runs') {
+            const { filter, select } = toolCall.input;
+            let url = SUPABASE_URL + '/rest/v1/build_agent_runs?select=' + encodeURIComponent(select || '*');
+            if (filter) url += '&' + filter;
+            url += '&order=started_at.asc';
+            const sbRes = await fetch(url, {
+              headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+            });
+            result = JSON.stringify(await sbRes.json());
+          }
+
+          else if (toolCall.name === 'check_worker_status') {
+            const lines = toolCall.input.lines || 10;
+            const pm2List = execSync('pm2 jlist 2>/dev/null || echo "[]"').toString();
+            const logs = execSync('pm2 logs friday-worker --lines ' + lines + ' --nostream 2>/dev/null || echo "no logs"').toString();
+            result = JSON.stringify({
+              pm2: JSON.parse(pm2List).map(p => ({ name: p.name, status: p.pm2_env?.status, uptime: p.pm2_env?.pm_uptime, restarts: p.pm2_env?.restart_time })),
+              recent_logs: logs.slice(-2000)
+            });
+          }
+
+          else if (toolCall.name === 'trigger_build') {
+            result = JSON.stringify({ status: 'pending_confirmation', message: 'Build trigger requested for ' + toolCall.input.client + '. Brian should confirm via the build API directly for safety.' });
+          }
+
+          else if (toolCall.name === 'check_n8n_workflows') {
+            const n8nRes = await fetch('http://localhost:5678/api/v1/workflows?active=true', {
+              headers: { 'Accept': 'application/json' }
+            });
+            const wfs = await n8nRes.json();
+            const filtered = toolCall.input.filter
+              ? (wfs.data || []).filter(w => w.name.toLowerCase().includes(toolCall.input.filter.toLowerCase()))
+              : (wfs.data || []);
+            result = JSON.stringify(filtered.map(w => ({ id: w.id, name: w.name, active: w.active, updatedAt: w.updatedAt })));
+          }
+
+          else if (toolCall.name === 'run_server_command') {
+            const cmd = toolCall.input.command;
+            const allowed = ['pm2 list', 'pm2 restart', 'pm2 status', 'git status', 'git log --oneline -10', 'df -h', 'free -h', 'uptime', 'pm2 jlist'];
+            const isAllowed = allowed.some(a => cmd.startsWith(a));
+            if (!isAllowed) {
+              result = JSON.stringify({ error: 'Command not allowed. Safe commands: ' + allowed.join(', ') });
+            } else {
+              result = execSync(cmd, { cwd: '/opt/manageai', timeout: 10000 }).toString().slice(-2000);
+            }
+          }
+        } catch (err) {
+          result = JSON.stringify({ error: err.message });
+        }
+
+        toolResults.push({ type: 'tool_result', tool_use_id: toolCall.id, content: result });
+      }
+
+      // Second Claude call with tool results
+      const followUp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: FRIDAY_SYSTEM,
+          messages: [...messages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }],
+          tools
+        })
+      });
+
+      data = await followUp.json();
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.post('/api/build', async (req, res) => {
