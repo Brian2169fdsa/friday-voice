@@ -253,7 +253,7 @@ function App() {
     try {
       const response = await fetch('/api/friday/tts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' },
         body: JSON.stringify({ text })
       });
       if (!response.ok) throw new Error('TTS ' + response.status);
@@ -310,7 +310,7 @@ function App() {
     try {
       const res = await fetch('/api/friday/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' },
         body: JSON.stringify({ messages: newMessages, system: SYSTEM_PROMPT })
       });
       const data = await res.json();
