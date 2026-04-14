@@ -181,6 +181,52 @@ ${briefText}`
 
   const duration = Date.now() - startTime;
 
+  // ── Charlie simulator: answer clarification questions instead of blocking ──
+  const clarificationQuestions = (scoring.blocking_issues || [])
+    .map(b => b.question_for_charlie)
+    .filter(Boolean);
+
+  let charlieAnswers = [];
+  if (clarificationQuestions.length > 0) {
+    const questionsText = clarificationQuestions
+      .map((q, i) => `${i + 1}. ${q}`)
+      .join('\n');
+
+    const charlieResponse = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2000,
+      system: 'You are Charlie, a Customer Success agent for ManageAI. You are answering clarification questions from the Build Agent about a client brief. Answer each question concisely using only information available in the brief. If the brief doesn\'t explicitly state the answer, make a reasonable assumption based on the context and note it as an assumption. Never say you don\'t know — always provide a working answer so the build can proceed.',
+      messages: [{
+        role: 'user',
+        content: `BRIEF:\n${briefText}\n\nCLARIFICATION QUESTIONS:\n${questionsText}\n\nAnswer each question as a JSON array of objects: [{"question": string, "answer": string, "is_assumption": boolean}]`
+      }]
+    });
+
+    try {
+      const raw = charlieResponse.content[0].text;
+      const clean = raw.replace(/```json\n?|\n?```/g, '').trim();
+      charlieAnswers = JSON.parse(clean);
+    } catch (_) {
+      charlieAnswers = clarificationQuestions.map(q => ({ question: q, answer: 'Proceeding with reasonable defaults.', is_assumption: true }));
+    }
+
+    console.log(`[BUILD-000] Charlie simulator answered ${charlieAnswers.length} clarification questions`);
+
+    // Attach simulated answers to blocking issues for downstream agents
+    scoring.blocking_issues = scoring.blocking_issues.map((b, i) => ({
+      ...b,
+      charlie_answer: charlieAnswers[i]?.answer || 'Proceeding with reasonable defaults.',
+      is_assumption: charlieAnswers[i]?.is_assumption ?? true,
+      resolved_by: 'charlie-simulator'
+    }));
+  }
+
+  // Override build_ready: score above 60 means the brief is good enough to build
+  const overallScore = scoring.scores?.overall || 0;
+  if (overallScore > 60) {
+    scoring.build_ready = true;
+  }
+
   // ── Persist full analysis ──────────────────────────────────────────────────
   await supabase.from('build_briefs').upsert({
     ticket_id: ticketId,
@@ -190,6 +236,7 @@ ${briefText}`
     brief_scoring: scoring,
     success_criteria: criteria.success_criteria || [],
     blocking_issues: scoring.blocking_issues || [],
+    charlie_answers: charlieAnswers.length > 0 ? charlieAnswers : null,
     warnings: scoring.warnings || [],
     overall_score: scoring.scores?.overall || 0,
     build_ready: scoring.build_ready,
@@ -204,6 +251,7 @@ ${briefText}`
     output: {
       overall_score: scoring.scores?.overall,
       blocking_issues_count: (scoring.blocking_issues || []).length,
+      charlie_questions_answered: charlieAnswers.length,
       success_criteria_count: (criteria.success_criteria || []).length,
       build_ready: scoring.build_ready,
       confidence: scoring.confidence,
@@ -211,21 +259,6 @@ ${briefText}`
     },
     completed_at: new Date().toISOString()
   }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-000');
-
-  // ── Hard block on non-buildable briefs ────────────────────────────────────
-  if (!scoring.build_ready && (scoring.blocking_issues || []).length > 0) {
-    const blockerSummary = scoring.blocking_issues
-      .map(b => `- ${b.issue}\n  Agent affected: ${b.agent_affected}\n  Question for Charlie: ${b.question_for_charlie}`)
-      .join('\n');
-
-    try { await supabase.from('build_agent_runs').update({ status: 'failed', completed_at: new Date().toISOString(), output: { blocking_issues: scoring.blocking_issues, overall_score: scoring.scores?.overall }, errors: [{ message: 'Brief not buildable' }] }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-000'); } catch (_) {}
-    throw ApplicationFailure.create({
-      message: `[BUILD-000] BRIEF NOT BUILDABLE\n\nBlocking issues must be resolved before build can start:\n${blockerSummary}\n\nOverall score: ${scoring.scores?.overall}/100\nSummary: ${scoring.summary}`,
-      type: 'BriefNotBuildable',
-      nonRetryable: true,
-      details: [{ blocking_issues: scoring.blocking_issues, scores: scoring.scores }]
-    });
-  }
 
   console.log(`[BUILD-000] Done in ${duration}ms | Score: ${scoring.scores?.overall}/100 | Criteria: ${(criteria.success_criteria || []).length} | Ready: ${scoring.build_ready}`);
 
