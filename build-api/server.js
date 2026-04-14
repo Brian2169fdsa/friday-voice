@@ -70,13 +70,38 @@ async function evaluateCompleteness(job) {
 const app = express();
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, x-cockpit-key');
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(path.dirname(new URL(import.meta.url).pathname), 'public')));
+
+// ── FRIDAY rate limiter (chat + TTS) ─────────────────────────────────────────
+const fridayRateLimit = new Map();
+const FRIDAY_RATE_LIMIT = 30;
+const FRIDAY_RATE_WINDOW = 60000;
+
+function checkFridayRate(req, res, next) {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+  const entry = fridayRateLimit.get(ip) || { count: 0, resetAt: now + FRIDAY_RATE_WINDOW };
+  if (now > entry.resetAt) {
+    entry.count = 0;
+    entry.resetAt = now + FRIDAY_RATE_WINDOW;
+  }
+  entry.count++;
+  fridayRateLimit.set(ip, entry);
+  if (entry.count > FRIDAY_RATE_LIMIT) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Max 30 requests per minute.' });
+  }
+  next();
+}
+
+// ── Monthly Claude API cost tracking ─────────────────────────────────────────
+let monthlyTokenUsage = { month: new Date().getMonth(), input: 0, output: 0, cost: 0 };
+const MONTHLY_COST_CAP = 400;
 
 // Simple in-memory rate limiter for build endpoints
 const buildRateLimit = new Map();
@@ -1521,8 +1546,17 @@ async function runSwarm(job) {
 }
 
 // ── FRIDAY Voice Chat — Full System Control ─────────────────────────────────
-app.post('/api/friday/chat', (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); }, async (req, res) => {
+app.post('/api/friday/chat', checkFridayRate, (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); }, async (req, res) => {
   try {
+    // Check monthly cost cap
+    const currentMonth = new Date().getMonth();
+    if (currentMonth !== monthlyTokenUsage.month) {
+      monthlyTokenUsage = { month: currentMonth, input: 0, output: 0, cost: 0 };
+    }
+    if (monthlyTokenUsage.cost >= MONTHLY_COST_CAP) {
+      return res.status(429).json({ error: 'Monthly API cost cap reached ($400). Resets next month.' });
+    }
+
     const { messages } = req.body;
 
     const FRIDAY_SYSTEM = `You are FRIDAY — Head of Build at ManageAI. You are Brian's AI operations system running on his production server at 5.223.79.255. Think JARVIS from Iron Man — you have full control of the server, the build system, all databases, all workflows, GitHub, OneDrive, and every tool in the stack.
@@ -1669,6 +1703,13 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
 
     let data = await firstRes.json();
 
+    // Track token usage
+    if (data.usage) {
+      monthlyTokenUsage.input += data.usage.input_tokens || 0;
+      monthlyTokenUsage.output += data.usage.output_tokens || 0;
+      monthlyTokenUsage.cost = (monthlyTokenUsage.input / 1000000 * 3) + (monthlyTokenUsage.output / 1000000 * 15);
+    }
+
     // Process tool calls if any
     const toolUseBlocks = (data.content || []).filter(b => b.type === 'tool_use');
 
@@ -1799,6 +1840,13 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
       });
 
       data = await followUp.json();
+
+      // Track follow-up token usage
+      if (data.usage) {
+        monthlyTokenUsage.input += data.usage.input_tokens || 0;
+        monthlyTokenUsage.output += data.usage.output_tokens || 0;
+        monthlyTokenUsage.cost = (monthlyTokenUsage.input / 1000000 * 3) + (monthlyTokenUsage.output / 1000000 * 15);
+      }
     }
 
     res.json(data);
@@ -1808,7 +1856,7 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
 });
 
 // ── FRIDAY ElevenLabs TTS ────────────────────────────────────────────────────
-app.post('/api/friday/tts', (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); }, async (req, res) => {
+app.post('/api/friday/tts', checkFridayRate, (req, res, next) => { if (req.headers['x-cockpit-key'] !== 'friday-cockpit-2026') return res.status(401).json({error:'Unauthorized'}); next(); }, async (req, res) => {
   try {
     const { text } = req.body;
     const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/XcXEQzuLXRU9RcfWzEJt', {
