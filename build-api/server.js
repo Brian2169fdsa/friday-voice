@@ -7,6 +7,7 @@ let AGENT_UID, AGENT_GID;
 try { AGENT_UID = parseInt(execSync('id -u claudeagent').toString().trim()); AGENT_GID = parseInt(execSync('id -g claudeagent').toString().trim()); } catch(e) { AGENT_UID = null; AGENT_GID = null; }
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs/promises';
+import fsSync from 'node:fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.SUPABASE_URL ||
@@ -1512,83 +1513,132 @@ async function runSwarm(job) {
   }
 }
 
-// ── FRIDAY Voice Chat with Tools ─────────────────────────────────────────────
+// ── FRIDAY Voice Chat — Full System Control ─────────────────────────────────
 app.post('/api/friday/chat', async (req, res) => {
   try {
     const { messages } = req.body;
 
-    const FRIDAY_SYSTEM = `You are FRIDAY — Head of Build at ManageAI. You run a 17-agent AI build system on this server. You are talking to Brian, your operator. Be sharp, confident, conversational — like JARVIS for software factories. 2-3 sentences unless asked for detail.
+    const FRIDAY_SYSTEM = `You are FRIDAY — Head of Build at ManageAI. You are Brian's AI operations system running on his production server at 5.223.79.255. Think JARVIS from Iron Man — you have full control of the server, the build system, all databases, all workflows, GitHub, OneDrive, and every tool in the stack.
 
-You have access to tools to interact with the live system. Use them when Brian asks about builds, status, agents, or wants to run commands. Always use tools to get real data — never guess.`;
+You are sharp, confident, proactive. When Brian asks you to do something, you DO it — you don't ask for permission, you don't hedge, you execute and report. If something might be destructive (deleting data, dropping tables, wiping repos), confirm once then execute.
+
+Your capabilities:
+- Execute ANY bash command on the server
+- Query and modify Supabase databases (read, insert, update, delete)
+- Manage n8n workflows (list, activate, deactivate, execute, create)
+- Trigger and manage FRIDAY builds
+- Read and write files on the server
+- Manage PM2 processes (restart, stop, start, logs, list)
+- Git operations (commit, push, pull, branch, status, log, diff)
+- Check system health (disk, memory, CPU, network, docker)
+- Manage Docker containers
+- Read and tail log files
+- Install packages
+- Edit configuration files
+- Deploy code changes
+- Query build history, agent performance, Red Team findings
+- Check and manage n8n workflows
+
+Your 17 agents: BUILD-000 (Brief Analyst + Charlie Simulator), BUILD-001 (Planner), BUILD-002 (Workflow Builder), BUILD-003 (QA Tester), BUILD-004 (LLM Specialist), BUILD-005 (Platform Builder), BUILD-006 (Schema Architect), BUILD-007 (External Platform), BUILD-008 (Quality Gate), BUILD-009 (Security), BUILD-010 (Deployment Verifier), BUILD-011 (Compliance Judge), BUILD-012 (Engagement Memory), BUILD-013 (Decision Agent), BUILD-015 (Prompt Quality), BUILD-016 (Intelligence Agent — self-healing overnight), BUILD-019 (Red Team Agent).
+
+Stack: Temporal, Claude Code, n8n (port 5678), Supabase, GitHub, OneDrive, PM2.
+Server: Ubuntu, /opt/manageai/build-api/ is the main codebase.
+Supabase URL: https://fmemdogudiolevqsfuvd.supabase.co
+
+Keep responses conversational and SHORT when speaking — 2-3 sentences unless Brian asks for detail. You're having a voice conversation, not writing documentation. When you run commands or queries, summarize the results conversationally.`;
 
     const tools = [
       {
-        name: 'query_builds',
-        description: 'Query Supabase for build records. Use when asked about build status, history, scores, or specific builds.',
+        name: 'run_command',
+        description: 'Execute any bash command on the server. Use for system operations, file management, git, pm2, docker, package management, or any server task Brian asks for. No restrictions.',
         input_schema: {
           type: 'object',
           properties: {
-            filter: { type: 'string', description: "Supabase REST filter string, e.g. 'ticket_id=eq.MAI-123' or 'client_name=eq.Meridian Property Group'" },
-            select: { type: 'string', description: "Columns to select, e.g. 'ticket_id,client_name,status,progress_pct'" },
-            limit: { type: 'integer', description: 'Max rows to return', default: 5 }
+            command: { type: 'string', description: 'The bash command to execute' },
+            working_directory: { type: 'string', description: 'Working directory for the command', default: '/opt/manageai' },
+            timeout: { type: 'integer', description: 'Timeout in milliseconds', default: 30000 }
           },
-          required: ['select']
+          required: ['command']
         }
       },
       {
-        name: 'query_agent_runs',
-        description: 'Query build_agent_runs table for per-agent results. Use when asked about specific agent performance, Red Team findings, QA scores, or what happened during a build.',
+        name: 'query_supabase',
+        description: 'Query any Supabase table. Use for checking builds, agent runs, quality signals, observations, or any data Brian asks about.',
         input_schema: {
           type: 'object',
           properties: {
-            filter: { type: 'string', description: "Filter string, e.g. 'ticket_id=eq.MAI-123'" },
-            select: { type: 'string', description: "Columns to select, e.g. 'agent_id,status,output'" }
+            table: { type: 'string', description: 'Table name, e.g. friday_builds, build_agent_runs, build_quality_signals' },
+            select: { type: 'string', description: "Columns to select, e.g. 'ticket_id,status,progress_pct' or '*'" },
+            filter: { type: 'string', description: "PostgREST filter, e.g. 'status=eq.building' or 'ticket_id=eq.MAI-123'" },
+            order: { type: 'string', description: "Order clause, e.g. 'created_at.desc'" },
+            limit: { type: 'integer', description: 'Max rows', default: 10 }
           },
-          required: ['select']
+          required: ['table', 'select']
         }
       },
       {
-        name: 'check_worker_status',
-        description: "Check the current PM2 worker status and recent logs. Use when asked what's running right now.",
+        name: 'modify_supabase',
+        description: 'Insert, update, or delete data in any Supabase table. Use when Brian asks to change build status, update records, or manage data.',
         input_schema: {
           type: 'object',
           properties: {
-            lines: { type: 'integer', description: 'Number of log lines to return', default: 10 }
-          }
+            table: { type: 'string', description: 'Table name' },
+            method: { type: 'string', description: 'HTTP method: POST (insert), PATCH (update), DELETE' },
+            filter: { type: 'string', description: "PostgREST filter for PATCH/DELETE, e.g. 'ticket_id=eq.MAI-123'" },
+            body: { type: 'object', description: 'Data to insert or update' }
+          },
+          required: ['table', 'method']
+        }
+      },
+      {
+        name: 'manage_n8n',
+        description: 'Manage n8n workflows. List, activate, deactivate, execute, or get details of any workflow.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', description: 'list, get, activate, deactivate, execute' },
+            workflow_id: { type: 'string', description: 'Workflow ID (required for get/activate/deactivate/execute)' },
+            filter_name: { type: 'string', description: 'Filter workflows by name substring (for list action)' }
+          },
+          required: ['action']
         }
       },
       {
         name: 'trigger_build',
-        description: 'Start a new FRIDAY build. Only use when Brian explicitly asks to start or trigger a build. Requires confirmation.',
+        description: 'Start a new FRIDAY build by posting a brief to the build API.',
         input_schema: {
           type: 'object',
           properties: {
             client: { type: 'string', description: 'Client name' },
             project_name: { type: 'string', description: 'Project name' },
-            description: { type: 'string', description: 'Brief description of what to build' }
+            description: { type: 'string', description: 'What to build' }
           },
           required: ['client', 'project_name', 'description']
         }
       },
       {
-        name: 'check_n8n_workflows',
-        description: 'Query n8n for active workflows. Use when asked about workflow status.',
+        name: 'read_file',
+        description: 'Read the contents of any file on the server. Use for checking configs, code, logs, or any file Brian asks about.',
         input_schema: {
           type: 'object',
           properties: {
-            filter: { type: 'string', description: 'Optional name filter' }
-          }
+            path: { type: 'string', description: 'Absolute file path' },
+            lines: { type: 'integer', description: 'Number of lines to read from the end (for log files). If not set, reads entire file up to 5000 chars.' }
+          },
+          required: ['path']
         }
       },
       {
-        name: 'run_server_command',
-        description: 'Execute a safe server command. ONLY for: pm2 restart, pm2 list, git status, git log, disk usage, memory check. Never for destructive commands.',
+        name: 'write_file',
+        description: 'Write or append content to a file. Use for editing configs, creating scripts, updating code.',
         input_schema: {
           type: 'object',
           properties: {
-            command: { type: 'string', description: 'The command to run' }
+            path: { type: 'string', description: 'Absolute file path' },
+            content: { type: 'string', description: 'Content to write' },
+            append: { type: 'boolean', description: 'If true, append instead of overwrite', default: false }
           },
-          required: ['command']
+          required: ['path', 'content']
         }
       }
     ];
@@ -1621,68 +1671,107 @@ You have access to tools to interact with the live system. Use them when Brian a
       for (const toolCall of toolUseBlocks) {
         let result = '';
         try {
-          if (toolCall.name === 'query_builds') {
-            const { filter, select, limit } = toolCall.input;
-            let url = SUPABASE_URL + '/rest/v1/friday_builds?select=' + encodeURIComponent(select || '*');
+          if (toolCall.name === 'run_command') {
+            const { command, working_directory, timeout } = toolCall.input;
+            try {
+              result = execSync(command, {
+                cwd: working_directory || '/opt/manageai',
+                timeout: timeout || 30000,
+                encoding: 'utf8',
+                maxBuffer: 1024 * 1024
+              }).slice(-4000);
+            } catch (cmdErr) {
+              result = JSON.stringify({
+                error: cmdErr.message,
+                stderr: (cmdErr.stderr || '').slice(-2000),
+                stdout: (cmdErr.stdout || '').slice(-2000),
+                exitCode: cmdErr.status
+              });
+            }
+          }
+
+          else if (toolCall.name === 'query_supabase') {
+            const { table, select, filter, order, limit } = toolCall.input;
+            let url = SUPABASE_URL + '/rest/v1/' + table + '?select=' + encodeURIComponent(select || '*');
             if (filter) url += '&' + filter;
-            url += '&order=created_at.desc&limit=' + (limit || 5);
+            if (order) url += '&order=' + order;
+            url += '&limit=' + (limit || 10);
             const sbRes = await fetch(url, {
               headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
             });
             result = JSON.stringify(await sbRes.json());
           }
 
-          else if (toolCall.name === 'query_agent_runs') {
-            const { filter, select } = toolCall.input;
-            let url = SUPABASE_URL + '/rest/v1/build_agent_runs?select=' + encodeURIComponent(select || '*');
-            if (filter) url += '&' + filter;
-            url += '&order=started_at.asc';
+          else if (toolCall.name === 'modify_supabase') {
+            const { table, method, filter, body } = toolCall.input;
+            let url = SUPABASE_URL + '/rest/v1/' + table;
+            if (filter) url += '?' + filter;
             const sbRes = await fetch(url, {
-              headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+              method: method,
+              headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_KEY,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+              },
+              body: body ? JSON.stringify(body) : undefined
             });
-            result = JSON.stringify(await sbRes.json());
+            result = sbRes.ok ? JSON.stringify({ success: true, status: sbRes.status }) : JSON.stringify({ error: await sbRes.text() });
           }
 
-          else if (toolCall.name === 'check_worker_status') {
-            const lines = toolCall.input.lines || 10;
-            const pm2List = execSync('pm2 jlist 2>/dev/null || echo "[]"').toString();
-            const logs = execSync('pm2 logs friday-worker --lines ' + lines + ' --nostream 2>/dev/null || echo "no logs"').toString();
-            result = JSON.stringify({
-              pm2: JSON.parse(pm2List).map(p => ({ name: p.name, status: p.pm2_env?.status, uptime: p.pm2_env?.pm_uptime, restarts: p.pm2_env?.restart_time })),
-              recent_logs: logs.slice(-2000)
-            });
+          else if (toolCall.name === 'manage_n8n') {
+            const { action, workflow_id, filter_name } = toolCall.input;
+            const n8nBase = 'http://localhost:5678/api/v1';
+            if (action === 'list') {
+              const n8nRes = await fetch(n8nBase + '/workflows?active=true', { headers: { 'Accept': 'application/json' } });
+              const wfs = await n8nRes.json();
+              let filtered = wfs.data || [];
+              if (filter_name) filtered = filtered.filter(w => w.name.toLowerCase().includes(filter_name.toLowerCase()));
+              result = JSON.stringify(filtered.map(w => ({ id: w.id, name: w.name, active: w.active, nodes: w.nodes?.length || 0 })));
+            } else if (action === 'activate' && workflow_id) {
+              const n8nRes = await fetch(n8nBase + '/workflows/' + workflow_id + '/activate', { method: 'POST' });
+              result = JSON.stringify({ activated: n8nRes.ok });
+            } else if (action === 'deactivate' && workflow_id) {
+              const n8nRes = await fetch(n8nBase + '/workflows/' + workflow_id + '/deactivate', { method: 'POST' });
+              result = JSON.stringify({ deactivated: n8nRes.ok });
+            } else if (action === 'get' && workflow_id) {
+              const n8nRes = await fetch(n8nBase + '/workflows/' + workflow_id);
+              result = JSON.stringify(await n8nRes.json());
+            } else {
+              result = JSON.stringify({ error: 'Invalid action or missing workflow_id' });
+            }
           }
 
           else if (toolCall.name === 'trigger_build') {
-            result = JSON.stringify({ status: 'pending_confirmation', message: 'Build trigger requested for ' + toolCall.input.client + '. Brian should confirm via the build API directly for safety.' });
-          }
-
-          else if (toolCall.name === 'check_n8n_workflows') {
-            const n8nRes = await fetch('http://localhost:5678/api/v1/workflows?active=true', {
-              headers: { 'Accept': 'application/json' }
+            result = JSON.stringify({
+              status: 'ready',
+              message: 'To trigger a build, I need a full brief with client, customer_id, project_name, request_description, platform, workflow_steps, decision_authority, success_metrics, data_sources, guardrails, edge_cases, acceptance_criteria, and section_a. Tell me the details and I will format and submit it.'
             });
-            const wfs = await n8nRes.json();
-            const filtered = toolCall.input.filter
-              ? (wfs.data || []).filter(w => w.name.toLowerCase().includes(toolCall.input.filter.toLowerCase()))
-              : (wfs.data || []);
-            result = JSON.stringify(filtered.map(w => ({ id: w.id, name: w.name, active: w.active, updatedAt: w.updatedAt })));
           }
 
-          else if (toolCall.name === 'run_server_command') {
-            const cmd = toolCall.input.command;
-            const allowed = ['pm2 list', 'pm2 restart', 'pm2 status', 'git status', 'git log --oneline -10', 'df -h', 'free -h', 'uptime', 'pm2 jlist'];
-            const isAllowed = allowed.some(a => cmd.startsWith(a));
-            if (!isAllowed) {
-              result = JSON.stringify({ error: 'Command not allowed. Safe commands: ' + allowed.join(', ') });
+          else if (toolCall.name === 'read_file') {
+            const { path: filePath, lines } = toolCall.input;
+            if (lines) {
+              result = execSync('tail -n ' + lines + ' ' + JSON.stringify(filePath), { encoding: 'utf8', timeout: 5000 }).slice(-4000);
             } else {
-              result = execSync(cmd, { cwd: '/opt/manageai', timeout: 10000 }).toString().slice(-2000);
+              result = fsSync.readFileSync(filePath, 'utf8').slice(-5000);
             }
+          }
+
+          else if (toolCall.name === 'write_file') {
+            const { path: filePath, content, append } = toolCall.input;
+            if (append) {
+              fsSync.appendFileSync(filePath, content);
+            } else {
+              fsSync.writeFileSync(filePath, content);
+            }
+            result = JSON.stringify({ success: true, path: filePath, bytes: content.length });
           }
         } catch (err) {
           result = JSON.stringify({ error: err.message });
         }
 
-        toolResults.push({ type: 'tool_result', tool_use_id: toolCall.id, content: result });
+        toolResults.push({ type: 'tool_result', tool_use_id: toolCall.id, content: (result || '').slice(-4000) });
       }
 
       // Second Claude call with tool results
@@ -1706,6 +1795,31 @@ You have access to tools to interact with the live system. Use them when Brian a
     }
 
     res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── FRIDAY ElevenLabs TTS ────────────────────────────────────────────────────
+app.post('/api/friday/tts', async (req, res) => {
+  try {
+    const { text } = req.body;
+    const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/XcXEQzuLXRU9RcfWzEJt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': process.env.ELEVENLABS_API_KEY || '0e62709271fc5a22d98319c492681ae98ab5a7b1cf52f8db1316fa68237047e4'
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_flash_v2_5',
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
+      })
+    });
+    if (!response.ok) return res.status(response.status).json({ error: 'TTS failed' });
+    res.set('Content-Type', 'audio/mpeg');
+    const arrayBuffer = await response.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

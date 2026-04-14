@@ -10,18 +10,11 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Inter', sans-serif;
-    background: #FAFBFC;
-    color: #1a1a2e;
-    height: 100vh;
-    overflow: hidden;
-  }
+  body { font-family: 'Inter', sans-serif; background: #FAFBFC; color: #1a1a2e; height: 100vh; overflow: hidden; }
   #root { height: 100vh; }
-  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  ::-webkit-scrollbar-thumb { background: #E5D5C0; border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -35,8 +28,8 @@ You have access to tools to interact with the live system. Use them when Brian a
 
 Your agents: BUILD-000 through BUILD-019, 17 total. Stack: Temporal, Claude Code, n8n, Supabase, GitHub, OneDrive. Session 13: 4 builds, 25% to 95% QA. Red Team, Intelligence Agent, circuit breakers all live.`;
 
-/* ── Orb Canvas Component ─────────────────────────────────────────────────── */
-function Orb({ isListening, isSpeaking, isProcessing }) {
+/* ── HUD Canvas ───────────────────────────────────────────────────────────── */
+function HUD({ status }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const timeRef = useRef(0);
@@ -44,121 +37,194 @@ function Orb({ isListening, isSpeaking, isProcessing }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const size = 340;
-    canvas.width = size * 2;
-    canvas.height = size * 2;
+    const S = 360;
+    canvas.width = S * 2;
+    canvas.height = S * 2;
     ctx.scale(2, 2);
+    const cx = S / 2, cy = S / 2;
 
     const animate = () => {
-      const speed = isSpeaking ? 0.028 : isListening ? 0.022 : isProcessing ? 0.018 : 0.01;
-      timeRef.current += speed;
+      const spd = status === 'SPEAKING' ? 0.025 : status === 'LISTENING' ? 0.018 : status === 'PROCESSING' ? 0.014 : 0.006;
+      timeRef.current += spd;
       const t = timeRef.current;
-      ctx.clearRect(0, 0, size, size);
-      const cx = size / 2, cy = size / 2;
-      const baseRadius = 95;
-      const intensity = isSpeaking ? 1.4 : isListening ? 1.0 : isProcessing ? 0.7 : 0.3;
+      ctx.clearRect(0, 0, S, S);
 
-      // Outer glow layers
-      for (let layer = 3; layer >= 1; layer--) {
-        const glowGrad = ctx.createRadialGradient(cx, cy, baseRadius * 0.3, cx, cy, baseRadius * (1.3 + layer * 0.3));
-        glowGrad.addColorStop(0, `rgba(56, 189, 248, ${0.06 * intensity / layer})`);
-        glowGrad.addColorStop(0.5, `rgba(59, 130, 246, ${0.03 * intensity / layer})`);
-        glowGrad.addColorStop(1, 'rgba(59, 130, 246, 0)');
-        ctx.fillStyle = glowGrad;
-        ctx.fillRect(0, 0, size, size);
-      }
+      // 5. CENTER GLOW
+      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80);
+      cg.addColorStop(0, 'rgba(255,107,0,0.06)');
+      cg.addColorStop(1, 'rgba(255,107,0,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 80, 0, Math.PI * 2);
+      ctx.fill();
 
-      // 12 flowing petals
-      const petalCount = 12;
-      for (let i = 0; i < petalCount; i++) {
-        const angle = (Math.PI * 2 / petalCount) * i + t * 0.35;
-        const wobble = Math.sin(t * 2.5 + i * 1.2) * 14 * intensity;
-        const breathe = Math.sin(t * 1.5 + i * 0.8) * 6 * intensity;
-        const r = baseRadius + wobble + breathe;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angle);
+      // 1. OUTER RING + TICK MARKS
+      ctx.beginPath();
+      ctx.arc(cx, cy, 155, 0, Math.PI * 2);
+      ctx.strokeStyle = '#FF6B00';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      for (let i = 0; i < 72; i++) {
+        const angle = (i * 5) * Math.PI / 180;
+        const isLong = i % 6 === 0;
+        const len = isLong ? 12 : 6;
+        const w = isLong ? 2 : 1;
+        const r1 = 155;
+        const r2 = r1 + len;
         ctx.beginPath();
-        ctx.ellipse(0, 0, r, r * 0.45, 0, 0, Math.PI * 2);
-        const petalGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-        const hue = 200 + Math.sin(t + i * 0.5) * 20;
-        petalGrad.addColorStop(0, `hsla(${hue}, 85%, 70%, ${0.12 + 0.08 * intensity})`);
-        petalGrad.addColorStop(0.5, `hsla(${hue + 20}, 75%, 55%, ${0.06 + 0.04 * intensity})`);
-        petalGrad.addColorStop(1, `hsla(${hue + 40}, 70%, 50%, 0)`);
-        ctx.fillStyle = petalGrad;
-        ctx.fill();
-        ctx.restore();
+        ctx.moveTo(cx + r1 * Math.cos(angle), cy + r1 * Math.sin(angle));
+        ctx.lineTo(cx + r2 * Math.cos(angle), cy + r2 * Math.sin(angle));
+        ctx.strokeStyle = isLong ? '#FF6B00' : 'rgba(255,107,0,0.5)';
+        ctx.lineWidth = w;
+        ctx.stroke();
       }
 
-      // Core orb
-      const coreGrad = ctx.createRadialGradient(cx - 18, cy - 18, 0, cx, cy, baseRadius * 0.6);
-      coreGrad.addColorStop(0, '#e0f2fe');
-      coreGrad.addColorStop(0.25, '#7dd3fc');
-      coreGrad.addColorStop(0.5, '#38bdf8');
-      coreGrad.addColorStop(0.75, '#3b82f6');
-      coreGrad.addColorStop(1, '#6366f1');
+      // 2. SECOND RING (dashed)
       ctx.beginPath();
-      const coreR = baseRadius * 0.52 + Math.sin(t * 3) * 3 * intensity;
-      ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
-      ctx.fillStyle = coreGrad;
-      ctx.fill();
-
-      // Inner glow
-      const innerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 0.8);
-      innerGlow.addColorStop(0, `rgba(186, 230, 253, ${0.2 + 0.15 * Math.sin(t * 2)})`);
-      innerGlow.addColorStop(1, 'rgba(186, 230, 253, 0)');
-      ctx.fillStyle = innerGlow;
-      ctx.fill();
-
-      // Specular highlight
-      const specGrad = ctx.createRadialGradient(cx - coreR * 0.3, cy - coreR * 0.35, 0, cx - coreR * 0.2, cy - coreR * 0.25, coreR * 0.5);
-      specGrad.addColorStop(0, `rgba(255, 255, 255, ${0.35 + 0.1 * Math.sin(t * 1.8)})`);
-      specGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
-      specGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.beginPath();
-      ctx.arc(cx, cy, coreR, 0, Math.PI * 2);
-      ctx.fillStyle = specGrad;
-      ctx.fill();
-
-      // Shimmer ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, coreR + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(186, 230, 253, ${0.25 + 0.25 * Math.sin(t * 4)})`;
+      ctx.arc(cx, cy, 135, 0, Math.PI * 2);
+      ctx.strokeStyle = '#CC5500';
       ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 3. SEGMENT ARCS (4 rotating arcs)
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#FF8C00';
+      ctx.lineWidth = 3;
+      const arcSpan = (60 * Math.PI) / 180;
+      const gapSpan = (30 * Math.PI) / 180;
+      const arcOffset = t * 0.1;
+      for (let i = 0; i < 4; i++) {
+        const start = arcOffset + i * (arcSpan + gapSpan);
+        ctx.beginPath();
+        ctx.arc(cx, cy, 145, start, start + arcSpan);
+        ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
+
+      // 4. INNER MEASUREMENT RING
+      for (let i = 0; i < 36; i++) {
+        const angle = (i * 10) * Math.PI / 180;
+        const r1 = 115;
+        const r2 = r1 + 4;
+        ctx.beginPath();
+        ctx.moveTo(cx + r1 * Math.cos(angle), cy + r1 * Math.sin(angle));
+        ctx.lineTo(cx + r2 * Math.cos(angle), cy + r2 * Math.sin(angle));
+        ctx.strokeStyle = 'rgba(255,107,0,0.3)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+
+      // 7. ANIMATED METER BAR(S)
+      const meterSpeed = status === 'SPEAKING' ? 1.2 : status === 'LISTENING' ? 0.8 : 0.2;
+      const meterAngle = t * meterSpeed;
+      const meterSpan = (40 * Math.PI) / 180;
+
+      // Meter gradient helper
+      const drawMeter = (startAngle) => {
+        const steps = 30;
+        for (let i = 0; i < steps; i++) {
+          const a1 = startAngle + (i / steps) * meterSpan;
+          const a2 = startAngle + ((i + 1) / steps) * meterSpan;
+          const fade = Math.sin((i / steps) * Math.PI);
+          ctx.beginPath();
+          ctx.arc(cx, cy, 100, a1, a2);
+          ctx.strokeStyle = `rgba(255,107,0,${fade * 0.9})`;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+      };
+      drawMeter(meterAngle);
+      if (status === 'SPEAKING') {
+        drawMeter(meterAngle + Math.PI);
+      }
+
+      // 8. CORNER DECORATIONS (targeting brackets at cardinal points)
+      const bracketSize = 8;
+      ctx.strokeStyle = 'rgba(255,107,0,0.6)';
+      ctx.lineWidth = 1.5;
+      const bracketR = 155 + 14;
+      // Top
+      ctx.beginPath();
+      ctx.moveTo(cx - bracketSize, cy - bracketR);
+      ctx.lineTo(cx, cy - bracketR);
+      ctx.lineTo(cx, cy - bracketR + bracketSize);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + bracketSize, cy - bracketR);
+      ctx.lineTo(cx, cy - bracketR);
+      ctx.stroke();
+      // Right
+      ctx.beginPath();
+      ctx.moveTo(cx + bracketR, cy - bracketSize);
+      ctx.lineTo(cx + bracketR, cy);
+      ctx.lineTo(cx + bracketR - bracketSize, cy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + bracketR, cy + bracketSize);
+      ctx.lineTo(cx + bracketR, cy);
+      ctx.stroke();
+      // Bottom
+      ctx.beginPath();
+      ctx.moveTo(cx - bracketSize, cy + bracketR);
+      ctx.lineTo(cx, cy + bracketR);
+      ctx.lineTo(cx, cy + bracketR - bracketSize);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + bracketSize, cy + bracketR);
+      ctx.lineTo(cx, cy + bracketR);
+      ctx.stroke();
+      // Left
+      ctx.beginPath();
+      ctx.moveTo(cx - bracketR, cy - bracketSize);
+      ctx.lineTo(cx - bracketR, cy);
+      ctx.lineTo(cx - bracketR + bracketSize, cy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - bracketR, cy + bracketSize);
+      ctx.lineTo(cx - bracketR, cy);
       ctx.stroke();
 
-      // Second ring
-      ctx.beginPath();
-      ctx.arc(cx, cy, coreR + 12, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(147, 197, 253, ${0.1 + 0.1 * Math.sin(t * 3 + 1)})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      // 6. CENTER TEXT
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#FF6B00';
+      ctx.font = '800 18px Montserrat, sans-serif';
+      ctx.letterSpacing = '4px';
+      ctx.fillText('F.R.I.D.A.Y.', cx, cy - 6);
+      ctx.fillStyle = '#CC5500';
+      ctx.font = '500 9px Inter, sans-serif';
+      ctx.letterSpacing = '2px';
+      const label = status === 'LISTENING' ? 'LISTENING' : status === 'SPEAKING' ? 'SPEAKING' : status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
+      ctx.fillText(label, cx, cy + 14);
 
       animRef.current = requestAnimationFrame(animate);
     };
     animate();
     return () => cancelAnimationFrame(animRef.current);
-  }, [isListening, isSpeaking, isProcessing]);
+  }, [status]);
 
-  return <canvas ref={canvasRef} style={{ width: 340, height: 340 }} />;
+  return <canvas ref={canvasRef} style={{ width: 360, height: 360 }} />;
 }
 
 /* ── Status Badge ─────────────────────────────────────────────────────────── */
 function StatusBadge({ status }) {
   const config = {
-    LISTENING: { color: '#3b82f6', bg: '#eff6ff', label: 'Listening' },
-    SPEAKING: { color: '#8b5cf6', bg: '#f5f3ff', label: 'Speaking' },
-    PROCESSING: { color: '#d97706', bg: '#fffbeb', label: 'Processing' },
-    READY: { color: '#22c55e', bg: '#f0fdf4', label: 'Ready' },
-    IDLE: { color: '#94a3b8', bg: '#f8fafc', label: 'Idle' }
+    LISTENING: { color: '#FF6B00', bg: '#FFF7ED', label: 'Listening' },
+    SPEAKING: { color: '#8B5CF6', bg: '#F5F3FF', label: 'Speaking' },
+    PROCESSING: { color: '#D97706', bg: '#FFFBEB', label: 'Processing' },
+    READY: { color: '#22C55E', bg: '#F0FDF4', label: 'Ready' },
+    IDLE: { color: '#94A3B8', bg: '#F8FAFC', label: 'Idle' }
   };
   const c = config[status] || config.IDLE;
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 8,
       padding: '6px 14px', borderRadius: 20, background: c.bg,
-      fontFamily: 'Inter, sans-serif', fontSize: 12, fontWeight: 600,
-      color: c.color, letterSpacing: '0.04em', textTransform: 'uppercase'
+      fontSize: 11, fontWeight: 600, color: c.color,
+      letterSpacing: '0.05em', textTransform: 'uppercase'
     }}>
       <div style={{
         width: 7, height: 7, borderRadius: '50%', background: c.color,
@@ -183,38 +249,54 @@ function App() {
   const chatEndRef = useRef(null);
   const shouldListenRef = useRef(false);
   const messagesRef = useRef([]);
+  const audioRef = useRef(null);
 
-  // Keep messagesRef in sync
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, callEvents]);
 
+  /* ── ElevenLabs TTS with browser fallback ─── */
   const speak = useCallback((text) => {
-    return new Promise((resolve) => {
-      const synth = window.speechSynthesis;
-      synth.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 1.05;
-      utter.pitch = 0.95;
-      const voices = synth.getVoices();
-      const preferred = voices.find(v => v.name === 'Daniel')
-        || voices.find(v => v.name === 'Samantha')
-        || voices.find(v => v.name.includes('Google UK English Male'))
-        || voices.find(v => v.lang === 'en-GB')
-        || voices.find(v => v.lang.startsWith('en'));
-      if (preferred) utter.voice = preferred;
-      utter.onstart = () => setStatus('SPEAKING');
-      utter.onend = () => {
-        setStatus(shouldListenRef.current ? 'READY' : 'IDLE');
-        resolve();
-      };
-      utter.onerror = () => {
-        setStatus('IDLE');
-        resolve();
-      };
-      synth.speak(utter);
+    return new Promise(async (resolve) => {
+      if (isMuted) { resolve(); return; }
+      try {
+        setStatus('SPEAKING');
+        const response = await fetch('/api/friday/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        if (!response.ok) throw new Error('TTS failed');
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+        audio.onended = () => {
+          setStatus(shouldListenRef.current ? 'READY' : 'IDLE');
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          resolve();
+        };
+        audio.onerror = () => {
+          setStatus('IDLE');
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          resolve();
+        };
+        audio.play();
+      } catch (err) {
+        console.error('TTS error, falling back to browser:', err);
+        const synth = window.speechSynthesis;
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1.05;
+        utter.onstart = () => setStatus('SPEAKING');
+        utter.onend = () => { setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); };
+        utter.onerror = () => { setStatus('IDLE'); resolve(); };
+        synth.speak(utter);
+      }
     });
-  }, []);
+  }, [isMuted]);
 
+  /* ── Send to Claude ─── */
   const sendToFriday = useCallback(async (text) => {
     if (!text.trim()) return;
     const userMsg = { role: 'user', content: text };
@@ -248,6 +330,7 @@ function App() {
     }
   }, [isMuted, speak]);
 
+  /* ── Speech Recognition ─── */
   const startListening = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       alert('Speech recognition requires Chrome.');
@@ -289,9 +372,7 @@ function App() {
     };
 
     recognition.onerror = (e) => {
-      if (e.error !== 'no-speech' && e.error !== 'aborted') {
-        console.error('Speech error:', e.error);
-      }
+      if (e.error !== 'no-speech' && e.error !== 'aborted') console.error('Speech error:', e.error);
       setStatus(prev => prev === 'LISTENING' ? 'READY' : prev);
     };
 
@@ -300,16 +381,15 @@ function App() {
     setStatus('LISTENING');
   }, [sendToFriday]);
 
+  /* ── Call Toggle ─── */
   const toggleCall = useCallback(async () => {
     if (isCallActive) {
       shouldListenRef.current = false;
       setIsCallActive(false);
       setStatus('IDLE');
       window.speechSynthesis.cancel();
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
-      }
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; }
       clearTimeout(silenceTimerRef.current);
       setTranscript('');
       setCallEvents(prev => [...prev, { type: 'ended', time: new Date() }]);
@@ -317,306 +397,234 @@ function App() {
       setIsCallActive(true);
       shouldListenRef.current = true;
       setCallEvents(prev => [...prev, { type: 'started', time: new Date() }]);
-
-      // Greeting
       const greeting = "FRIDAY online — what can I do for you, Brian?";
       setMessages(prev => [...prev, { role: 'assistant', content: greeting }]);
-      setStatus('SPEAKING');
       await speak(greeting);
-      if (shouldListenRef.current && !isMuted) {
-        startListening();
-      }
+      if (shouldListenRef.current && !isMuted) startListening();
     }
   }, [isCallActive, isMuted, speak, startListening]);
 
+  /* ── Mute Toggle ─── */
   const toggleMute = useCallback(() => {
     if (isMuted) {
       setIsMuted(false);
-      if (isCallActive && status === 'READY') {
+      if (isCallActive && (status === 'READY' || status === 'IDLE')) {
         shouldListenRef.current = true;
         startListening();
       }
     } else {
       setIsMuted(true);
       shouldListenRef.current = false;
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
-      }
+      if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; }
       if (status === 'LISTENING') setStatus('READY');
     }
   }, [isMuted, isCallActive, status, startListening]);
 
-  const newConversation = () => {
-    setMessages([]);
-    setCallEvents([]);
-    setTranscript('');
-  };
+  const newConversation = () => { setMessages([]); setCallEvents([]); setTranscript(''); };
 
   const handleTextSend = (e) => {
     e.preventDefault();
-    if (input.trim()) {
-      sendToFriday(input.trim());
-      setInput('');
-    }
+    if (input.trim()) { sendToFriday(input.trim()); setInput(''); }
   };
 
-  const formatTime = (d) => {
-    const date = new Date(d);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const fmtTime = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#FAFBFC' }}>
-      {/* ── Left Panel: Orb ───────────────────────────────────────────────── */}
+
+      {/* ── Left Panel ────────────────────────────────────────────────────── */}
       <div style={{
         flex: '0 0 60%', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', position: 'relative',
-        background: 'linear-gradient(180deg, #f5f7fa 0%, #ebeef3 100%)',
-        minWidth: 0
+        alignItems: 'center', justifyContent: 'center', position: 'relative'
       }}>
-        {/* Title */}
-        <h1 style={{
-          fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 32,
-          color: '#0f172a', letterSpacing: '-0.03em', marginBottom: 4
-        }}>FRIDAY</h1>
-        <p style={{
-          fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: 12,
-          color: '#94a3b8', marginBottom: 48, letterSpacing: '0.1em', textTransform: 'uppercase'
-        }}>Head of Build</p>
+        <HUD status={isCallActive ? status : 'IDLE'} />
 
-        {/* Orb */}
-        <Orb
-          isListening={status === 'LISTENING'}
-          isSpeaking={status === 'SPEAKING'}
-          isProcessing={status === 'PROCESSING'}
-        />
+        {/* Phone button */}
+        <button onClick={toggleCall} title={isCallActive ? 'End call' : 'Start call'} style={{
+          width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
+          marginTop: 24, color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: isCallActive ? '#DC2626' : 'linear-gradient(135deg, #FF6B00, #CC5500)',
+          boxShadow: isCallActive ? '0 4px 16px rgba(220,38,38,0.3)' : '0 4px 16px rgba(255,107,0,0.3)',
+          transition: 'all 0.25s ease'
+        }}>
+          {isCallActive ? (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
+            </svg>
+          )}
+        </button>
 
-        {/* Status */}
-        <div style={{ marginTop: 36 }}>
+        {/* Mute + Settings row */}
+        <div style={{ display: 'flex', gap: 12, marginTop: 16, alignItems: 'center' }}>
+          {isCallActive && (
+            <button onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
+              width: 44, height: 44, borderRadius: '50%', cursor: 'pointer',
+              border: isMuted ? '1px solid #FCA5A5' : '1px solid #E5D5C0',
+              background: isMuted ? '#FEF2F2' : '#fff',
+              color: isMuted ? '#EF4444' : '#FF6B00',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}>
+              {isMuted ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                  <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
+                  <path d="M17 16.95A7 7 0 015 12"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+                  <path d="M19 12a7 7 0 01-.11 1.23"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+                  <path d="M19 10v2a7 7 0 01-14 0v-2"/>
+                  <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              )}
+            </button>
+          )}
+          <button title="Settings" style={{
+            width: 36, height: 36, borderRadius: '50%', border: '1px solid #E5D5C0',
+            cursor: 'pointer', background: '#fff', color: '#CC5500',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Status badge */}
+        <div style={{ marginTop: 20 }}>
           <StatusBadge status={isCallActive ? status : 'IDLE'} />
         </div>
 
         {/* Live transcript */}
         {transcript && (
           <p style={{
-            marginTop: 16, fontFamily: 'Inter, sans-serif', fontSize: 13,
-            color: '#64748b', maxWidth: 340, textAlign: 'center', fontStyle: 'italic',
+            marginTop: 14, fontSize: 13, color: '#CC5500',
+            maxWidth: 340, textAlign: 'center', fontStyle: 'italic',
             lineHeight: 1.5, padding: '0 20px'
           }}>"{transcript}"</p>
         )}
-
-        {/* Controls */}
-        <div style={{ display: 'flex', gap: 16, marginTop: 40, alignItems: 'center' }}>
-          {/* Phone button */}
-          <button onClick={toggleCall} title={isCallActive ? 'End call' : 'Start call'} style={{
-            width: 60, height: 60, borderRadius: '50%', border: 'none', cursor: 'pointer',
-            background: isCallActive
-              ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-              : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-            color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: isCallActive
-              ? '0 6px 24px rgba(239,68,68,0.35)'
-              : '0 6px 24px rgba(59,130,246,0.35)',
-            transition: 'all 0.25s ease'
-          }}>
-            {isCallActive ? (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-              </svg>
-            ) : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-              </svg>
-            )}
-          </button>
-
-          {/* Mute button */}
-          {isCallActive && (
-            <button onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
-              width: 48, height: 48, borderRadius: '50%',
-              border: isMuted ? '2px solid #fca5a5' : '2px solid #e2e8f0',
-              cursor: 'pointer',
-              background: isMuted ? '#fef2f2' : '#fff',
-              color: isMuted ? '#ef4444' : '#64748b',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s ease'
-            }}>
-              {isMuted ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                  <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
-                  <path d="M17 16.95A7 7 0 015 12"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                  <path d="M19 12a7 7 0 01-.11 1.23"/>
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
-                  <path d="M19 10v2a7 7 0 01-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/>
-                  <line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
-              )}
-            </button>
-          )}
-
-          {/* Settings icon */}
-          <button title="Settings" style={{
-            width: 40, height: 40, borderRadius: '50%', border: '1px solid #e2e8f0',
-            cursor: 'pointer', background: '#fff', color: '#94a3b8',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* ── Right Panel: Chat ─────────────────────────────────────────────── */}
       <div style={{
         flex: '0 0 40%', minWidth: 380, display: 'flex', flexDirection: 'column',
-        borderLeft: '1px solid #e5e7eb', background: '#fff'
+        borderLeft: '1px solid #F0E6D6', background: '#fff'
       }}>
         {/* Header */}
         <div style={{
-          padding: '16px 24px', borderBottom: '1px solid #f1f5f9',
+          padding: '14px 20px', borderBottom: '1px solid #F0E6D6',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* FRIDAY avatar */}
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+              background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 14, color: '#fff'
+              fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 13, color: '#fff'
             }}>F</div>
             <div>
-              <span style={{
-                fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14,
-                color: '#0f172a'
-              }}>FRIDAY</span>
-              <span style={{
-                fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#94a3b8',
-                display: 'block', marginTop: -1
-              }}>Head of Build</span>
+              <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>FRIDAY</span>
+              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginTop: -1 }}>Head of Build</span>
             </div>
           </div>
-          <button
-            onClick={newConversation}
-            style={{
-              padding: '6px 12px', borderRadius: 8, border: '1px solid #e5e7eb',
-              background: '#fff', cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              fontSize: 12, fontWeight: 500, color: '#64748b',
-              display: 'flex', alignItems: 'center', gap: 4
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <button onClick={newConversation} style={{
+            padding: '5px 10px', borderRadius: 8, border: '1px solid #E5D5C0',
+            background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 500,
+            color: '#CC5500', display: 'flex', alignItems: 'center', gap: 4
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
             New conversation
           </button>
         </div>
 
-        {/* Messages area */}
+        {/* Messages */}
         <div style={{
-          flex: 1, overflowY: 'auto', padding: '16px 24px',
+          flex: 1, overflowY: 'auto', padding: '14px 20px',
           display: 'flex', flexDirection: 'column', gap: 4
         }}>
           {messages.length === 0 && callEvents.length === 0 && (
-            <div style={{
-              textAlign: 'center', color: '#94a3b8', marginTop: 120,
-              fontFamily: 'Inter, sans-serif'
-            }}>
+            <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: 100 }}>
               <div style={{
-                width: 56, height: 56, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                width: 52, height: 52, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px', fontFamily: 'Montserrat, sans-serif',
-                fontWeight: 800, fontSize: 22, color: '#fff'
+                margin: '0 auto 14px', fontFamily: 'Montserrat, sans-serif',
+                fontWeight: 800, fontSize: 20, color: '#fff'
               }}>F</div>
-              <p style={{ fontSize: 15, fontWeight: 500, color: '#475569', marginBottom: 6 }}>FRIDAY is ready</p>
-              <p style={{ fontSize: 13 }}>Start a voice call or type a message below.</p>
+              <p style={{ fontSize: 14, fontWeight: 500, color: '#475569', marginBottom: 4 }}>FRIDAY is ready</p>
+              <p style={{ fontSize: 12 }}>Start a voice call or type a message.</p>
             </div>
           )}
 
-          {/* Render messages with call events interspersed */}
-          {(() => {
-            const items = [];
-            let msgIdx = 0;
-            let evtIdx = 0;
+          {callEvents.map((evt, i) => (
+            <div key={'evt-' + i} style={{ textAlign: 'center', padding: '10px 0', fontSize: 11, color: '#94a3b8' }}>
+              <span style={{
+                background: '#FFFBF5', padding: '3px 10px', borderRadius: 10,
+                border: '1px solid #F0E6D6'
+              }}>
+                {evt.type === 'started' ? 'Call started' : 'You ended the call'} - {fmtTime(evt.time)}
+              </span>
+            </div>
+          ))}
 
-            // Simple merge: show call events at the top, then messages
-            callEvents.forEach((evt, i) => {
-              items.push(
-                <div key={'evt-' + i} style={{
-                  textAlign: 'center', padding: '12px 0', fontFamily: 'Inter, sans-serif',
-                  fontSize: 12, color: '#94a3b8'
-                }}>
-                  <span style={{
-                    background: '#f8fafc', padding: '4px 12px', borderRadius: 12,
-                    border: '1px solid #f1f5f9'
-                  }}>
-                    {evt.type === 'started' ? 'Call started' : 'You ended the call'} - {formatTime(evt.time)}
-                  </span>
-                </div>
-              );
-            });
-
-            messages.forEach((msg, i) => {
-              const isUser = msg.role === 'user';
-              items.push(
-                <div key={'msg-' + i} style={{
-                  display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start',
-                  marginBottom: 8
-                }}>
-                  <div style={{ display: 'flex', gap: 8, maxWidth: '85%', alignItems: 'flex-start' }}>
-                    {!isUser && (
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                        background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'Montserrat, sans-serif', fontWeight: 800,
-                        fontSize: 11, color: '#fff', marginTop: 2
-                      }}>F</div>
-                    )}
+          {messages.map((msg, i) => {
+            const isUser = msg.role === 'user';
+            return (
+              <div key={'msg-' + i} style={{
+                display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 6
+              }}>
+                <div style={{ display: 'flex', gap: 8, maxWidth: '85%', alignItems: 'flex-start' }}>
+                  {!isUser && (
                     <div style={{
-                      padding: '10px 14px', borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      background: isUser ? '#3b82f6' : '#f1f5f9',
-                      color: isUser ? '#fff' : '#1e293b',
-                      fontFamily: 'Inter, sans-serif', fontSize: 14, lineHeight: 1.55,
-                      fontWeight: 400, whiteSpace: 'pre-wrap'
-                    }}>
-                      {msg.content}
-                    </div>
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                      background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 10, color: '#fff'
+                    }}>F</div>
+                  )}
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: isUser ? '#FF6B00' : '#FFF7ED',
+                    color: isUser ? '#fff' : '#1e293b',
+                    borderLeft: isUser ? 'none' : '3px solid #FF6B00',
+                    fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap'
+                  }}>
+                    {msg.content}
                   </div>
                 </div>
-              );
-            });
-
-            return items;
-          })()}
+              </div>
+            );
+          })}
 
           {status === 'PROCESSING' && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
               <div style={{
-                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Montserrat, sans-serif', fontWeight: 800,
-                fontSize: 11, color: '#fff', marginTop: 2
+                fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 10, color: '#fff'
               }}>F</div>
               <div style={{
-                padding: '12px 16px', borderRadius: '16px 16px 16px 4px',
-                background: '#f1f5f9', display: 'flex', gap: 4, alignItems: 'center'
+                padding: '12px 16px', borderRadius: '14px 14px 14px 4px',
+                background: '#FFF7ED', borderLeft: '3px solid #FF6B00',
+                display: 'flex', gap: 5, alignItems: 'center'
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8', animation: 'dotPulse 1.4s infinite', animationDelay: '0s' }}/>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', animation: 'dotPulse 1.4s infinite', animationDelay: '0s' }}/>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/>
               </div>
             </div>
           )}
@@ -625,48 +633,37 @@ function App() {
 
         {/* Text input */}
         <form onSubmit={handleTextSend} style={{
-          padding: '12px 24px 16px', borderTop: '1px solid #f1f5f9',
+          padding: '10px 20px 14px', borderTop: '1px solid #F0E6D6',
           display: 'flex', gap: 8
         }}>
           <input
-            type="text"
-            value={input}
+            type="text" value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type a message..."
             style={{
-              flex: 1, padding: '11px 16px', borderRadius: 12,
-              border: '1px solid #e5e7eb', fontFamily: 'Inter, sans-serif',
-              fontSize: 14, outline: 'none', background: '#f8fafc',
-              transition: 'border 0.2s, box-shadow 0.2s'
+              flex: 1, padding: '10px 14px', borderRadius: 10,
+              border: '1px solid #E5D5C0', fontSize: 13, outline: 'none',
+              background: '#FFFBF5', transition: 'border 0.2s, box-shadow 0.2s'
             }}
-            onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.1)'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
+            onFocus={(e) => { e.target.style.borderColor = '#FF6B00'; e.target.style.boxShadow = '0 0 0 3px rgba(255,107,0,0.08)'; }}
+            onBlur={(e) => { e.target.style.borderColor = '#E5D5C0'; e.target.style.boxShadow = 'none'; }}
           />
           <button type="submit" disabled={!input.trim()} style={{
-            padding: '11px 18px', borderRadius: 12, border: 'none',
-            background: input.trim() ? '#3b82f6' : '#e2e8f0',
-            color: input.trim() ? '#fff' : '#94a3b8',
-            fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 14,
-            cursor: input.trim() ? 'pointer' : 'default',
-            transition: 'all 0.2s'
+            padding: '10px 16px', borderRadius: 10, border: 'none',
+            background: input.trim() ? 'linear-gradient(135deg, #FF6B00, #CC5500)' : '#E5D5C0',
+            color: '#fff', fontWeight: 600, fontSize: 13,
+            cursor: input.trim() ? 'pointer' : 'default', transition: 'all 0.2s'
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
             </svg>
           </button>
         </form>
       </div>
 
-      {/* Global keyframes */}
       <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        @keyframes dotPulse {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40% { transform: scale(1); opacity: 1; }
-        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes dotPulse { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
       `}</style>
     </div>
   );
