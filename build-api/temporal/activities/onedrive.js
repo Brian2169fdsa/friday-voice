@@ -119,10 +119,12 @@ export async function uploadToOnedriveActivity(jobData, agentResults) {
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
   const buildVersion = jobData.buildVersion || 'v1.0';
   const sanitize = s => (s || '').replace(/[<>:"\/\\|?*]/g, '-').trim();
-  const aitm = jobData.aitm_name || jobData.project_name || jobData.ticket_id;
-  const basePath = 'ManageAI/Clients/' + sanitize(jobData.client || jobData.client_name) + '/' + sanitize(aitm);
-  const versionPath = basePath + '/' + buildVersion;
-  const currentPath = basePath + '/current';
+  const ticketId = jobData.ticket_id || jobData.ticketId || '';
+  const clientDisplay = jobData.client || jobData.client_name || '';
+  const buildFolderName = sanitize(ticketId + ' - ' + clientDisplay);
+  const basePath = 'FRIDAY Builds/' + buildFolderName;
+  const versionPath = basePath + '/Phase 2';
+  const currentPath = basePath + '/Phase 2';
 
   const token = await getGraphToken();
   await ensureFolder(token, versionPath);
@@ -178,7 +180,9 @@ export async function uploadPhase1ManifestsActivity(jobData, phase1Results) {
   console.log('[FRIDAY] Uploading Phase 1 manifests to OneDrive for', clientDisplay);
 
   const sanitize = s => (s || '').replace(/[<>:"\\/|?*]/g, '-').trim();
-  const basePath = `ManageAI/Clients/${sanitize(clientDisplay)}/${sanitize(aitm)}/current/phase1`;
+  const ticketId = jobData.ticket_id || jobData.ticketId || '';
+  const buildFolderName = sanitize(ticketId + ' - ' + clientDisplay);
+  const basePath = 'FRIDAY Builds/' + buildFolderName + '/Phase 1';
 
   const token = await getGraphToken();
   const results = [];

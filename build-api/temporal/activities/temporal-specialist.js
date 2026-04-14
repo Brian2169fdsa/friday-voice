@@ -206,7 +206,7 @@ OUTPUT DIRECTORY: ${agentDir}`;
   try {
     const token = await getGraphToken();
     const workerContent = await fs.readFile(path.join(agentDir, 'worker.js'), 'utf8');
-    onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/temporal`, 'worker.js', workerContent, 'application/javascript');
+    onedriveUrl = await uploadFile(token, `FRIDAY Builds/${(ticketId + ' - ' + (jobData.client || jobData.client_name || '')).replace(/[<>:"\\/|?*]/g, '-').trim()}/Phase 1`, 'worker.js', workerContent, 'application/javascript');
     console.log('[BUILD-014] OneDrive upload:', onedriveUrl);
   } catch(upErr) { console.warn('[BUILD-014] OneDrive upload failed (non-blocking):', upErr.message); }
 

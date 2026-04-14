@@ -281,7 +281,7 @@ OUTPUT DIRECTORY: ${agentDir}`;
     try {
       const token = await getGraphToken();
       const fileContent = await fs.readFile(path.join(agentDir, 'deployment-manifest.json'), 'utf8');
-      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/platform`, 'deployment-manifest.json', fileContent, 'application/json');
+      onedriveUrl = await uploadFile(token, `FRIDAY Builds/${(ticketId + ' - ' + (jobData.client || jobData.client_name || '')).replace(/[<>:"\\/|?*]/g, '-').trim()}/Phase 1`, 'deployment-manifest.json', fileContent, 'application/json');
       console.log('[BUILD-005] OneDrive upload:', onedriveUrl);
     } catch(upErr) { console.warn('[BUILD-005] OneDrive upload failed (non-blocking):', upErr.message); }
     try {

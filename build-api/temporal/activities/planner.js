@@ -260,7 +260,7 @@ Do not ask questions. Do not request more information. Everything you need is in
     try {
       const token = await getGraphToken();
       const fileContent = await fs.readFile(contractPath, 'utf8');
-      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/planner`, 'build-contract.json', fileContent, 'application/json');
+      onedriveUrl = await uploadFile(token, `FRIDAY Builds/${(ticketId + ' - ' + (jobData.client || jobData.client_name || '')).replace(/[<>:"\\/|?*]/g, '-').trim()}/Phase 1`, 'build-contract.json', fileContent, 'application/json');
       console.log('[BUILD-001] OneDrive upload:', onedriveUrl);
     } catch(upErr) { console.warn('[BUILD-001] OneDrive upload failed (non-blocking):', upErr.message); }
     try {

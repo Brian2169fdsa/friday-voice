@@ -318,7 +318,8 @@ export async function postBuildPipelineActivity(jobData) {
     console.log('[TEMPORAL PIPELINE] Step 10: Build finalized');
 
     const sanitize = s => (s || '').replace(/[<>:"\/|?*]/g, '-').trim();
-    const basePath = 'ManageAI/Clients/' + sanitize(clientName) + '/Builds/' + sanitize(projectName);
+    const buildFolderName = sanitize(ticketId + ' - ' + clientName);
+    const basePath = 'FRIDAY Builds/' + buildFolderName;
 
     // Step 10b: Generate Agent Definition .md (FR-GAP-017 — OS Agent Template)
     try {
@@ -456,9 +457,8 @@ export async function postBuildPipelineActivity(jobData) {
       await ensureFolder(token, defPath);
       const shareUrl = await uploadFile(token, defPath, aitmSlug + '-agent-definition.md', agentDefMd, 'text/markdown');
 
-      // Also upload to the client build folder
-      const aitm2 = jobData.aitm_name || projectName;
-      const clientBuildPath = 'ManageAI/Clients/' + sanitize(clientName) + '/' + sanitize(aitm2);
+      // Also upload to the build folder
+      const clientBuildPath = 'FRIDAY Builds/' + buildFolderName;
       try {
         await ensureFolder(token, clientBuildPath);
         await uploadFile(token, clientBuildPath, aitmSlug + '-agent-definition.md', agentDefMd, 'text/markdown');
@@ -504,8 +504,7 @@ export async function postBuildPipelineActivity(jobData) {
 
     // Step 10d: Save OneDrive folder URL and all output_links to build record (FIX 14)
     try {
-      const aitm2 = jobData.aitm_name || projectName;
-      const folderPath = 'ManageAI/Clients/' + sanitize(clientName) + '/' + sanitize(aitm2);
+      const folderPath = 'FRIDAY Builds/' + buildFolderName;
       const encodedPath = folderPath.split('/').map(p => encodeURIComponent(p)).join('/');
       const onedriveFolderUrl = 'https://managepartners-my.sharepoint.com/personal/brian_manageai_io/Documents/' + encodedPath;
 
@@ -630,9 +629,15 @@ export async function postBuildPipelineActivity(jobData) {
 
       const engagementJson = JSON.stringify(engagementContext, null, 2);
       const engToken = await getGraphToken();
+      // Engagement context goes to stable per-client location (read back by future builds)
       const engPath = 'ManageAI/Clients/' + sanitize(clientName) + '/FRIDAY';
       await ensureFolder(engToken, engPath);
       await uploadFile(engToken, engPath, 'engagement-context.json', engagementJson, 'application/json');
+      // Also copy to the build folder for completeness
+      try {
+        const buildEngPath = 'FRIDAY Builds/' + buildFolderName;
+        await uploadFile(engToken, buildEngPath, 'engagement-context.json', engagementJson, 'application/json');
+      } catch (_) {}
       console.log('[TEMPORAL PIPELINE] Engagement context uploaded to ' + engPath + '/engagement-context.json');
       buildLog.push({ step: '10e', action: 'engagement_context', detail: 'uploaded to ' + engPath, ts: new Date().toISOString() });
     } catch(engErr) {

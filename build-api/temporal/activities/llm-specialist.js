@@ -255,7 +255,7 @@ Do not ask questions. Everything you need is above.`;
     try {
       const token = await getGraphToken();
       const fileContent = await fs.readFile(path.join(agentDir, 'ai-integration.js'), 'utf8');
-      onedriveUrl = await uploadFile(token, `ManageAI/Builds/${ticketId}/phase1/llm`, 'ai-integration.js', fileContent, 'application/javascript');
+      onedriveUrl = await uploadFile(token, `FRIDAY Builds/${(ticketId + ' - ' + (jobData.client || jobData.client_name || '')).replace(/[<>:"\\/|?*]/g, '-').trim()}/Phase 1`, 'ai-integration.js', fileContent, 'application/javascript');
       console.log('[BUILD-004] OneDrive upload:', onedriveUrl);
     } catch(upErr) { console.warn('[BUILD-004] OneDrive upload failed (non-blocking):', upErr.message); }
     try {
