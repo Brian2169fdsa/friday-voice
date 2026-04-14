@@ -31,173 +31,92 @@ You have access to tools to interact with the live system. Use them when Brian a
 Your agents: BUILD-000 through BUILD-019, 17 total. Stack: Temporal, Claude Code, n8n, Supabase, GitHub, OneDrive. Session 13: 4 builds, 25% to 95% QA. Red Team, Intelligence Agent, circuit breakers all live.`;
 
 const HAS_SPEECH = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+const AUTH_HEADERS = { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' };
 
 /* ── HUD Canvas ───────────────────────────────────────────────────────────── */
 function HUD({ status, size }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const timeRef = useRef(0);
-
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const S = size;
-    canvas.width = S * 2;
-    canvas.height = S * 2;
-    ctx.scale(2, 2);
-    const cx = S / 2, cy = S / 2;
-    const scale = S / 360;
-
+    const S = size; canvas.width = S * 2; canvas.height = S * 2; ctx.scale(2, 2);
+    const cx = S / 2, cy = S / 2, sc = S / 360;
     const animate = () => {
       const spd = status === 'SPEAKING' ? 0.025 : status === 'LISTENING' ? 0.018 : status === 'PROCESSING' ? 0.014 : 0.006;
-      timeRef.current += spd;
-      const t = timeRef.current;
-      ctx.clearRect(0, 0, S, S);
-
-      // Center glow
-      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 * scale);
-      cg.addColorStop(0, 'rgba(255,107,0,0.06)');
-      cg.addColorStop(1, 'rgba(255,107,0,0)');
-      ctx.fillStyle = cg;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 80 * scale, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Outer ring + tick marks
-      ctx.beginPath();
-      ctx.arc(cx, cy, 155 * scale, 0, Math.PI * 2);
-      ctx.strokeStyle = '#FF6B00';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      for (let i = 0; i < 72; i++) {
-        const angle = (i * 5) * Math.PI / 180;
-        const isLong = i % 6 === 0;
-        const len = (isLong ? 12 : 6) * scale;
-        ctx.beginPath();
-        ctx.moveTo(cx + 155 * scale * Math.cos(angle), cy + 155 * scale * Math.sin(angle));
-        ctx.lineTo(cx + (155 * scale + len) * Math.cos(angle), cy + (155 * scale + len) * Math.sin(angle));
-        ctx.strokeStyle = isLong ? '#FF6B00' : 'rgba(255,107,0,0.5)';
-        ctx.lineWidth = isLong ? 2 : 1;
-        ctx.stroke();
-      }
-
-      // Second ring (dashed)
-      ctx.beginPath();
-      ctx.arc(cx, cy, 135 * scale, 0, Math.PI * 2);
-      ctx.strokeStyle = '#CC5500';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // 4 rotating segment arcs
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#FF8C00';
-      ctx.lineWidth = 3;
-      const arcSpan = (60 * Math.PI) / 180;
-      const gapSpan = (30 * Math.PI) / 180;
-      const arcOffset = t * 0.1;
-      for (let i = 0; i < 4; i++) {
-        const start = arcOffset + i * (arcSpan + gapSpan);
-        ctx.beginPath();
-        ctx.arc(cx, cy, 145 * scale, start, start + arcSpan);
-        ctx.stroke();
-      }
-      ctx.lineCap = 'butt';
-
-      // Inner measurement ring
-      for (let i = 0; i < 36; i++) {
-        const angle = (i * 10) * Math.PI / 180;
-        ctx.beginPath();
-        ctx.moveTo(cx + 115 * scale * Math.cos(angle), cy + 115 * scale * Math.sin(angle));
-        ctx.lineTo(cx + 119 * scale * Math.cos(angle), cy + 119 * scale * Math.sin(angle));
-        ctx.strokeStyle = 'rgba(255,107,0,0.3)';
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-      }
-
-      // Animated meter bar(s)
-      const meterSpeed = status === 'SPEAKING' ? 1.2 : status === 'LISTENING' ? 0.8 : 0.2;
-      const meterAngle = t * meterSpeed;
-      const meterSpan = (40 * Math.PI) / 180;
-      const drawMeter = (startAngle) => {
-        const steps = 30;
-        for (let i = 0; i < steps; i++) {
-          const a1 = startAngle + (i / steps) * meterSpan;
-          const a2 = startAngle + ((i + 1) / steps) * meterSpan;
-          const fade = Math.sin((i / steps) * Math.PI);
-          ctx.beginPath();
-          ctx.arc(cx, cy, 100 * scale, a1, a2);
-          ctx.strokeStyle = `rgba(255,107,0,${fade * 0.9})`;
-          ctx.lineWidth = 2.5;
-          ctx.stroke();
-        }
-      };
-      drawMeter(meterAngle);
-      if (status === 'SPEAKING') drawMeter(meterAngle + Math.PI);
-
-      // Corner brackets
-      const bs = 8 * scale;
-      ctx.strokeStyle = 'rgba(255,107,0,0.6)';
-      ctx.lineWidth = 1.5;
-      const br = (155 + 14) * scale;
-      [[0,-1],[1,0],[0,1],[-1,0]].forEach(([dx,dy]) => {
-        const bx = cx + dx * br, by = cy + dy * br;
-        const px = dy !== 0 ? bs : 0, py = dx !== 0 ? bs : 0;
-        ctx.beginPath();
-        ctx.moveTo(bx - px, by - py);
-        ctx.lineTo(bx, by);
-        ctx.lineTo(bx + (dy !== 0 ? 0 : -dx * bs), by + (dx !== 0 ? 0 : -dy * bs));
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(bx + px, by + py);
-        ctx.lineTo(bx, by);
-        ctx.stroke();
-      });
-
-      // Center text
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#FF6B00';
-      ctx.font = `800 ${18 * scale}px Montserrat, sans-serif`;
-      ctx.fillText('F.R.I.D.A.Y.', cx, cy - 6 * scale);
-      ctx.fillStyle = '#CC5500';
-      ctx.font = `500 ${9 * scale}px Inter, sans-serif`;
-      const label = status === 'LISTENING' ? 'LISTENING' : status === 'SPEAKING' ? 'SPEAKING' : status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
-      ctx.fillText(label, cx, cy + 14 * scale);
-
+      timeRef.current += spd; const t = timeRef.current; ctx.clearRect(0, 0, S, S);
+      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80*sc); cg.addColorStop(0, 'rgba(255,107,0,0.06)'); cg.addColorStop(1, 'rgba(255,107,0,0)'); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, 80*sc, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 155*sc, 0, Math.PI*2); ctx.strokeStyle = '#FF6B00'; ctx.lineWidth = 2; ctx.stroke();
+      for (let i = 0; i < 72; i++) { const a = (i*5)*Math.PI/180, isL = i%6===0, len = (isL?12:6)*sc; ctx.beginPath(); ctx.moveTo(cx+155*sc*Math.cos(a), cy+155*sc*Math.sin(a)); ctx.lineTo(cx+(155*sc+len)*Math.cos(a), cy+(155*sc+len)*Math.sin(a)); ctx.strokeStyle = isL ? '#FF6B00' : 'rgba(255,107,0,0.5)'; ctx.lineWidth = isL?2:1; ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(cx, cy, 135*sc, 0, Math.PI*2); ctx.strokeStyle = '#CC5500'; ctx.lineWidth = 1.5; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineCap = 'round'; ctx.strokeStyle = '#FF8C00'; ctx.lineWidth = 3;
+      const as = (60*Math.PI)/180, gs = (30*Math.PI)/180, ao = t*0.1;
+      for (let i = 0; i < 4; i++) { const s = ao+i*(as+gs); ctx.beginPath(); ctx.arc(cx, cy, 145*sc, s, s+as); ctx.stroke(); } ctx.lineCap = 'butt';
+      for (let i = 0; i < 36; i++) { const a = (i*10)*Math.PI/180; ctx.beginPath(); ctx.moveTo(cx+115*sc*Math.cos(a), cy+115*sc*Math.sin(a)); ctx.lineTo(cx+119*sc*Math.cos(a), cy+119*sc*Math.sin(a)); ctx.strokeStyle = 'rgba(255,107,0,0.3)'; ctx.lineWidth = 0.5; ctx.stroke(); }
+      const ms = status==='SPEAKING'?1.2:status==='LISTENING'?0.8:0.2, ma = t*ms, mp = (40*Math.PI)/180;
+      const dm = (sa) => { for (let i=0;i<30;i++) { const a1=sa+(i/30)*mp, a2=sa+((i+1)/30)*mp, f=Math.sin((i/30)*Math.PI); ctx.beginPath(); ctx.arc(cx,cy,100*sc,a1,a2); ctx.strokeStyle=`rgba(255,107,0,${f*0.9})`; ctx.lineWidth=2.5; ctx.stroke(); } };
+      dm(ma); if (status==='SPEAKING') dm(ma+Math.PI);
+      const bs = 8*sc; ctx.strokeStyle = 'rgba(255,107,0,0.6)'; ctx.lineWidth = 1.5; const br = (155+14)*sc;
+      [[0,-1],[1,0],[0,1],[-1,0]].forEach(([dx,dy]) => { const bx=cx+dx*br, by=cy+dy*br, px=dy!==0?bs:0, py=dx!==0?bs:0; ctx.beginPath(); ctx.moveTo(bx-px,by-py); ctx.lineTo(bx,by); ctx.lineTo(bx+(dy!==0?0:-dx*bs),by+(dx!==0?0:-dy*bs)); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bx+px,by+py); ctx.lineTo(bx,by); ctx.stroke(); });
+      ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#FF6B00'; ctx.font=`800 ${18*sc}px Montserrat,sans-serif`; ctx.fillText('F.R.I.D.A.Y.',cx,cy-6*sc);
+      ctx.fillStyle='#CC5500'; ctx.font=`500 ${9*sc}px Inter,sans-serif`; ctx.fillText(status==='LISTENING'?'LISTENING':status==='SPEAKING'?'SPEAKING':status==='PROCESSING'?'PROCESSING':'IDLE',cx,cy+14*sc);
       animRef.current = requestAnimationFrame(animate);
-    };
-    animate();
-    return () => cancelAnimationFrame(animRef.current);
+    }; animate(); return () => cancelAnimationFrame(animRef.current);
   }, [status, size]);
-
   return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
 }
 
-/* ── Status Badge ─────────────────────────────────────────────────────────── */
 function StatusBadge({ status }) {
-  const config = {
-    LISTENING: { color: '#FF6B00', bg: '#FFF7ED', label: 'Listening' },
-    SPEAKING: { color: '#8B5CF6', bg: '#F5F3FF', label: 'Speaking' },
-    PROCESSING: { color: '#D97706', bg: '#FFFBEB', label: 'Processing' },
-    READY: { color: '#22C55E', bg: '#F0FDF4', label: 'Ready' },
-    IDLE: { color: '#94A3B8', bg: '#F8FAFC', label: 'Idle' }
+  const c = ({ LISTENING:{color:'#FF6B00',bg:'#FFF7ED',label:'Listening'}, SPEAKING:{color:'#8B5CF6',bg:'#F5F3FF',label:'Speaking'}, PROCESSING:{color:'#D97706',bg:'#FFFBEB',label:'Processing'}, READY:{color:'#22C55E',bg:'#F0FDF4',label:'Ready'}, IDLE:{color:'#94A3B8',bg:'#F8FAFC',label:'Idle'} })[status] || {color:'#94A3B8',bg:'#F8FAFC',label:'Idle'};
+  return (<div style={{display:'inline-flex',alignItems:'center',gap:8,padding:'6px 14px',borderRadius:20,background:c.bg,fontSize:11,fontWeight:600,color:c.color,letterSpacing:'0.05em',textTransform:'uppercase'}}><div style={{width:7,height:7,borderRadius:'50%',background:c.color,animation:status==='LISTENING'?'pulse 1.5s infinite':'none'}}/>{c.label}</div>);
+}
+
+/* ── Chat History Sidebar ─────────────────────────────────────────────────── */
+function ChatSidebar({ open, conversations, activeId, onSelect, onNew, onClose, onDelete }) {
+  const fmtDate = (d) => {
+    const date = new Date(d), now = new Date(), diff = Math.floor((now-date)/(1000*60*60*24));
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return diff + 'd ago';
+    return date.toLocaleDateString();
   };
-  const c = config[status] || config.IDLE;
   return (
     <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 8,
-      padding: '6px 14px', borderRadius: 20, background: c.bg,
-      fontSize: 11, fontWeight: 600, color: c.color,
-      letterSpacing: '0.05em', textTransform: 'uppercase'
+      width: open ? 280 : 0, background: '#fff', borderRight: open ? '1px solid #F0E6D6' : 'none',
+      transition: 'width 0.25s ease', overflow: 'hidden', display: 'flex', flexDirection: 'column',
+      flexShrink: 0, position: 'relative', zIndex: 10
     }}>
-      <div style={{
-        width: 7, height: 7, borderRadius: '50%', background: c.color,
-        animation: status === 'LISTENING' ? 'pulse 1.5s infinite' : 'none'
-      }} />
-      {c.label}
+      <div style={{ padding: '14px 16px', borderBottom: '1px solid #F0E6D6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minWidth: 280 }}>
+        <span style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: 13, color: '#0f172a' }}>Chat History</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#94a3b8', padding: '2px 6px' }}>x</button>
+      </div>
+      <button onClick={onNew} style={{
+        margin: '10px 12px', padding: '9px 14px', background: 'linear-gradient(135deg,#FF6B00,#CC5500)',
+        color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+        minWidth: 256
+      }}>+ New Chat</button>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 10px', minWidth: 280 }}>
+        {conversations.length === 0 && (
+          <p style={{ padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>No conversations yet.</p>
+        )}
+        {conversations.map(conv => (
+          <div key={conv.id} onClick={() => onSelect(conv.id)} style={{
+            padding: '10px 12px', marginBottom: 4, borderRadius: 8, cursor: 'pointer',
+            background: conv.id === activeId ? '#FFF7ED' : 'transparent',
+            border: conv.id === activeId ? '1px solid #FF6B00' : '1px solid transparent',
+            transition: 'all 0.15s'
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: '#1e293b', lineHeight: 1.4,
+              overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
+            }}>{conv.title}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: '#94a3b8' }}>
+              <span>{conv.message_count || 0} msgs</span>
+              <span>{fmtDate(conv.created_at)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -212,478 +131,233 @@ function App() {
   const [transcript, setTranscript] = useState('');
   const [callEvents, setCallEvents] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const recognitionRef = useRef(null);
-  const silenceTimerRef = useRef(null);
-  const chatEndRef = useRef(null);
-  const shouldListenRef = useRef(false);
-  const messagesRef = useRef([]);
-  const audioCtxRef = useRef(null);
-  const audioUnlocked = useRef(false);
-  const activeSourceRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
+
+  const recognitionRef = useRef(null); const silenceTimerRef = useRef(null); const chatEndRef = useRef(null);
+  const shouldListenRef = useRef(false); const messagesRef = useRef([]); const audioCtxRef = useRef(null);
+  const audioUnlocked = useRef(false); const activeSourceRef = useRef(null); const convIdRef = useRef(null);
 
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { convIdRef.current = conversationId; }, [conversationId]);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, callEvents]);
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  useEffect(() => { loadConversations(); }, []);
 
-  // Unlock audio on first user interaction (required for iOS Safari)
+  async function loadConversations() {
+    try {
+      const res = await fetch('/api/friday/conversations');
+      if (res.ok) setConversations(await res.json());
+    } catch (e) { /* non-fatal */ }
+  }
+
+  async function loadConversation(id) {
+    try {
+      const res = await fetch('/api/friday/conversations/' + id);
+      if (!res.ok) return;
+      const msgs = await res.json();
+      setMessages(msgs.map(m => ({ role: m.role, content: m.content })));
+      setConversationId(id);
+      setCallEvents([]);
+      setTranscript('');
+    } catch (e) { /* non-fatal */ }
+  }
+
+  function startNewConversation() {
+    setMessages([]); setCallEvents([]); setTranscript(''); setConversationId(null);
+  }
+
   const unlockAudio = useCallback(() => {
     if (audioUnlocked.current) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const buffer = ctx.createBuffer(1, 1, 22050);
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      source.start(0);
-      audioCtxRef.current = ctx;
-      audioUnlocked.current = true;
-    } catch (e) {
-      console.warn('Audio unlock failed:', e);
-    }
+    try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const b = ctx.createBuffer(1,1,22050); const s = ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0); audioCtxRef.current = ctx; audioUnlocked.current = true; } catch(e){}
   }, []);
 
-  /* ── ElevenLabs TTS with AudioContext + browser fallback ─── */
   const speak = useCallback(async (text) => {
-    if (isMuted) return;
-    setStatus('SPEAKING');
+    if (isMuted) return; setStatus('SPEAKING');
     try {
-      const response = await fetch('/api/friday/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' },
-        body: JSON.stringify({ text })
-      });
+      const response = await fetch('/api/friday/tts', { method: 'POST', headers: AUTH_HEADERS, body: JSON.stringify({ text }) });
       if (!response.ok) throw new Error('TTS ' + response.status);
-      const arrayBuffer = await response.arrayBuffer();
-
-      // Use AudioContext for mobile compatibility
-      const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)();
-      audioCtxRef.current = ctx;
-      if (ctx.state === 'suspended') await ctx.resume();
-
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
-
-      return new Promise((resolve) => {
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(ctx.destination);
-        activeSourceRef.current = source;
-        source.onended = () => {
-          activeSourceRef.current = null;
-          setStatus(shouldListenRef.current ? 'READY' : 'IDLE');
-          resolve();
-        };
-        source.start(0);
-      });
+      const ab = await response.arrayBuffer();
+      const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)(); audioCtxRef.current = ctx; if (ctx.state === 'suspended') await ctx.resume();
+      const audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+      return new Promise((resolve) => { const src = ctx.createBufferSource(); src.buffer = audioBuffer; src.connect(ctx.destination); activeSourceRef.current = src; src.onended = () => { activeSourceRef.current = null; setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); }; src.start(0); });
     } catch (err) {
-      console.warn('ElevenLabs failed, using browser TTS:', err.message);
-      return new Promise((resolve) => {
-        const synth = window.speechSynthesis;
-        if (!synth) { setStatus('IDLE'); resolve(); return; }
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.rate = 1.05;
-        utter.pitch = 0.95;
-        const voices = synth.getVoices();
-        const preferred = voices.find(v => v.name === 'Daniel')
-          || voices.find(v => v.name === 'Samantha')
-          || voices.find(v => v.lang.startsWith('en'));
-        if (preferred) utter.voice = preferred;
-        utter.onend = () => { setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); };
-        utter.onerror = () => { setStatus('IDLE'); resolve(); };
-        synth.speak(utter);
-      });
+      console.warn('ElevenLabs failed, browser TTS:', err.message);
+      return new Promise((resolve) => { const synth = window.speechSynthesis; if (!synth) { setStatus('IDLE'); resolve(); return; } const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; u.pitch = 0.95; const v = synth.getVoices(); const p = v.find(x => x.name==='Daniel') || v.find(x => x.name==='Samantha') || v.find(x => x.lang.startsWith('en')); if (p) u.voice = p; u.onend = () => { setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); }; u.onerror = () => { setStatus('IDLE'); resolve(); }; synth.speak(u); });
     }
   }, [isMuted]);
 
-  /* ── Send to Claude ─── */
   const sendToFriday = useCallback(async (text) => {
     if (!text.trim()) return;
     const userMsg = { role: 'user', content: text };
     const newMessages = [...messagesRef.current, userMsg];
-    setMessages(newMessages);
-    setStatus('PROCESSING');
-    setTranscript('');
-
+    setMessages(newMessages); setStatus('PROCESSING'); setTranscript('');
     try {
       const res = await fetch('/api/friday/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' },
-        body: JSON.stringify({ messages: newMessages, system: SYSTEM_PROMPT })
+        method: 'POST', headers: AUTH_HEADERS,
+        body: JSON.stringify({ messages: newMessages, system: SYSTEM_PROMPT, conversation_id: convIdRef.current })
       });
       const data = await res.json();
+      // Capture conversation_id from server
+      if (data.conversation_id && !convIdRef.current) {
+        setConversationId(data.conversation_id);
+        loadConversations(); // refresh sidebar
+      }
       const textBlocks = (data.content || []).filter(b => b.type === 'text');
       const reply = textBlocks.map(b => b.text).join('\n') || data.error || 'No response.';
-      const assistantMsg = { role: 'assistant', content: reply };
-      setMessages(prev => [...prev, assistantMsg]);
-      setStatus('READY');
-
-      if (shouldListenRef.current && !isMuted) {
-        await speak(reply);
-        if (shouldListenRef.current && !isMuted && HAS_SPEECH) {
-          startListening();
-        }
-      }
-    } catch (err) {
-      setStatus('READY');
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Try again.' }]);
-    }
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]); setStatus('READY');
+      if (shouldListenRef.current && !isMuted) { await speak(reply); if (shouldListenRef.current && !isMuted && HAS_SPEECH) startListening(); }
+    } catch (err) { setStatus('READY'); setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Try again.' }]); }
   }, [isMuted, speak]);
 
-  /* ── Speech Recognition ─── */
   const startListening = useCallback(() => {
     if (!HAS_SPEECH) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    let finalTranscript = '';
-
-    recognition.onresult = (event) => {
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript + ' ';
-        } else {
-          interim += event.results[i][0].transcript;
-        }
-      }
-      setTranscript(finalTranscript + interim);
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = setTimeout(() => {
-        if (finalTranscript.trim()) {
-          recognition.stop();
-          sendToFriday(finalTranscript.trim());
-          finalTranscript = '';
-        }
-      }, 2000);
-    };
-
-    recognition.onend = () => {
-      setStatus(prev => prev === 'LISTENING' ? 'READY' : prev);
-      if (finalTranscript.trim() && shouldListenRef.current) {
-        sendToFriday(finalTranscript.trim());
-        finalTranscript = '';
-      }
-    };
-
-    recognition.onerror = (e) => {
-      if (e.error !== 'no-speech' && e.error !== 'aborted') console.error('Speech error:', e.error);
-      setStatus(prev => prev === 'LISTENING' ? 'READY' : prev);
-    };
-
-    recognitionRef.current = recognition;
-    try {
-      recognition.start();
-      setStatus('LISTENING');
-    } catch (e) {
-      console.warn('Speech recognition start failed:', e);
-    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition; const r = new SR(); r.continuous = true; r.interimResults = true; r.lang = 'en-US'; let ft = '';
+    r.onresult = (e) => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) ft += e.results[i][0].transcript + ' '; else interim += e.results[i][0].transcript; } setTranscript(ft + interim); clearTimeout(silenceTimerRef.current); silenceTimerRef.current = setTimeout(() => { if (ft.trim()) { r.stop(); sendToFriday(ft.trim()); ft = ''; } }, 2000); };
+    r.onend = () => { setStatus(p => p==='LISTENING'?'READY':p); if (ft.trim() && shouldListenRef.current) { sendToFriday(ft.trim()); ft = ''; } };
+    r.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') console.error('Speech error:', e.error); setStatus(p => p==='LISTENING'?'READY':p); };
+    recognitionRef.current = r; try { r.start(); setStatus('LISTENING'); } catch(e) {}
   }, [sendToFriday]);
 
-  /* ── Call Toggle ─── */
   const toggleCall = useCallback(async () => {
-    if (isCallActive) {
-      shouldListenRef.current = false;
-      setIsCallActive(false);
-      setStatus('IDLE');
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-      if (activeSourceRef.current) { try { activeSourceRef.current.stop(); } catch(e) {} activeSourceRef.current = null; }
-      if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; }
-      clearTimeout(silenceTimerRef.current);
-      setTranscript('');
-      setCallEvents(prev => [...prev, { type: 'ended', time: new Date() }]);
-    } else {
-      unlockAudio();
-      setIsCallActive(true);
-      shouldListenRef.current = true;
-      setCallEvents(prev => [...prev, { type: 'started', time: new Date() }]);
-      const greeting = "FRIDAY online — what can I do for you, Brian?";
-      setMessages(prev => [...prev, { role: 'assistant', content: greeting }]);
-      await speak(greeting);
-      if (shouldListenRef.current && !isMuted && HAS_SPEECH) startListening();
-    }
+    if (isCallActive) { shouldListenRef.current = false; setIsCallActive(false); setStatus('IDLE'); if (window.speechSynthesis) window.speechSynthesis.cancel(); if (activeSourceRef.current) { try { activeSourceRef.current.stop(); } catch(e) {} activeSourceRef.current = null; } if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; } clearTimeout(silenceTimerRef.current); setTranscript(''); setCallEvents(prev => [...prev, { type: 'ended', time: new Date() }]); loadConversations();
+    } else { unlockAudio(); setIsCallActive(true); shouldListenRef.current = true; setCallEvents(prev => [...prev, { type: 'started', time: new Date() }]); const g = "FRIDAY online — what can I do for you, Brian?"; setMessages(prev => [...prev, { role: 'assistant', content: g }]); await speak(g); if (shouldListenRef.current && !isMuted && HAS_SPEECH) startListening(); }
   }, [isCallActive, isMuted, speak, startListening, unlockAudio]);
 
-  /* ── Mute Toggle ─── */
-  const toggleMute = useCallback(() => {
-    if (isMuted) {
-      setIsMuted(false);
-      if (isCallActive && (status === 'READY' || status === 'IDLE')) {
-        shouldListenRef.current = true;
-        if (HAS_SPEECH) startListening();
-      }
-    } else {
-      setIsMuted(true);
-      shouldListenRef.current = false;
-      if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; }
-      if (status === 'LISTENING') setStatus('READY');
-    }
-  }, [isMuted, isCallActive, status, startListening]);
-
-  const newConversation = () => { setMessages([]); setCallEvents([]); setTranscript(''); };
-
-  const handleTextSend = (e) => {
-    e.preventDefault();
-    if (input.trim()) { sendToFriday(input.trim()); setInput(''); }
-  };
-
+  const toggleMute = useCallback(() => { if (isMuted) { setIsMuted(false); if (isCallActive && (status==='READY'||status==='IDLE')) { shouldListenRef.current = true; if (HAS_SPEECH) startListening(); } } else { setIsMuted(true); shouldListenRef.current = false; if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; } if (status==='LISTENING') setStatus('READY'); } }, [isMuted, isCallActive, status, startListening]);
+  const handleTextSend = (e) => { e.preventDefault(); if (input.trim()) { sendToFriday(input.trim()); setInput(''); } };
   const fmtTime = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   const hudSize = isMobile ? 200 : 360;
 
   return (
-    <div style={{
-      display: 'flex', height: '100vh', background: '#FAFBFC',
-      flexDirection: isMobile ? 'column' : 'row'
-    }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#FAFBFC' }}>
 
-      {/* ── Left Panel ────────────────────────────────────────────────────── */}
-      <div style={{
-        flex: isMobile ? 'none' : '0 0 60%',
-        width: isMobile ? '100%' : undefined,
-        height: isMobile ? '50vh' : undefined,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', position: 'relative',
-        padding: isMobile ? '10px 0' : 0
-      }}>
-        <HUD status={isCallActive ? status : 'IDLE'} size={hudSize} />
+      {/* ── Chat History Sidebar ──────────────────────────────────────────── */}
+      <ChatSidebar
+        open={sidebarOpen}
+        conversations={conversations}
+        activeId={conversationId}
+        onSelect={(id) => { loadConversation(id); if (isMobile) setSidebarOpen(false); }}
+        onNew={() => { startNewConversation(); if (isMobile) setSidebarOpen(false); }}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-        {/* Phone button */}
-        {HAS_SPEECH ? (
-          <button onClick={toggleCall} title={isCallActive ? 'End call' : 'Start call'} style={{
-            width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
-            marginTop: isMobile ? 12 : 24, color: '#fff',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: isCallActive ? '#DC2626' : 'linear-gradient(135deg, #FF6B00, #CC5500)',
-            boxShadow: isCallActive ? '0 4px 16px rgba(220,38,38,0.3)' : '0 4px 16px rgba(255,107,0,0.3)',
-            transition: 'all 0.25s ease'
+      {/* ── Main Layout (orb + chat) ─────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', minWidth: 0 }}>
+
+        {/* ── Left Panel: HUD ─────────────────────────────────────────────── */}
+        <div style={{
+          flex: isMobile ? 'none' : '0 0 60%', width: isMobile ? '100%' : undefined,
+          height: isMobile ? '50vh' : undefined, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', position: 'relative', padding: isMobile ? '10px 0' : 0
+        }}>
+          {/* Sidebar toggle */}
+          <button onClick={() => { setSidebarOpen(!sidebarOpen); if (!sidebarOpen) loadConversations(); }} style={{
+            position: 'absolute', top: 16, left: 16, background: '#fff', border: '1px solid #E5D5C0',
+            borderRadius: 8, padding: '7px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 500,
+            color: '#CC5500', display: 'flex', alignItems: 'center', gap: 6, zIndex: 5,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
           }}>
-            {isCallActive ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-              </svg>
-            ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-              </svg>
-            )}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            Chats
           </button>
-        ) : (
-          <p style={{ marginTop: 16, fontSize: 12, color: '#94a3b8' }}>Voice requires Chrome. Use text input below.</p>
-        )}
 
-        {/* Mute + Settings row */}
-        <div style={{ display: 'flex', gap: 12, marginTop: isMobile ? 8 : 16, alignItems: 'center' }}>
-          {isCallActive && (
-            <button onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} style={{
-              width: 44, height: 44, borderRadius: '50%', cursor: 'pointer',
-              border: isMuted ? '1px solid #FCA5A5' : '1px solid #E5D5C0',
-              background: isMuted ? '#FEF2F2' : '#fff',
-              color: isMuted ? '#EF4444' : '#FF6B00',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.2s'
+          <HUD status={isCallActive ? status : 'IDLE'} size={hudSize} />
+
+          {HAS_SPEECH ? (
+            <button onClick={toggleCall} style={{
+              width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
+              marginTop: isMobile ? 12 : 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: isCallActive ? '#DC2626' : 'linear-gradient(135deg,#FF6B00,#CC5500)',
+              boxShadow: isCallActive ? '0 4px 16px rgba(220,38,38,0.3)' : '0 4px 16px rgba(255,107,0,0.3)',
+              transition: 'all 0.25s ease'
             }}>
-              {isMuted ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                  <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
-                  <path d="M17 16.95A7 7 0 015 12"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-                  <path d="M19 12a7 7 0 01-.11 1.23"/>
-                </svg>
+              {isCallActive ? (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
               ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
-                  <path d="M19 10v2a7 7 0 01-14 0v-2"/>
-                  <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
-                </svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
               )}
             </button>
-          )}
-          <button title="Settings" style={{
-            width: 36, height: 36, borderRadius: '50%', border: '1px solid #E5D5C0',
-            cursor: 'pointer', background: '#fff', color: '#CC5500',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
-            </svg>
-          </button>
-        </div>
-
-        {!isMobile && (
-          <div style={{ marginTop: 20 }}>
-            <StatusBadge status={isCallActive ? status : 'IDLE'} />
-          </div>
-        )}
-
-        {!isMobile && transcript && (
-          <p style={{
-            marginTop: 14, fontSize: 13, color: '#CC5500',
-            maxWidth: 340, textAlign: 'center', fontStyle: 'italic',
-            lineHeight: 1.5, padding: '0 20px'
-          }}>"{transcript}"</p>
-        )}
-      </div>
-
-      {/* ── Right Panel: Chat ─────────────────────────────────────────────── */}
-      <div style={{
-        flex: isMobile ? 'none' : '0 0 40%',
-        width: isMobile ? '100%' : undefined,
-        height: isMobile ? '50vh' : undefined,
-        minWidth: isMobile ? undefined : 380,
-        display: 'flex', flexDirection: 'column',
-        borderLeft: isMobile ? 'none' : '1px solid #F0E6D6',
-        borderTop: isMobile ? '1px solid #F0E6D6' : 'none',
-        background: '#fff'
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: isMobile ? '10px 16px' : '14px 20px', borderBottom: '1px solid #F0E6D6',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 13, color: '#fff'
-            }}>F</div>
-            <div>
-              <span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>FRIDAY</span>
-              <span style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginTop: -1 }}>Head of Build</span>
-            </div>
-          </div>
-          <button onClick={newConversation} style={{
-            padding: '5px 10px', borderRadius: 8, border: '1px solid #E5D5C0',
-            background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 500,
-            color: '#CC5500', display: 'flex', alignItems: 'center', gap: 4
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            New
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div style={{
-          flex: 1, overflowY: 'auto', padding: isMobile ? '10px 12px' : '14px 20px',
-          display: 'flex', flexDirection: 'column', gap: 4
-        }}>
-          {messages.length === 0 && callEvents.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: isMobile ? 20 : 100 }}>
-              <div style={{
-                width: 52, height: 52, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 14px', fontFamily: 'Montserrat, sans-serif',
-                fontWeight: 800, fontSize: 20, color: '#fff'
-              }}>F</div>
-              <p style={{ fontSize: 14, fontWeight: 500, color: '#475569', marginBottom: 4 }}>FRIDAY is ready</p>
-              <p style={{ fontSize: 12 }}>{HAS_SPEECH ? 'Start a voice call or type a message.' : 'Type a message below.'}</p>
-            </div>
+          ) : (
+            <p style={{ marginTop: 16, fontSize: 12, color: '#94a3b8' }}>Voice requires Chrome. Use text input.</p>
           )}
 
-          {callEvents.map((evt, i) => (
-            <div key={'evt-' + i} style={{ textAlign: 'center', padding: '10px 0', fontSize: 11, color: '#94a3b8' }}>
-              <span style={{
-                background: '#FFFBF5', padding: '3px 10px', borderRadius: 10,
-                border: '1px solid #F0E6D6'
-              }}>
-                {evt.type === 'started' ? 'Call started' : 'You ended the call'} - {fmtTime(evt.time)}
-              </span>
-            </div>
-          ))}
+          <div style={{ display: 'flex', gap: 12, marginTop: isMobile ? 8 : 16, alignItems: 'center' }}>
+            {isCallActive && (
+              <button onClick={toggleMute} style={{ width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', border: isMuted ? '1px solid #FCA5A5' : '1px solid #E5D5C0', background: isMuted ? '#FEF2F2' : '#fff', color: isMuted ? '#EF4444' : '#FF6B00', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isMuted ? (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/><path d="M17 16.95A7 7 0 015 12"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/><path d="M19 12a7 7 0 01-.11 1.23"/></svg>) : (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>)}
+              </button>
+            )}
+          </div>
+          {!isMobile && <div style={{ marginTop: 16 }}><StatusBadge status={isCallActive ? status : 'IDLE'} /></div>}
+          {!isMobile && transcript && <p style={{ marginTop: 10, fontSize: 13, color: '#CC5500', maxWidth: 340, textAlign: 'center', fontStyle: 'italic', lineHeight: 1.5 }}>"{transcript}"</p>}
+        </div>
 
-          {messages.map((msg, i) => {
-            const isUser = msg.role === 'user';
-            return (
-              <div key={'msg-' + i} style={{
-                display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 6
-              }}>
-                <div style={{ display: 'flex', gap: 8, maxWidth: '85%', alignItems: 'flex-start' }}>
-                  {!isUser && (
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-                      background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 10, color: '#fff'
-                    }}>F</div>
-                  )}
-                  <div style={{
-                    padding: '10px 14px',
-                    borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                    background: isUser ? '#FF6B00' : '#FFF7ED',
-                    color: isUser ? '#fff' : '#1e293b',
-                    borderLeft: isUser ? 'none' : '3px solid #FF6B00',
-                    fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap'
-                  }}>
-                    {msg.content}
+        {/* ── Right Panel: Chat ───────────────────────────────────────────── */}
+        <div style={{
+          flex: isMobile ? 'none' : '0 0 40%', width: isMobile ? '100%' : undefined,
+          height: isMobile ? '50vh' : undefined, minWidth: isMobile ? undefined : 340,
+          display: 'flex', flexDirection: 'column',
+          borderLeft: isMobile ? 'none' : '1px solid #F0E6D6', borderTop: isMobile ? '1px solid #F0E6D6' : 'none',
+          background: '#fff'
+        }}>
+          <div style={{ padding: isMobile ? '10px 16px' : '14px 20px', borderBottom: '1px solid #F0E6D6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#FF6B00,#CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: 13, color: '#fff' }}>F</div>
+              <div><span style={{ fontFamily: 'Montserrat,sans-serif', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>FRIDAY</span><span style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginTop: -1 }}>Head of Build</span></div>
+            </div>
+            <button onClick={() => { startNewConversation(); }} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #E5D5C0', background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: '#CC5500', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '10px 12px' : '14px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {messages.length === 0 && callEvents.length === 0 && (
+              <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: isMobile ? 20 : 80 }}>
+                <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#FF6B00,#CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: 20, color: '#fff' }}>F</div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: '#475569', marginBottom: 4 }}>FRIDAY is ready</p>
+                <p style={{ fontSize: 12 }}>{HAS_SPEECH ? 'Start a voice call or type a message.' : 'Type a message below.'}</p>
+              </div>
+            )}
+            {callEvents.map((evt, i) => (
+              <div key={'e-'+i} style={{ textAlign: 'center', padding: '10px 0', fontSize: 11, color: '#94a3b8' }}>
+                <span style={{ background: '#FFFBF5', padding: '3px 10px', borderRadius: 10, border: '1px solid #F0E6D6' }}>
+                  {evt.type === 'started' ? 'Call started' : 'You ended the call'} - {fmtTime(evt.time)}
+                </span>
+              </div>
+            ))}
+            {messages.map((msg, i) => {
+              const u = msg.role === 'user';
+              return (
+                <div key={'m-'+i} style={{ display: 'flex', justifyContent: u ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', gap: 8, maxWidth: '85%', alignItems: 'flex-start' }}>
+                    {!u && <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: 'linear-gradient(135deg,#FF6B00,#CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: 10, color: '#fff' }}>F</div>}
+                    <div style={{ padding: '10px 14px', borderRadius: u ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: u ? '#FF6B00' : '#FFF7ED', color: u ? '#fff' : '#1e293b', borderLeft: u ? 'none' : '3px solid #FF6B00', fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                   </div>
                 </div>
+              );
+            })}
+            {status === 'PROCESSING' && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: 'linear-gradient(135deg,#FF6B00,#CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat,sans-serif', fontWeight: 800, fontSize: 10, color: '#fff' }}>F</div>
+                <div style={{ padding: '12px 16px', borderRadius: '14px 14px 14px 4px', background: '#FFF7ED', borderLeft: '3px solid #FF6B00', display: 'flex', gap: 5, alignItems: 'center' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite' }}/>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/>
+                </div>
               </div>
-            );
-          })}
+            )}
+            <div ref={chatEndRef} />
+          </div>
 
-          {status === 'PROCESSING' && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-                background: 'linear-gradient(135deg, #FF6B00, #CC5500)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 10, color: '#fff'
-              }}>F</div>
-              <div style={{
-                padding: '12px 16px', borderRadius: '14px 14px 14px 4px',
-                background: '#FFF7ED', borderLeft: '3px solid #FF6B00',
-                display: 'flex', gap: 5, alignItems: 'center'
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0s' }}/>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/>
-              </div>
-            </div>
-          )}
-          <div ref={chatEndRef} />
+          <form onSubmit={handleTextSend} style={{ padding: isMobile ? '8px 12px 12px' : '10px 20px 14px', borderTop: '1px solid #F0E6D6', display: 'flex', gap: 8 }}>
+            <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid #E5D5C0', fontSize: 14, outline: 'none', background: '#FFFBF5', WebkitAppearance: 'none' }} onFocus={(e) => { e.target.style.borderColor = '#FF6B00'; e.target.style.boxShadow = '0 0 0 3px rgba(255,107,0,0.08)'; }} onBlur={(e) => { e.target.style.borderColor = '#E5D5C0'; e.target.style.boxShadow = 'none'; }} />
+            <button type="submit" disabled={!input.trim()} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: input.trim() ? 'linear-gradient(135deg,#FF6B00,#CC5500)' : '#E5D5C0', color: '#fff', fontWeight: 600, fontSize: 14, cursor: input.trim() ? 'pointer' : 'default', WebkitAppearance: 'none' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </form>
         </div>
-
-        {/* Text input */}
-        <form onSubmit={handleTextSend} style={{
-          padding: isMobile ? '8px 12px 12px' : '10px 20px 14px', borderTop: '1px solid #F0E6D6',
-          display: 'flex', gap: 8
-        }}>
-          <input
-            type="text" value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
-            style={{
-              flex: 1, padding: '10px 14px', borderRadius: 10,
-              border: '1px solid #E5D5C0', fontSize: 14, outline: 'none',
-              background: '#FFFBF5', transition: 'border 0.2s, box-shadow 0.2s',
-              WebkitAppearance: 'none'
-            }}
-            onFocus={(e) => { e.target.style.borderColor = '#FF6B00'; e.target.style.boxShadow = '0 0 0 3px rgba(255,107,0,0.08)'; }}
-            onBlur={(e) => { e.target.style.borderColor = '#E5D5C0'; e.target.style.boxShadow = 'none'; }}
-          />
-          <button type="submit" disabled={!input.trim()} style={{
-            padding: '10px 16px', borderRadius: 10, border: 'none',
-            background: input.trim() ? 'linear-gradient(135deg, #FF6B00, #CC5500)' : '#E5D5C0',
-            color: '#fff', fontWeight: 600, fontSize: 14,
-            cursor: input.trim() ? 'pointer' : 'default', transition: 'all 0.2s',
-            WebkitAppearance: 'none'
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
-          </button>
-        </form>
       </div>
     </div>
   );

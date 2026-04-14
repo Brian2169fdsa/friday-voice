@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FRIDAY - Head of Build</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #FAFBFC; color: #1a1a2e; height: 100vh; overflow: hidden; }
+  #root { height: 100vh; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #E5D5C0; border-radius: 3px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes dotPulse { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!-- VERCEL VERSION: Uses absolute URLs to https://fridayvoice.manageai.io -->
+<!-- Copy this file to /opt/manageai/friday-voice/index.html -->
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const SYSTEM_PROMPT = `You are FRIDAY — Head of Build at ManageAI. You run a 17-agent AI build system on this server. You are talking to Brian, your operator. Be sharp, confident, conversational — like JARVIS for software factories. 2-3 sentences unless asked for detail.
+
+You have access to tools to interact with the live system. Use them when Brian asks about builds, status, agents, or wants to run commands. Always use tools to get real data — never guess.
+
+Your agents: BUILD-000 through BUILD-019, 17 total. Stack: Temporal, Claude Code, n8n, Supabase, GitHub, OneDrive. Session 13: 4 builds, 25% to 95% QA. Red Team, Intelligence Agent, circuit breakers all live.`;
+
+const API_BASE = 'https://fridayvoice.manageai.io';
+const HAS_SPEECH = typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+
+function HUD({ status, size }) {
+  const canvasRef = useRef(null); const animRef = useRef(null); const timeRef = useRef(0);
+  useEffect(() => {
+    const canvas = canvasRef.current; const ctx = canvas.getContext('2d');
+    const S = size; canvas.width = S * 2; canvas.height = S * 2; ctx.scale(2, 2);
+    const cx = S / 2, cy = S / 2, scale = S / 360;
+    const animate = () => {
+      const spd = status === 'SPEAKING' ? 0.025 : status === 'LISTENING' ? 0.018 : status === 'PROCESSING' ? 0.014 : 0.006;
+      timeRef.current += spd; const t = timeRef.current; ctx.clearRect(0, 0, S, S);
+      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, 80 * scale); cg.addColorStop(0, 'rgba(255,107,0,0.06)'); cg.addColorStop(1, 'rgba(255,107,0,0)'); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, 80 * scale, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 155 * scale, 0, Math.PI * 2); ctx.strokeStyle = '#FF6B00'; ctx.lineWidth = 2; ctx.stroke();
+      for (let i = 0; i < 72; i++) { const angle = (i * 5) * Math.PI / 180, isLong = i % 6 === 0, len = (isLong ? 12 : 6) * scale; ctx.beginPath(); ctx.moveTo(cx + 155 * scale * Math.cos(angle), cy + 155 * scale * Math.sin(angle)); ctx.lineTo(cx + (155 * scale + len) * Math.cos(angle), cy + (155 * scale + len) * Math.sin(angle)); ctx.strokeStyle = isLong ? '#FF6B00' : 'rgba(255,107,0,0.5)'; ctx.lineWidth = isLong ? 2 : 1; ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(cx, cy, 135 * scale, 0, Math.PI * 2); ctx.strokeStyle = '#CC5500'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineCap = 'round'; ctx.strokeStyle = '#FF8C00'; ctx.lineWidth = 3; const arcSpan = (60 * Math.PI) / 180, gapSpan = (30 * Math.PI) / 180, arcOffset = t * 0.1;
+      for (let i = 0; i < 4; i++) { const start = arcOffset + i * (arcSpan + gapSpan); ctx.beginPath(); ctx.arc(cx, cy, 145 * scale, start, start + arcSpan); ctx.stroke(); } ctx.lineCap = 'butt';
+      for (let i = 0; i < 36; i++) { const angle = (i * 10) * Math.PI / 180; ctx.beginPath(); ctx.moveTo(cx + 115 * scale * Math.cos(angle), cy + 115 * scale * Math.sin(angle)); ctx.lineTo(cx + 119 * scale * Math.cos(angle), cy + 119 * scale * Math.sin(angle)); ctx.strokeStyle = 'rgba(255,107,0,0.3)'; ctx.lineWidth = 0.5; ctx.stroke(); }
+      const meterSpeed = status === 'SPEAKING' ? 1.2 : status === 'LISTENING' ? 0.8 : 0.2, meterAngle = t * meterSpeed, ms = (40 * Math.PI) / 180;
+      const drawMeter = (sa) => { for (let i = 0; i < 30; i++) { const a1 = sa + (i / 30) * ms, a2 = sa + ((i + 1) / 30) * ms, fade = Math.sin((i / 30) * Math.PI); ctx.beginPath(); ctx.arc(cx, cy, 100 * scale, a1, a2); ctx.strokeStyle = `rgba(255,107,0,${fade * 0.9})`; ctx.lineWidth = 2.5; ctx.stroke(); } };
+      drawMeter(meterAngle); if (status === 'SPEAKING') drawMeter(meterAngle + Math.PI);
+      const bs = 8 * scale; ctx.strokeStyle = 'rgba(255,107,0,0.6)'; ctx.lineWidth = 1.5; const br = (155 + 14) * scale;
+      [[0,-1],[1,0],[0,1],[-1,0]].forEach(([dx,dy]) => { const bx = cx + dx * br, by = cy + dy * br, px = dy !== 0 ? bs : 0, py = dx !== 0 ? bs : 0; ctx.beginPath(); ctx.moveTo(bx - px, by - py); ctx.lineTo(bx, by); ctx.lineTo(bx + (dy !== 0 ? 0 : -dx * bs), by + (dx !== 0 ? 0 : -dy * bs)); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bx + px, by + py); ctx.lineTo(bx, by); ctx.stroke(); });
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#FF6B00'; ctx.font = `800 ${18 * scale}px Montserrat, sans-serif`; ctx.fillText('F.R.I.D.A.Y.', cx, cy - 6 * scale);
+      ctx.fillStyle = '#CC5500'; ctx.font = `500 ${9 * scale}px Inter, sans-serif`; ctx.fillText(status === 'LISTENING' ? 'LISTENING' : status === 'SPEAKING' ? 'SPEAKING' : status === 'PROCESSING' ? 'PROCESSING' : 'IDLE', cx, cy + 14 * scale);
+      animRef.current = requestAnimationFrame(animate);
+    }; animate(); return () => cancelAnimationFrame(animRef.current);
+  }, [status, size]);
+  return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
+}
+
+function StatusBadge({ status }) {
+  const config = { LISTENING: { color: '#FF6B00', bg: '#FFF7ED', label: 'Listening' }, SPEAKING: { color: '#8B5CF6', bg: '#F5F3FF', label: 'Speaking' }, PROCESSING: { color: '#D97706', bg: '#FFFBEB', label: 'Processing' }, READY: { color: '#22C55E', bg: '#F0FDF4', label: 'Ready' }, IDLE: { color: '#94A3B8', bg: '#F8FAFC', label: 'Idle' } };
+  const c = config[status] || config.IDLE;
+  return (<div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 20, background: c.bg, fontSize: 11, fontWeight: 600, color: c.color, letterSpacing: '0.05em', textTransform: 'uppercase' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, animation: status === 'LISTENING' ? 'pulse 1.5s infinite' : 'none' }} />{c.label}</div>);
+}
+
+function App() {
+  const [messages, setMessages] = useState([]); const [input, setInput] = useState(''); const [status, setStatus] = useState('IDLE');
+  const [isCallActive, setIsCallActive] = useState(false); const [isMuted, setIsMuted] = useState(false);
+  const [transcript, setTranscript] = useState(''); const [callEvents, setCallEvents] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const recognitionRef = useRef(null); const silenceTimerRef = useRef(null); const chatEndRef = useRef(null);
+  const shouldListenRef = useRef(false); const messagesRef = useRef([]); const audioCtxRef = useRef(null);
+  const audioUnlocked = useRef(false); const activeSourceRef = useRef(null);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, callEvents]);
+  useEffect(() => { const h = () => setIsMobile(window.innerWidth <= 768); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  const unlockAudio = useCallback(() => { if (audioUnlocked.current) return; try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const b = ctx.createBuffer(1, 1, 22050); const s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); audioCtxRef.current = ctx; audioUnlocked.current = true; } catch(e){} }, []);
+
+  const speak = useCallback(async (text) => {
+    if (isMuted) return; setStatus('SPEAKING');
+    try {
+      const response = await fetch(API_BASE + '/api/friday/tts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' }, body: JSON.stringify({ text }) });
+      if (!response.ok) throw new Error('TTS ' + response.status);
+      const ab = await response.arrayBuffer(); const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)(); audioCtxRef.current = ctx; if (ctx.state === 'suspended') await ctx.resume();
+      const audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+      return new Promise((resolve) => { const src = ctx.createBufferSource(); src.buffer = audioBuffer; src.connect(ctx.destination); activeSourceRef.current = src; src.onended = () => { activeSourceRef.current = null; setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); }; src.start(0); });
+    } catch(err) {
+      console.warn('ElevenLabs failed, browser TTS:', err.message);
+      return new Promise((resolve) => { const synth = window.speechSynthesis; if (!synth) { setStatus('IDLE'); resolve(); return; } const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; u.pitch = 0.95; const v = synth.getVoices(); const p = v.find(x => x.name === 'Daniel') || v.find(x => x.name === 'Samantha') || v.find(x => x.lang.startsWith('en')); if (p) u.voice = p; u.onend = () => { setStatus(shouldListenRef.current ? 'READY' : 'IDLE'); resolve(); }; u.onerror = () => { setStatus('IDLE'); resolve(); }; synth.speak(u); });
+    }
+  }, [isMuted]);
+
+  const sendToFriday = useCallback(async (text) => {
+    if (!text.trim()) return; const userMsg = { role: 'user', content: text }; const newMsgs = [...messagesRef.current, userMsg]; setMessages(newMsgs); setStatus('PROCESSING'); setTranscript('');
+    try {
+      const res = await fetch(API_BASE + '/api/friday/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cockpit-key': 'friday-cockpit-2026' }, body: JSON.stringify({ messages: newMsgs, system: SYSTEM_PROMPT }) });
+      const data = await res.json(); const tb = (data.content || []).filter(b => b.type === 'text'); const reply = tb.map(b => b.text).join('\n') || data.error || 'No response.';
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]); setStatus('READY');
+      if (shouldListenRef.current && !isMuted) { await speak(reply); if (shouldListenRef.current && !isMuted && HAS_SPEECH) startListening(); }
+    } catch(err) { setStatus('READY'); setMessages(prev => [...prev, { role: 'assistant', content: 'Connection error. Try again.' }]); }
+  }, [isMuted, speak]);
+
+  const startListening = useCallback(() => {
+    if (!HAS_SPEECH) return; const SR = window.SpeechRecognition || window.webkitSpeechRecognition; const r = new SR(); r.continuous = true; r.interimResults = true; r.lang = 'en-US'; let ft = '';
+    r.onresult = (e) => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) ft += e.results[i][0].transcript + ' '; else interim += e.results[i][0].transcript; } setTranscript(ft + interim); clearTimeout(silenceTimerRef.current); silenceTimerRef.current = setTimeout(() => { if (ft.trim()) { r.stop(); sendToFriday(ft.trim()); ft = ''; } }, 2000); };
+    r.onend = () => { setStatus(p => p === 'LISTENING' ? 'READY' : p); if (ft.trim() && shouldListenRef.current) { sendToFriday(ft.trim()); ft = ''; } };
+    r.onerror = (e) => { if (e.error !== 'no-speech' && e.error !== 'aborted') console.error('Speech error:', e.error); setStatus(p => p === 'LISTENING' ? 'READY' : p); };
+    recognitionRef.current = r; try { r.start(); setStatus('LISTENING'); } catch(e) {}
+  }, [sendToFriday]);
+
+  const toggleCall = useCallback(async () => {
+    if (isCallActive) { shouldListenRef.current = false; setIsCallActive(false); setStatus('IDLE'); if (window.speechSynthesis) window.speechSynthesis.cancel(); if (activeSourceRef.current) { try { activeSourceRef.current.stop(); } catch(e) {} activeSourceRef.current = null; } if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; } clearTimeout(silenceTimerRef.current); setTranscript(''); setCallEvents(prev => [...prev, { type: 'ended', time: new Date() }]);
+    } else { unlockAudio(); setIsCallActive(true); shouldListenRef.current = true; setCallEvents(prev => [...prev, { type: 'started', time: new Date() }]); const g = "FRIDAY online — what can I do for you, Brian?"; setMessages(prev => [...prev, { role: 'assistant', content: g }]); await speak(g); if (shouldListenRef.current && !isMuted && HAS_SPEECH) startListening(); }
+  }, [isCallActive, isMuted, speak, startListening, unlockAudio]);
+
+  const toggleMute = useCallback(() => { if (isMuted) { setIsMuted(false); if (isCallActive && (status === 'READY' || status === 'IDLE')) { shouldListenRef.current = true; if (HAS_SPEECH) startListening(); } } else { setIsMuted(true); shouldListenRef.current = false; if (recognitionRef.current) { recognitionRef.current.abort(); recognitionRef.current = null; } if (status === 'LISTENING') setStatus('READY'); } }, [isMuted, isCallActive, status, startListening]);
+  const newConversation = () => { setMessages([]); setCallEvents([]); setTranscript(''); };
+  const handleTextSend = (e) => { e.preventDefault(); if (input.trim()) { sendToFriday(input.trim()); setInput(''); } };
+  const fmtTime = (d) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const hudSize = isMobile ? 200 : 360;
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', background: '#FAFBFC', flexDirection: isMobile ? 'column' : 'row' }}>
+      <div style={{ flex: isMobile ? 'none' : '0 0 60%', width: isMobile ? '100%' : undefined, height: isMobile ? '50vh' : undefined, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '10px 0' : 0 }}>
+        <HUD status={isCallActive ? status : 'IDLE'} size={hudSize} />
+        {HAS_SPEECH ? (<button onClick={toggleCall} style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer', marginTop: isMobile ? 12 : 24, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isCallActive ? '#DC2626' : 'linear-gradient(135deg, #FF6B00, #CC5500)', boxShadow: isCallActive ? '0 4px 16px rgba(220,38,38,0.3)' : '0 4px 16px rgba(255,107,0,0.3)', transition: 'all 0.25s ease' }}>{isCallActive ? (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 004.73.88 2 2 0 012 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.42 19.42 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 016.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>) : (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>)}</button>) : (<p style={{ marginTop: 16, fontSize: 12, color: '#94a3b8' }}>Voice requires Chrome. Use text below.</p>)}
+        <div style={{ display: 'flex', gap: 12, marginTop: isMobile ? 8 : 16, alignItems: 'center' }}>
+          {isCallActive && (<button onClick={toggleMute} style={{ width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', border: isMuted ? '1px solid #FCA5A5' : '1px solid #E5D5C0', background: isMuted ? '#FEF2F2' : '#fff', color: isMuted ? '#EF4444' : '#FF6B00', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{isMuted ? (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/><path d="M17 16.95A7 7 0 015 12"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/><path d="M19 12a7 7 0 01-.11 1.23"/></svg>) : (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>)}</button>)}
+          <button title="Settings" style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid #E5D5C0', cursor: 'pointer', background: '#fff', color: '#CC5500', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+        </div>
+        {!isMobile && <div style={{ marginTop: 20 }}><StatusBadge status={isCallActive ? status : 'IDLE'} /></div>}
+        {!isMobile && transcript && <p style={{ marginTop: 14, fontSize: 13, color: '#CC5500', maxWidth: 340, textAlign: 'center', fontStyle: 'italic', lineHeight: 1.5 }}>"{transcript}"</p>}
+      </div>
+      <div style={{ flex: isMobile ? 'none' : '0 0 40%', width: isMobile ? '100%' : undefined, height: isMobile ? '50vh' : undefined, minWidth: isMobile ? undefined : 380, display: 'flex', flexDirection: 'column', borderLeft: isMobile ? 'none' : '1px solid #F0E6D6', borderTop: isMobile ? '1px solid #F0E6D6' : 'none', background: '#fff' }}>
+        <div style={{ padding: isMobile ? '10px 16px' : '14px 20px', borderBottom: '1px solid #F0E6D6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}><div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #FF6B00, #CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 13, color: '#fff' }}>F</div><div><span style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: 14, color: '#0f172a' }}>FRIDAY</span><span style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginTop: -1 }}>Head of Build</span></div></div><button onClick={newConversation} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #E5D5C0', background: '#fff', cursor: 'pointer', fontSize: 11, fontWeight: 500, color: '#CC5500', display: 'flex', alignItems: 'center', gap: 4 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New</button></div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '10px 12px' : '14px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {messages.length === 0 && callEvents.length === 0 && (<div style={{ textAlign: 'center', color: '#94a3b8', marginTop: isMobile ? 20 : 100 }}><div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #FF6B00, #CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 20, color: '#fff' }}>F</div><p style={{ fontSize: 14, fontWeight: 500, color: '#475569', marginBottom: 4 }}>FRIDAY is ready</p><p style={{ fontSize: 12 }}>{HAS_SPEECH ? 'Start a voice call or type a message.' : 'Type a message below.'}</p></div>)}
+          {callEvents.map((evt, i) => (<div key={'e-'+i} style={{ textAlign: 'center', padding: '10px 0', fontSize: 11, color: '#94a3b8' }}><span style={{ background: '#FFFBF5', padding: '3px 10px', borderRadius: 10, border: '1px solid #F0E6D6' }}>{evt.type === 'started' ? 'Call started' : 'You ended the call'} - {fmtTime(evt.time)}</span></div>))}
+          {messages.map((msg, i) => { const u = msg.role === 'user'; return (<div key={'m-'+i} style={{ display: 'flex', justifyContent: u ? 'flex-end' : 'flex-start', marginBottom: 6 }}><div style={{ display: 'flex', gap: 8, maxWidth: '85%', alignItems: 'flex-start' }}>{!u && (<div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: 'linear-gradient(135deg, #FF6B00, #CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 10, color: '#fff' }}>F</div>)}<div style={{ padding: '10px 14px', borderRadius: u ? '14px 14px 4px 14px' : '14px 14px 14px 4px', background: u ? '#FF6B00' : '#FFF7ED', color: u ? '#fff' : '#1e293b', borderLeft: u ? 'none' : '3px solid #FF6B00', fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{msg.content}</div></div></div>); })}
+          {status === 'PROCESSING' && (<div style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}><div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, marginTop: 2, background: 'linear-gradient(135deg, #FF6B00, #CC5500)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: 10, color: '#fff' }}>F</div><div style={{ padding: '12px 16px', borderRadius: '14px 14px 14px 4px', background: '#FFF7ED', borderLeft: '3px solid #FF6B00', display: 'flex', gap: 5, alignItems: 'center' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite' }}/><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.2s' }}/><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B00', display: 'inline-block', animation: 'dotPulse 1.4s infinite', animationDelay: '0.4s' }}/></div></div>)}
+          <div ref={chatEndRef} />
+        </div>
+        <form onSubmit={handleTextSend} style={{ padding: isMobile ? '8px 12px 12px' : '10px 20px 14px', borderTop: '1px solid #F0E6D6', display: 'flex', gap: 8 }}>
+          <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type a message..." style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid #E5D5C0', fontSize: 14, outline: 'none', background: '#FFFBF5', WebkitAppearance: 'none' }} onFocus={(e) => { e.target.style.borderColor = '#FF6B00'; e.target.style.boxShadow = '0 0 0 3px rgba(255,107,0,0.08)'; }} onBlur={(e) => { e.target.style.borderColor = '#E5D5C0'; e.target.style.boxShadow = 'none'; }} />
+          <button type="submit" disabled={!input.trim()} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: input.trim() ? 'linear-gradient(135deg, #FF6B00, #CC5500)' : '#E5D5C0', color: '#fff', fontWeight: 600, fontSize: 14, cursor: input.trim() ? 'pointer' : 'default', WebkitAppearance: 'none' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+        </form>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

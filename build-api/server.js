@@ -103,6 +103,33 @@ function checkFridayRate(req, res, next) {
 let monthlyTokenUsage = { month: new Date().getMonth(), input: 0, output: 0, cost: 0 };
 const MONTHLY_COST_CAP = 400;
 
+// ── FRIDAY Memory Functions ─────────────────────────────────────────────────
+async function createFridayConversation(title) {
+  try {
+    const { data, error } = await supabase
+      .from('friday_conversations')
+      .insert([{ title: title || 'Chat ' + new Date().toLocaleString() }])
+      .select()
+      .single();
+    if (error) { console.error('[FRIDAY Memory] Create conversation error:', error.message); return null; }
+    return data.id;
+  } catch (e) { console.error('[FRIDAY Memory] Create conversation exception:', e.message); return null; }
+}
+
+async function saveFridayMessage(conversationId, role, content) {
+  if (!conversationId) return;
+  try {
+    await supabase.from('friday_messages').insert([{ conversation_id: conversationId, role, content }]);
+  } catch (e) { console.error('[FRIDAY Memory] Save message error:', e.message); }
+}
+
+async function updateConversationTitle(conversationId, title) {
+  if (!conversationId || !title) return;
+  try {
+    await supabase.from('friday_conversations').update({ title }).eq('id', conversationId);
+  } catch (e) { /* non-fatal */ }
+}
+
 // Simple in-memory rate limiter for build endpoints
 const buildRateLimit = new Map();
 const RATE_WINDOW_MS = 60000;
@@ -1557,7 +1584,22 @@ app.post('/api/friday/chat', checkFridayRate, (req, res, next) => { if (req.head
       return res.status(429).json({ error: 'Monthly API cost cap reached ($400). Resets next month.' });
     }
 
-    const { messages } = req.body;
+    const { messages, conversation_id } = req.body;
+
+    // ── Memory: get or create conversation ──
+    let convId = conversation_id || null;
+    if (!convId) {
+      // Auto-create from first user message
+      const firstUserMsg = (messages || []).find(m => m.role === 'user');
+      const title = firstUserMsg ? firstUserMsg.content.slice(0, 60) : 'Chat';
+      convId = await createFridayConversation(title);
+    }
+
+    // Save the latest user message (only the last one to avoid re-saving history)
+    const lastUserMsg = [...(messages || [])].reverse().find(m => m.role === 'user');
+    if (lastUserMsg && convId) {
+      await saveFridayMessage(convId, 'user', lastUserMsg.content);
+    }
 
     const FRIDAY_SYSTEM = `You are FRIDAY — Head of Build at ManageAI. You are Brian's AI operations system running on his production server at 5.223.79.255. Think JARVIS from Iron Man — you have full control of the server, the build system, all databases, all workflows, GitHub, OneDrive, and every tool in the stack.
 
@@ -1849,7 +1891,14 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
       }
     }
 
-    res.json(data);
+    // ── Memory: save assistant response ──
+    const textBlocks = (data.content || []).filter(b => b.type === 'text');
+    const assistantText = textBlocks.map(b => b.text).join('\n');
+    if (assistantText && convId) {
+      await saveFridayMessage(convId, 'assistant', assistantText);
+    }
+
+    res.json({ ...data, conversation_id: convId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1877,6 +1926,48 @@ app.post('/api/friday/tts', checkFridayRate, (req, res, next) => { if (req.heade
     res.send(Buffer.from(arrayBuffer));
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ── FRIDAY Conversation History APIs ─────────────────────────────────────────
+app.get('/api/friday/conversations', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('friday_conversations')
+      .select('id, title, created_at, updated_at, message_count')
+      .order('updated_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/friday/conversations/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('friday_messages')
+      .select('role, content, created_at')
+      .eq('conversation_id', req.params.id)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/friday/conversations/:id', async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('friday_conversations')
+      .delete()
+      .eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
