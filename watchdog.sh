@@ -1,23 +1,26 @@
 #!/bin/bash
-# ManageAI Server Watchdog — auto-kill rogue processes + SMS to Brian
+# ManageAI Server Watchdog v2 — auto-kill rogue processes + SMS to Brian
 LOG="/var/log/manageai-watchdog.log"
-CPU_THRESHOLD=500
-SAFE_PROCS="dockerd|containerd|clickhouse|java|node|claude|nginx|redis|php|puma|temporal-server|postgres|beam|ttyd"
+CPU_THRESHOLD=800
+SAFE_PROCS="dockerd|containerd|clickhouse|java|node|claude|nginx|redis|php|puma|temporal|postgres|beam|ttyd|ruby|rails|runc|git|ps|awk|grep|sort|curl|python|sidekiq|horizon|caddy|ssh|bash|sh|cron|systemd|docker-proxy|containerd-shim"
 
-TWILIO_SID="AC054aa32392247949cb3a94008e6d6a0e"
-TWILIO_TOKEN="0213161b7e9899db4fa23caeb24d4570"
+TWILIO_SID="REPLACE_WITH_TWILIO_SID"
+TWILIO_TOKEN="REPLACE_WITH_TWILIO_TOKEN"
 TWILIO_FROM="+18882574191"
 BRIAN_PHONE="+16024027197"
 
+# Only flag processes in /tmp (the actual attack pattern)
+TMP_PROCS=$(ps aux | grep -E "/tmp/[a-z]" | grep -v grep | grep -v watchdog | awk '{print $2"|"$1"|"$3"|"$11}')
+
+# Flag unknown processes over threshold that aren't whitelisted
 ROGUES=$(ps aux --sort=-%cpu | awk -v thresh=$CPU_THRESHOLD -v safe="$SAFE_PROCS" '
   NR>1 && $3>thresh {
     cmd=$11; for(i=12;i<=NF;i++) cmd=cmd" "$i
-    if (cmd !~ safe) print $2"|"$1"|"$3"|"cmd
+    skip=0; split(safe,a,"|"); for(k in a) if(cmd~a[k]) skip=1
+    if(!skip) print $2"|"$1"|"$3"|"cmd
   }')
 
-TMP_PROCS=$(ps aux | grep -E "/tmp/[a-z]" | grep -v grep | grep -v watchdog | awk '{print $2"|"$1"|"$3"|"$11}')
-
-KILL_LIST=$(echo -e "$ROGUES\n$TMP_PROCS" | grep -v "^$" | sort -u)
+KILL_LIST=$(echo -e "$TMP_PROCS\n$ROGUES" | grep -v "^$" | sort -u)
 
 if [ -n "$KILL_LIST" ]; then
   TS=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
@@ -32,13 +35,11 @@ if [ -n "$KILL_LIST" ]; then
     KILLED="PID:$PID CPU:${CPU}% CMD:$(basename $CMD)"
   done <<< "$KILL_LIST"
 
-  # Re-lock /tmp/mysql
   rm -f /tmp/mysql 2>/dev/null
   touch /tmp/mysql && chmod 000 /tmp/mysql && chattr +i /tmp/mysql 2>/dev/null
 
   MSG="FRIDAY WATCHDOG: Rogue process killed on FRIDAY server. $KILLED Load:$LOAD $TS"
 
-  # Send SMS via Twilio API directly
   curl -s -X POST "https://api.twilio.com/2010-04-01/Accounts/$TWILIO_SID/Messages.json" \
     -u "$TWILIO_SID:$TWILIO_TOKEN" \
     --data-urlencode "To=$BRIAN_PHONE" \

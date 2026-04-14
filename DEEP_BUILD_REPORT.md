@@ -105,3 +105,13 @@
 ```
 
 All 8 checks passed.
+
+## Git Push Status
+
+Commit created: `7a533ae` — blocked by GitHub push protection (ecosystem.config.js contains API keys, pre-existing).
+
+To push, bypass via GitHub:
+- Anthropic key: https://github.com/Brian2169fdsa/friday-voice/security/secret-scanning/unblock-secret/3CTQ4xtvABrIKlSCEoW3eUG99d5
+- GitHub PAT: https://github.com/Brian2169fdsa/friday-voice/security/secret-scanning/unblock-secret/3CTQ4xySf3FXtA4YBvR7AD19z2w
+
+After approving both, re-run: `git push origin main`
