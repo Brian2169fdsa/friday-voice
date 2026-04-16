@@ -506,346 +506,94 @@ function getManageAIAgents(job) {
       specialist: 'Solution Demo Builder',
       output_subdir: 'deliverables',
       deliverables: [`${p} Solution Demo.html`],
-      task: `You are Agent 01 — Solution Demo Builder for the ManageAI FRIDAY build swarm.
+      task: `You are Agent 01 — Solution Demo Builder.
+
+CRITICAL: Read /opt/manageai/build-api/templates/solution-demo-reference.html FIRST. Match its design EXACTLY.
 
 CLIENT: ${job.client}
 PROJECT: ${p}
 PLATFORM: ${job.platform}
 REQUEST: ${job.request_description}
 
-You must produce ONE file: "${p} Solution Demo.html"
-Save it to your output directory.
+Design system (locked — do not change):
+- Fonts: DM Sans, Inter, JetBrains Mono (Google Fonts CDN)
+- Colors: body #FFFFFF, navy #1E3348, accent #4A8FD6, text #1A1A2E
+- React 18 via CDN: React.createElement (NO JSX)
+- Animations: floatUp, pulseGlow, slideIn, fadeUp, shimmer, ringPulse, waveform
+- Scrollbar: 5px, transparent track, rgba thumb
 
-This file must be a complete, self-contained React 18 SPA using createElement syntax
-(no JSX, no build tools). It must match the ManageAI Solution Demo design system
-EXACTLY — pixel perfect to the locked spec below.
+Structure (match reference):
+1. HEADER — ManageAI branded, client name, project name, status indicator
+2. OVERVIEW — What the agent does, key metrics cards, architecture summary
+3. PROTOTYPE — Tabbed view: Flow diagram (using f-layer/f-box/f-connector CSS), scenario walkthrough, live dashboard preview
+4. HOW IT WORKS — Step-by-step explanation with data flow visualization
+5. BUILD SPEC — Technical details: tables, workflows, AI models, guardrails
+6. EDITOR PANEL — Supabase-connected editor for reviewing/editing agent configurations
 
-═══════════════════════════════════════════
-LOCKED DESIGN SYSTEM — DO NOT DEVIATE
-═══════════════════════════════════════════
-
-Fonts (load from Google Fonts):
-  DM Sans: weights 300,400,500,600,700
-  JetBrains Mono: weights 400,500
-
-Color tokens (use these exact hex values, stored in const C = {}):
-  accent:     "#4A8FD6"
-  accentDim:  "rgba(74,143,214,0.07)"
-  bg:         "#FFFFFF"
-  surface:    "#F8F9FB"
-  surface2:   "#F0F2F5"
-  border:     "#E2E5EA"
-  text:       "#1A1A2E"
-  textDim:    "#8890A0"
-  textMid:    "#5A6070"
-  success:    "#22A860"
-  warning:    "#E5A200"
-  danger:     "#E04848"
-  logo:       "#2A2A3E"
-  purple:     "#7C5CFC"
-  orange:     "#E8723A"
-  teal:       "#1AA8A8"
-
-Monospace font variable: const mono = "'JetBrains Mono', monospace";
-
-Animations (define all of these in <style>):
-  @keyframes floatUp — particles float upward and fade
-  @keyframes pulseGlow — box-shadow pulses on cards
-  @keyframes slideIn — from opacity:0 translateY(16px) to opacity:1 translateY(0)
-  @keyframes pulseDot — scale 1→1.4→1, opacity 0.7→1→0.7
-  @keyframes fadeIn — opacity 0→1
-
-Background: fixed grid pattern using CSS backgroundImage with linear-gradient
-  lines at border color, backgroundSize 60px 60px
-
-Floating particles: 12 absolutely positioned 2x2px dots, accent color,
-  position fixed, animate with floatUp, staggered delays, z-index 0
-
-═══════════════════════════════════════════
-LOCKED PAGE STRUCTURE
-═══════════════════════════════════════════
-
-The page has:
-1. A fixed left editor panel (width 380px when open, 0 when closed)
-2. A main content area that shifts right when panel opens
-3. A fixed header
-4. Tab navigation
-5. Main content area
-6. Footer
-
-EDITOR PANEL (left slide-in, z-index 100):
-- Toggle button in header (pencil emoji) when panel is closed
-- Header inside panel: MANAGE (logo color) + AI (accent color) wordmark + "Editor" mono label + close button
-- 6 section tabs: Overview | Stats & Flow | Prototype | How it Works | Scenarios | Limits & Tiers
-- Scrollable content area per section
-- Footer inside panel with:
-  - Green "Supabase Connected" status pill
-  - "Save to Cloud" button (accent color, green on success, red on error)
-  - "Load from Cloud" button
-  - "Export JSON" button
-  - "Reset to Default" button
+Replace ALL content placeholders with real data from this build:
+- Client name, project name, agent description from the brief
+- Workflow diagrams from confirmed-schema.json and workflow-manifest.json
+- Scenario descriptions from the build contract
+- Table list and column details from confirmed-schema.json
+- AI model routing from the LLM specialist output
 
 Supabase connection (hardcode these):
   URL: https://abqwambiblgjztzkrbzg.supabase.co
   Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFicXdhbWJpYmxnanp0emtyYnpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNTA0NzIsImV4cCI6MjA4NzYyNjQ3Mn0.e10i_DqoLwS0UQhEoJGOGRtBlm4dsYxEbPQ3XFkpwQc
 
-HEADER (fixed top, z-index 10):
-  Left side:
-    - Toggle button (only when panel is closed)
-    - MANAGE (logo color #2A2A3E bold) + AI (accent #4A8FD6 bold) — Montserrat-style
-    - Vertical divider line
-    - Client name + solution name (bold, 12px)
-    - "Solution Demo v{version} · {stack}" (9px, mono, textDim)
-  Right side:
-    - Pill tab navigation with 4 tabs inside a surface2 rounded container:
-        Overview | Prototype | How it Works | Build Spec
-    - Active tab: accent background, white text
-    - Inactive tab: transparent, textDim
+Output: "${p} Solution Demo.html" — single file, opens in any browser.
 
-FOOTER:
-  Left: "MANAGE" (logo color) + "AI" (accent) + "· {solutionName} Solution Demo v{version} · March 2026"
-  Right: "CONFIDENTIAL — {confidentialLine}"
-  Border top, padding 16px 28px
-
-═══════════════════════════════════════════
-4 TAB VIEWS — EXACT STRUCTURE
-═══════════════════════════════════════════
-
-TAB 1 — OVERVIEW:
-  - Section header: h2 "{overviewTitle}" + p "{overviewDesc}" (max-width 720px)
-  - Execution Flow card (surface background, border):
-      Label: "EXECUTION FLOW — ALL SCENARIOS" (accent, 12px, 0.04em spacing)
-      Flow nodes connected by arrow symbols, each node:
-        - Bordered box (2px solid node color)
-        - Icon (emoji, 18px)
-        - Label (10px, mono, node color, bold)
-        - Sub (8px, textDim)
-      Nodes come from data.flow array — build these from the automation being built
-  - Stats grid (auto-fit, min 200px):
-      Each stat card: surface bg, border, 3px top border in stat color
-        - Label (10px, uppercase, textDim, 0.05em)
-        - Value (28px, bold, mono)
-        - Sub (11px, textDim)
-  - 2-column scope grid:
-      IN SCOPE card: success color theme (checkmarks)
-      OUT OF SCOPE card: danger color theme (x marks)
-
-TAB 2 — PROTOTYPE:
-  - Section header: h2 "Report Prototypes" + description p
-  - Pill tab bar (no gap, bordered container, overflow hidden):
-      One tab per prototype — label + colored pulse dot
-      Active tab: white bg, colored text
-      Inactive tab: surface bg, muted
-  - Description block below tabs: badge pill (scenario ID) + description text
-  - iframe container (border, border-radius 8, overflow hidden):
-      iframe height: 800px, width 100%, border none
-      src: points to the separate prototype HTML file
-      key={active.id} to force reload on tab change
-      loading="lazy"
-
-  IMPORTANT: The prototype HTML files are OTHER deliverables in the same build package.
-  When building this demo for a Make.com build, the iframe srcs should reference
-  the actual workflow output HTML files if they exist, OR use placeholder paths
-  named after the project/scenario. The iframe shell always stays — only src changes.
-
-TAB 3 — HOW IT WORKS:
-  - Section header + description
-  - Vertical stepper (numbered circles connected by lines):
-      Each step: number circle (step color, white text) → vertical connector line → content
-      Content: title (14px bold) + description (13px, textMid, lineHeight 1.7)
-      Optional detail block: mono font, surface bg, border, borderRadius 8, pre-line whitespace
-      Step 3 gets an extra 2-column table row below it showing:
-        Left: Facility Tier Classification table (tier | criteria | examples)
-        Right: Severity Scoring Engine table (severity | threshold | action)
-  - Cadence grid (2 columns):
-      Each cadence card: surface bg, icon + title (cadence color) + description
-
-TAB 4 — BUILD SPEC:
-  - Section header + description
-  - "System Tech Stack" label + auto-fit grid of tech cards:
-      Each: 40x40 icon box (color-tinted bg) + name (13px bold) + role (11px textDim)
-  - 3-column I/O/Triggers row:
-      Each column: surface card with colored header label + bullet list
-      Inputs (accent), Outputs (success), Triggers (orange)
-  - "Scenario Specifications" label + expandable accordion:
-      Each scenario row: mono ID badge + name + module count + expand arrow
-      Expanded: description + numbered module list (name + description per module)
-      Expand/collapse on click, one open at a time
-  - "Architecture Notes" label + limitations card:
-      Known Limitations header (danger color)
-      Bullet list of limitation strings
-
-═══════════════════════════════════════════
-DATA STRUCTURE — getDefaultData()
-═══════════════════════════════════════════
-
-Build the getDefaultData() function with these exact field names,
-populated with realistic content for the specific build being requested:
-
-{
-  clientName: "{client}",
-  solutionName: "{project_name}",
-  version: "1.0",
-  stack: "{platform} + Claude API + {other tools}",
-  confidentialLine: "Prepared for {client}",
-  overviewTitle: "{project_name}",
-  overviewDesc: "{2-sentence description of what this automation does}",
-  flow: [
-    {icon:"emoji", label:"Step Name", sub:"subtitle", clr: C.colorName},
-    ... (4-7 flow steps representing the actual automation pipeline)
-  ],
-  stats: [
-    {label:"Stat Label", value:"N", sub:"description", color: C.colorName},
-    ... (exactly 4 stat cards relevant to this build)
-  ],
-  scopeIn: ["item 1", "item 2", ...],   // 5-8 in-scope items
-  scopeOut: ["item 1", "item 2", ...],  // 4-6 out-of-scope items
-  protoTabs: [
-    {id:"tab-id", label:"Tab Label", badge:"WF-01", color: C.colorName, src:"filename.html", desc:"description"},
-    ... (one tab per major workflow or report type)
-  ],
-  steps: [
-    {num:1, title:"Step Title", color: C.colorName, desc:"description", detail:"optional mono detail"},
-    ... (one step per major system component, typically 4-6)
-  ],
-  tiers: [
-    {tier:"Tier Name", criteria:"criteria text", ex:"example", color: C.colorName},
-    ... (if applicable to this build — omit if not)
-  ],
-  sevs: [
-    {sev:"LEVEL", threshold:"threshold text", action:"action text", color: C.colorName},
-    ... (severity levels if applicable)
-  ],
-  cadences: [
-    {icon:"emoji", title:"Cadence Name", color: C.colorName, desc:"description"},
-    ... (timing/frequency breakdown if applicable)
-  ],
-  techStack: [
-    {icon:"emoji or letters", name:"Tool Name", role:"Role Description", color: C.colorName, isMono: bool},
-    ...
-  ],
-  scenarios: [
-    {
-      id:"WF-01",
-      name:"Workflow Name",
-      color: C.colorName,
-      desc:"what this workflow does",
-      modules:["Module Name then Action", ...],
-      descs:["what this module does", ...]
-    },
-    ...
-  ],
-  limits: ["limitation 1", "limitation 2", ...]
-}
-
-═══════════════════════════════════════════
-BUILD INSTRUCTIONS
-═══════════════════════════════════════════
-
-1. Read the request_description and platform carefully
-2. Build getDefaultData() with realistic, specific content for THIS build
-3. Do not use placeholder text like "Lorem ipsum" or "Description here"
-4. The flow steps must reflect the ACTUAL automation pipeline being built
-5. Scenarios must reflect the ACTUAL workflows being built (WF-01, WF-02, etc.)
-6. Tech stack must reflect ACTUAL tools being used
-7. Prototype tab srcs must reference actual HTML filenames being delivered
-   in the same package (coordinate with Agent 04's blueprint output names)
-8. The Supabase save/load code must be included exactly as in the template
-9. All editor functionality must work — the client may use it to update content
-10. File must be completely self-contained — no external dependencies except
-    Google Fonts CDN and React/ReactDOM from cdnjs.cloudflare.com
-
-OUTPUT: One complete HTML file named "${p} Solution Demo.html"
-
-REFERENCE SPEC: Read this file FIRST before writing anything: cat /opt/manageai/agents/solution-demo-spec.md
-Match its structure, component patterns, and design system EXACTLY.
-Adapt all content to this specific build — use real workflow names, real platform, real client.
-
-PROTOTYPE TAB RULE: If you cannot build interactive prototype content, render a placeholder card — never a white screen.
-
-TIMEOUT WARNING: You have 8 minutes. Read spec then write file immediately. One pass only.
-
-When referencing files or outputs in your work, always include version context. This is version ${job.buildVersion || 'v1.0'} of this project. File paths follow the pattern: /ManageAI/Clients/{client}/{ticket_id}/${job.buildVersion || 'v1.0'}/{filename}. If you are making changes to an existing build rather than creating from scratch, your output filename should reflect the version passed in the payload (default v1.0 for new builds).`
+Version: ${job.buildVersion || 'v1.0'}. File paths: /ManageAI/Clients/{client}/{ticket_id}/${job.buildVersion || 'v1.0'}/{filename}.
+TIMEOUT WARNING: You have 8 minutes. Read reference template then write file immediately. One pass only.`
     },
     {
       agent_id: 'agent_02',
-      specialist: 'Skillset Manual Author',
+      specialist: 'Build Manual Author',
       output_subdir: 'deliverables',
-      deliverables: [`${p} Training Manual.md`],
-      task: `You are Agent 02 — Skillset Manual Author for the ManageAI FRIDAY build swarm.
+      deliverables: [`${p} Build Manual.html`],
+      task: `You are Agent 02 — Build Manual Author.
+
+CRITICAL: Read /opt/manageai/build-api/templates/build-manual-reference.html FIRST. Match its design EXACTLY.
 
 CLIENT: ${job.client}
 PROJECT: ${p}
 PLATFORM: ${job.platform}
 REQUEST: ${job.request_description}
 
-Your job is to produce ONE markdown file: "${p} Training Manual.md"
+Design system (locked — do not change):
+- Fonts: Montserrat (body), JetBrains Mono (code/data)
+- Design tokens: T = { bg:"#FFFFFF", surface:"#FFFFFF", surfaceAlt:"#F5F6F8", surfaceHover:"#EDF0F4", border:"#E2E6EC", borderLight:"#EEF0F4", borderAccent:"#4A8FD6", navBg:"#1E3348", navText:"#CBD5E1", navActive:"#4A8FD6", text:"#1E293B", textSecondary:"#475569", textTertiary:"#7A8B9A", accent:"#4A8FD6", accentLight:"#EBF3FC", accentDark:"#2D6AAF", teal:"#0D9488", tealLight:"#E6F7F5", purple:"#7C5CFC" }
+- React 18 via CDN: React.createElement (NO JSX)
+- Animations: fadeUp, fadeIn, shimmer, pulseRing, flowLine, gentlePulse
 
-This Training Manual documents the AI Teammate (AITM) that was just built. You have access to:
-1. The BUILD CONTRACT FOCUS section (appended to this prompt) — contains the planner's contract with agent-specific fields
-2. The PHASE 1 BUILD RESULTS section (appended to this prompt) — contains actual outputs from each Phase 1 agent
+Sections (match reference structure exactly):
+1. OVERVIEW — Agent name, mission statement, key metrics cards (workflows, tables, guardrails, trust level), architecture summary
+2. SCENARIOS — Each workflow as a card: { id, name, trigger, phase, purpose, modules count, type:"hitl"|"auto", claude:true/false, details, frMap }
+3. REQUIREMENTS — Functional requirements: { id:"FR-001", title, desc, color, scenario }. Map each FR to its scenario.
+4. CLAUDE CONFIG — System prompt rules extracted from the build contract LLM section: { num, title, desc, color }
+5. TEMPLATES — Data templates and configuration schemas used. Group by category.
+6. TIMELINE — Implementation phases: { week, focus, deliverables, color }
+7. GO-LIVE — Acceptance criteria checklist, cost breakdown table, monitoring requirements
 
-Use BOTH data sources. Extract ACTUAL names, URLs, table names, workflow names, and endpoints. No generic placeholders.
+Data patterns (populate from this build's actual data):
+- const scenarios = [ ... ] — one entry per workflow from workflow-manifest.json
+- const frRequirements = [ ... ] — extracted from build contract requirements
+- const systemPromptRules = [ ... ] — extracted from LLM specialist output
+- const templates = { ... } — extracted from confirmed-schema.json
+- const timeline = [ ... ] — generated from build contract phases
+- const acceptance = [ ... ] — from brief acceptance_criteria
+- const costs = [ ... ] — estimated from build cost tracking
 
-The document MUST have exactly these 6 sections:
+Output: "${p} Build Manual.html" — single file React 18 SPA.
 
-## 1. Overview
-What this AI Teammate is, what problem it solves, who uses it, and what it replaces or augments.
-- Pull the AITM name, business objective, and responsibilities from the build contract system_summary and BUILD_005 fields.
-- State the client name (${job.client}), the platform (${job.platform}), and the project name (${p}).
-- Describe in 2-3 paragraphs what the end user experiences when this teammate is running.
-
-## 2. How It Works
-Step-by-step description of how the AI Teammate operates, from input to process to output.
-- Written for a non-technical manager who needs to understand the flow.
-- Pull from the build contract BUILD_002.workflow_steps and BUILD_002.decision_points fields.
-- Number each step. For each step state: trigger, what happens, what output is produced.
-- Flag any human-in-the-loop decision points.
-
-## 3. Implementation
-What was ACTUALLY built during the Phase 1 build. This is the most important section — every item must come from PHASE 1 BUILD RESULTS, not from the contract.
-- Schema: Look in PHASE 1 BUILD RESULTS → Schema section for "tables_verified" or "tables_created" arrays. List EVERY table by its ACTUAL name (e.g. "cornerstone_extraction_jobs", NOT "table_name"). For each table: name, purpose, key columns.
-- Workflows: Look in PHASE 1 BUILD RESULTS → Workflow section for "manifest" with workflow names, IDs, activation status. List EVERY ${job.platform} workflow by its ACTUAL name (e.g. "WF-01 Intake Processor"), trigger type, and function.
-- AI Integration: Look in PHASE 1 BUILD RESULTS → LLM section for "files_produced" and prompt details. List which Claude models are used, for which tasks, include ACTUAL system prompt excerpts (first 2-3 sentences of each prompt from BUILD-004 output).
-- External platforms: Look in PHASE 1 BUILD RESULTS → External section for "platforms" array. List each third-party integration by name and what endpoints were configured (from BUILD-007 output).
-- GitHub: Look in PHASE 1 BUILD RESULTS → Platform section for "manifest.repo_url". Include the ACTUAL repo URL.
-
-## 4. Configuration
-Environment variables, API keys, credentials, and settings the customer needs to maintain.
-- Look in PHASE 1 BUILD RESULTS → Platform section for environment variables. List EVERY env var by ACTUAL name.
-- Also check the build contract BUILD_005.environment_variables array.
-- List every credential or API key required (from build contract).
-- Provide setup steps for first-time deployment.
-- Note any platform-specific configuration (${job.platform} settings, webhook URLs from workflow manifest, etc).
-
-## 5. Best Practices
-How to get the most out of this AI Teammate.
-- Common mistakes and how to avoid them.
-- Edge cases and how the system handles them (from BUILD_004.edge_cases).
-- Guardrails: what the AI Teammate must never do (from BUILD_004.guardrails). Include ACTUAL guardrail text, not summaries.
-- Escalation guidance: when and how to escalate to a human.
-- Performance tips for optimal operation.
-
-## 6. Architecture
-System diagram in text form showing how all components connect.
-- Draw an ASCII diagram using ACTUAL table names from Schema results, ACTUAL workflow names from Workflow results, and ACTUAL integration endpoints from External results.
-- List all external dependencies and integration points by their real names.
-- Include the ACTUAL GitHub repo URL from PHASE 1 BUILD RESULTS → Platform → manifest.repo_url.
-- Note the ACTUAL tech stack from BUILD_005.tech_stack or Platform results.
-
-CRITICAL RULES:
-- Every section must contain real content derived from the build contract and Phase 1 results. If a field is not available, state what would normally go there and mark it [PENDING].
-- Minimum 200 words per section. Total document minimum 1500 words.
-- Use proper markdown formatting with headers, bullet points, tables, and code blocks where appropriate.
-- Output filename: "${p} Training Manual.md"
-- Write the file directly to your output directory. No other files.`
+Version: ${job.buildVersion || 'v1.0'}. File paths: /ManageAI/Clients/{client}/{ticket_id}/${job.buildVersion || 'v1.0'}/{filename}.`
 
       },
     {
       agent_id: 'agent_03',
       specialist: 'Requirements & Docs Writer',
       output_subdir: 'build-docs',
-      deliverables: [`${p} Requirements Document.md`, `${p} Architecture Assessment.md`, `${p} Implementation Wave Manual.md`, `${p.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-regression-suite.json`],
+      deliverables: [`${p} Requirements Document.md`, `${p} Architecture Assessment.md`, `${p} Deployment Summary.md`, `${p.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-regression-suite.json`],
       task: `You are writing three technical documents for ManageAI.
 
 CLIENT: ${job.client}
@@ -858,15 +606,19 @@ YOU MUST CREATE EXACTLY 4 FILES in your output directory:
 FILE 1: "${p} Requirements Document.md"
 - Full PRD: functional requirements (FR-001+), non-functional requirements, dependencies, assumptions, scope boundaries
 - Requirements must be specific to the actual system being built on ${job.platform}
+- Use FR-001+ numbering and reference the actual brief's acceptance_criteria
 
 FILE 2: "${p} Architecture Assessment.md"
-- System architecture: component breakdown, data flow diagram (ASCII), integration points, security considerations, error handling strategy, scalability notes
+- System architecture: component breakdown, data flow diagrams (ASCII showing actual data flows), integration points, security considerations, error handling strategy, scalability notes
+- MUST include ASCII data flow diagrams using actual table names and workflow names from the build
 - Specific to ${job.platform} and what was requested
 
-FILE 3: "${p} Implementation Wave Manual.md"
-- Phased rollout: Wave 1 (foundation/MVP), Wave 2 (core features), Wave 3 (optimization/scale)
-- Each wave: what gets built, acceptance criteria, estimated effort, rollback plan
-- Realistic and specific to the project
+FILE 3: "${p} Deployment Summary.md"
+- Scope Confirmation: what was requested vs what was built
+- Build Delta: what changed from the original brief during build (revisions, additions, removals)
+- Deferrals: what was requested but not built, with reasons
+- Performance Values: build duration, QA score, compliance score, per-agent scores, cost
+- Infrastructure Deployed: tables (count + names), workflows (count + names), GitHub repo, Temporal namespace
 
 Minimum 600 words each for docs 1-3. Real content. No placeholder text.
 
@@ -1150,26 +902,26 @@ Root package descriptor that ties all 9 subpackages together.
   "platform": "${job.platform}",
   "generated_at": "<ISO timestamp>",
   "subpackages": {
-    "workflows":       { "file": "workflows.json",       "validated": true },
-    "prompts":         { "file": "prompts.json",         "validated": true },
-    "schemas":         { "file": "schemas.json",         "validated": true },
-    "knowledge":       { "file": "knowledge.json",       "validated": true },
-    "templates":       { "file": "templates.json",       "validated": true },
-    "mcp_servers":     { "file": "mcp-servers.json",     "validated": true },
-    "environment":     { "file": "environment.json",     "validated": true },
-    "infrastructure":  { "file": "infrastructure.json",  "validated": true },
-    "deployment_ops":  { "file": "deployment-ops.json",  "validated": true }
+    "workflows":       { "file": "workflows.json",       "validated": false, "validation_note": "" },
+    "prompts":         { "file": "prompts.json",         "validated": false, "validation_note": "" },
+    "schemas":         { "file": "schemas.json",         "validated": false, "validation_note": "" },
+    "knowledge":       { "file": "knowledge.json",       "validated": false, "validation_note": "" },
+    "templates":       { "file": "templates.json",       "validated": false, "validation_note": "" },
+    "mcp_servers":     { "file": "mcp-servers.json",     "validated": false, "validation_note": "" },
+    "environment":     { "file": "environment.json",     "validated": false, "validation_note": "" },
+    "infrastructure":  { "file": "infrastructure.json",  "validated": false, "validation_note": "" },
+    "deployment_ops":  { "file": "deployment-ops.json",  "validated": false, "validation_note": "" }
   },
-  "ready_to_deploy": true,
+  "ready_to_deploy": false,
   "validation_summary": {
     "total_subpackages": 9,
-    "validated": 9,
+    "validated": 0,
     "failed": 0,
     "errors": []
   }
 }
 
-Set "validated" to true for each subpackage ONLY if you actually populated it with real build data. If a subpackage has no applicable data (e.g., no MCP servers), set validated to true but keep the data arrays empty. Set "ready_to_deploy" to true only if ALL subpackages are validated.
+After generating all 9 subpackages, validate each one: does it contain real data from this build? Set validated to true only if the subpackage has real, non-placeholder data. If a subpackage has empty or placeholder data, set validated to false and add a validation_note explaining why. Set "ready_to_deploy" to true only if ALL subpackages have validated: true.
 
 CRITICAL RULES:
 - Every JSON file MUST be valid JSON parseable by JSON.parse().
@@ -1621,8 +1373,19 @@ Your capabilities:
 - Deploy code changes
 - Query build history, agent performance, Red Team findings
 - Check and manage n8n workflows
+- Query build intelligence (performance trends, failure patterns, cost analysis, bottlenecks, recommendations)
+- Check deployment usage (which deployed agents are active vs idle vs dead)
+- View cost optimization suggestions and duration trends
 
-Your 17 agents: BUILD-000 (Brief Analyst + Charlie Simulator), BUILD-001 (Planner), BUILD-002 (Workflow Builder), BUILD-003 (QA Tester), BUILD-004 (LLM Specialist), BUILD-005 (Platform Builder), BUILD-006 (Schema Architect), BUILD-007 (External Platform), BUILD-008 (Quality Gate), BUILD-009 (Security), BUILD-010 (Deployment Verifier), BUILD-011 (Compliance Judge), BUILD-012 (Engagement Memory), BUILD-013 (Decision Agent), BUILD-015 (Prompt Quality), BUILD-016 (Intelligence Agent — self-healing overnight), BUILD-019 (Red Team Agent).
+You have knowledge files at /opt/manageai/friday-knowledge/ — read them with the read_file tool when asked about customers, team members, server architecture, or build history. Files: customers.json, team.json, server-map.json, build-performance.md.
+
+You can also check Charlie's status at http://5.223.60.100:3001/health via run_command with curl.
+You can query any Supabase table to find build data, agent runs, quality signals, compliance results.
+You can list all Supabase tables by querying: SELECT tablename FROM pg_tables WHERE schemaname='public' via run_command with curl against the Supabase REST API.
+
+Your 17 agents: BUILD-000 (Brief Analyst + Charlie Simulator), BUILD-001 (Planner), BUILD-002 (Workflow Builder), BUILD-003 (QA Tester), BUILD-004 (LLM Specialist), BUILD-005 (Platform Builder), BUILD-006 (Schema Architect), BUILD-007 (External Platform), BUILD-008 (Quality Gate), BUILD-009 (Security), BUILD-010 (Deployment Verifier), BUILD-011 (Compliance Judge), BUILD-012 (Engagement Memory), BUILD-013 (Decision Agent), BUILD-015 (Prompt Quality + Self-Improving Prompts), BUILD-016 (Intelligence Agent — cross-build learning, usage monitoring, cost optimization, self-healing overnight), BUILD-019 (Red Team Agent).
+
+Intelligence layer (Sprint 3): Pre-build quality predictor, cross-build learning engine, self-improving prompts, deployment usage monitoring, build cost optimizer, prediction vs reality comparison, weekly intelligence summaries.
 
 Stack: Temporal, Claude Code, n8n (port 5678), Supabase, GitHub, OneDrive, PM2.
 Server: Ubuntu, /opt/manageai/build-api/ is the main codebase.
@@ -1722,6 +1485,30 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
             append: { type: 'boolean', description: 'If true, append instead of overwrite', default: false }
           },
           required: ['path', 'content']
+        }
+      },
+      {
+        name: 'query_intelligence',
+        description: 'Query FRIDAY build intelligence insights — performance trends, failure patterns, cost analysis, recommendations. Use when Brian asks about build performance, agent health, system trends, or optimization.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            insight_type: { type: 'string', description: 'Filter: agent_pattern, failure_pattern, duration_trend, cost_trend, revision_pattern, skillset_gap, bottleneck, recommendation, or "all"' },
+            severity: { type: 'string', description: 'Filter: critical, warning, opportunity, info, or "all"' },
+            limit: { type: 'integer', description: 'Max results (default 10)' }
+          },
+          required: []
+        }
+      },
+      {
+        name: 'check_deployment_usage',
+        description: 'Check whether deployed agents are active, idle, or dead. Shows n8n execution counts and database activity.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            ticket_id: { type: 'string', description: 'Specific build ticket to check. If omitted, shows all recent deployments.' }
+          },
+          required: []
         }
       }
     ];
@@ -1857,6 +1644,25 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
             }
             result = JSON.stringify({ success: true, path: filePath, bytes: content.length });
           }
+          else if (toolCall.name === 'query_intelligence') {
+            const { insight_type, severity, limit } = toolCall.input || {};
+            try {
+              let query = supabase.from('build_intelligence').select('*').order('created_at', { ascending: false }).limit(limit || 10);
+              if (insight_type && insight_type !== 'all') query = query.eq('insight_type', insight_type);
+              if (severity && severity !== 'all') query = query.eq('severity', severity);
+              const { data } = await query;
+              result = JSON.stringify(data || []);
+            } catch (e) { result = JSON.stringify({ error: e.message }); }
+          }
+          else if (toolCall.name === 'check_deployment_usage') {
+            const { ticket_id } = toolCall.input || {};
+            try {
+              let query = supabase.from('deployment_usage').select('*').order('checked_at', { ascending: false }).limit(20);
+              if (ticket_id) query = query.eq('ticket_id', ticket_id);
+              const { data } = await query;
+              result = JSON.stringify(data || []);
+            } catch (e) { result = JSON.stringify({ error: e.message }); }
+          }
         } catch (err) {
           result = JSON.stringify({ error: err.message });
         }
@@ -1864,30 +1670,87 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
         toolResults.push({ type: 'tool_result', tool_use_id: toolCall.id, content: (result || '').slice(-4000) });
       }
 
-      // Second Claude call with tool results
-      const followUp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
-          system: FRIDAY_SYSTEM,
-          messages: [...messages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }],
-          tools
-        })
-      });
+      // Build conversation with tool results for follow-up
+      let loopMessages = [...messages, { role: 'assistant', content: data.content }, { role: 'user', content: toolResults }];
 
-      data = await followUp.json();
+      // Tool loop — keep calling Claude until it stops using tools (max 5 rounds)
+      for (let round = 0; round < 5; round++) {
+        const followUp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 4096,
+            system: FRIDAY_SYSTEM,
+            messages: loopMessages,
+            tools
+          })
+        });
 
-      // Track follow-up token usage
-      if (data.usage) {
-        monthlyTokenUsage.input += data.usage.input_tokens || 0;
-        monthlyTokenUsage.output += data.usage.output_tokens || 0;
-        monthlyTokenUsage.cost = (monthlyTokenUsage.input / 1000000 * 3) + (monthlyTokenUsage.output / 1000000 * 15);
+        data = await followUp.json();
+
+        if (data.usage) {
+          monthlyTokenUsage.input += data.usage.input_tokens || 0;
+          monthlyTokenUsage.output += data.usage.output_tokens || 0;
+          monthlyTokenUsage.cost = (monthlyTokenUsage.input / 1000000 * 3) + (monthlyTokenUsage.output / 1000000 * 15);
+        }
+
+        // If Claude is done talking, break
+        if (data.stop_reason !== 'tool_use') break;
+
+        // Otherwise execute the next round of tools
+        const nextToolCalls = (data.content || []).filter(b => b.type === 'tool_use');
+        if (nextToolCalls.length === 0) break;
+
+        const nextResults = [];
+        for (const tc of nextToolCalls) {
+          let r = '';
+          try {
+            if (tc.name === 'run_command') {
+              try { r = execSync(tc.input.command, { cwd: tc.input.working_directory || '/opt/manageai', timeout: tc.input.timeout || 30000, encoding: 'utf8', maxBuffer: 1024*1024 }).slice(-4000); }
+              catch (e) { r = JSON.stringify({ error: e.message, stderr: (e.stderr||'').slice(-2000), stdout: (e.stdout||'').slice(-2000) }); }
+            } else if (tc.name === 'query_supabase') {
+              let url = SUPABASE_URL + '/rest/v1/' + tc.input.table + '?select=' + encodeURIComponent(tc.input.select || '*');
+              if (tc.input.filter) url += '&' + tc.input.filter;
+              if (tc.input.order) url += '&order=' + tc.input.order;
+              url += '&limit=' + (tc.input.limit || 10);
+              const sr = await fetch(url, { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } });
+              r = JSON.stringify(await sr.json());
+            } else if (tc.name === 'read_file') {
+              if (tc.input.lines) { r = execSync('tail -n ' + tc.input.lines + ' ' + JSON.stringify(tc.input.path), { encoding: 'utf8', timeout: 5000 }).slice(-4000); }
+              else { r = fsSync.readFileSync(tc.input.path, 'utf8').slice(-5000); }
+            } else if (tc.name === 'manage_n8n') {
+              const n8nBase = 'http://localhost:5678/api/v1';
+              if (tc.input.action === 'list') {
+                const nr = await fetch(n8nBase + '/workflows?active=true', { headers: { 'Accept': 'application/json' } });
+                const wfs = await nr.json();
+                r = JSON.stringify((wfs.data || []).map(w => ({ id: w.id, name: w.name, active: w.active })));
+              } else { r = JSON.stringify({ error: 'Action not supported in loop' }); }
+            } else if (tc.name === 'query_intelligence') {
+              try {
+                let q = supabase.from('build_intelligence').select('*').order('created_at', { ascending: false }).limit((tc.input||{}).limit || 10);
+                if ((tc.input||{}).insight_type && (tc.input||{}).insight_type !== 'all') q = q.eq('insight_type', (tc.input||{}).insight_type);
+                if ((tc.input||{}).severity && (tc.input||{}).severity !== 'all') q = q.eq('severity', (tc.input||{}).severity);
+                const { data } = await q;
+                r = JSON.stringify(data || []);
+              } catch (e) { r = JSON.stringify({ error: e.message }); }
+            } else if (tc.name === 'check_deployment_usage') {
+              try {
+                let q = supabase.from('deployment_usage').select('*').order('checked_at', { ascending: false }).limit(20);
+                if ((tc.input||{}).ticket_id) q = q.eq('ticket_id', (tc.input||{}).ticket_id);
+                const { data } = await q;
+                r = JSON.stringify(data || []);
+              } catch (e) { r = JSON.stringify({ error: e.message }); }
+            } else { r = JSON.stringify({ error: 'Tool not supported in loop: ' + tc.name }); }
+          } catch (e) { r = JSON.stringify({ error: e.message }); }
+          nextResults.push({ type: 'tool_result', tool_use_id: tc.id, content: (r || '').slice(-4000) });
+        }
+
+        loopMessages = [...loopMessages, { role: 'assistant', content: data.content }, { role: 'user', content: nextResults }];
       }
     }
 
@@ -1902,6 +1765,313 @@ Keep responses conversational and SHORT when speaking — 2-3 sentences unless B
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+
+
+// ── Build Completion Email ───────────────────────────────────────────────────
+async function sendBuildCompletionEmail(to, ticketId) {
+  try {
+    // Pull ALL build data from Supabase
+    const { data: build } = await supabase.from('friday_builds').select('*').eq('ticket_id', ticketId).single();
+    const { data: agentRuns } = await supabase.from('build_agent_runs').select('*').eq('ticket_id', ticketId).order('started_at', { ascending: true });
+    const { data: qualitySignals } = await supabase.from('build_quality_signals').select('*').eq('ticket_id', ticketId).order('created_at', { ascending: true });
+
+    const project = build?.project_name || ticketId;
+    const client = build?.client || 'ManageAI';
+    const brief = build?.brief_analysis || build?.brief || {};
+    const status = build?.status || 'complete';
+    const progress = build?.progress_pct || 100;
+
+    // Extract agent results
+    const agentRows = (agentRuns || []).map(a => {
+      const out = a.output || {};
+      const duration = a.duration_seconds || Math.round((new Date(a.completed_at) - new Date(a.started_at)) / 1000) || 0;
+      let detail = '';
+      if (a.agent_id === 'BUILD-006') detail = out.tables ? (out.tables.length || out.tables) + ' tables deployed' : JSON.stringify(out).substring(0, 100);
+      else if (a.agent_id === 'BUILD-002') detail = out.workflows ? (out.workflows.length || out.workflows) + ' workflows created' : JSON.stringify(out).substring(0, 100);
+      else if (a.agent_id === 'BUILD-004') detail = out.files ? (out.files.length || out.files) + ' AI files' : JSON.stringify(out).substring(0, 100);
+      else if (a.agent_id === 'BUILD-005') detail = (out.files_pushed || 0) + ' files pushed to GitHub';
+      else if (a.agent_id === 'BUILD-009') detail = 'Critical: ' + (out.critical || 0) + ', High: ' + (out.high || 0);
+      else if (a.agent_id === 'BUILD-003') detail = 'QA Score: ' + (out.overall_score || out.score || 'N/A');
+      else if (a.agent_id === 'BUILD-011') detail = 'Compliance: ' + (out.score || 'N/A') + '%';
+      else if (a.agent_id === 'BUILD-019') detail = (out.findings || 0) + ' findings';
+      else if (a.agent_id === 'BUILD-013') detail = 'Decision: ' + (out.type || out.decision || 'N/A');
+      else if (a.agent_id === 'BUILD-020') detail = (out.checks || []).filter(c => c.status === 'PASS').length + '/' + (out.checks || []).length + ' deploy checks';
+      else detail = (JSON.stringify(out) || '').substring(0, 80);
+      return { id: a.agent_id, status: a.status, duration, detail };
+    });
+
+    // Extract quality gate scores
+    const qaScores = (qualitySignals || []).filter(s => s.signal_type === 'quality_review').map(s => ({
+      agent: s.agent_id || 'Unknown',
+      score: Math.round((s.confidence || 0) * 100),
+      verdict: s.verdict || 'N/A'
+    }));
+
+    // Extract n8n workflow details
+    const workflowAgent = (agentRuns || []).find(a => a.agent_id === 'BUILD-002');
+    const workflowOutput = workflowAgent?.output || {};
+    const n8nWorkflows = workflowOutput.workflows || workflowOutput.active_workflows || [];
+
+    // Extract schema details
+    const schemaAgent = (agentRuns || []).find(a => a.agent_id === 'BUILD-006');
+    const schemaOutput = schemaAgent?.output || {};
+    const tables = schemaOutput.tables || schemaOutput.verified_tables || [];
+
+    // Extract LLM/prompt details
+    const llmAgent = (agentRuns || []).find(a => a.agent_id === 'BUILD-004');
+    const llmOutput = llmAgent?.output || {};
+    const testPairs = llmOutput.test_pairs || [];
+
+    // Extract security findings
+    const secAgent = (agentRuns || []).find(a => a.agent_id === 'BUILD-009');
+    const secOutput = secAgent?.output || {};
+
+    // Extract red team findings
+    const redTeam = (agentRuns || []).find(a => a.agent_id === 'BUILD-019');
+    const redTeamOutput = redTeam?.output || {};
+
+    // Extract compliance
+    const compAgent = (agentRuns || []).find(a => a.agent_id === 'BUILD-011');
+    const compOutput = compAgent?.output || {};
+
+    // Extract deployment manifest
+    const deployAgent = (agentRuns || []).find(a => a.agent_id === 'BUILD-005');
+    const deployOutput = deployAgent?.output || {};
+
+    // Build agent scorecard HTML
+    const agentScorecard = agentRows.map(a => {
+      const statusColor = a.status === 'complete' ? '#22C55E' : a.status === 'error' ? '#EF4444' : '#F59E0B';
+      const statusIcon = a.status === 'complete' ? '&#x2705;' : a.status === 'error' ? '&#x274C;' : '&#x26A0;';
+      return '<tr style="border-bottom: 1px solid #E5E7EB;">' +
+        '<td style="padding: 8px 12px; font-size: 12px; font-weight: 600; color: #0f172a;">' + a.id + '</td>' +
+        '<td style="padding: 8px 12px; font-size: 12px; color: ' + statusColor + ';">' + statusIcon + ' ' + a.status + '</td>' +
+        '<td style="padding: 8px 12px; font-size: 12px; color: #64748B;">' + a.duration + 's</td>' +
+        '<td style="padding: 8px 12px; font-size: 12px; color: #374151;">' + a.detail + '</td>' +
+        '</tr>';
+    }).join('');
+
+    // Quality gate scores HTML
+    const qaRows = qaScores.map(q => {
+      const scoreColor = q.score >= 80 ? '#22C55E' : q.score >= 60 ? '#F59E0B' : '#EF4444';
+      return '<tr style="border-bottom: 1px solid #E5E7EB;">' +
+        '<td style="padding: 6px 12px; font-size: 12px; color: #374151;">' + q.agent + '</td>' +
+        '<td style="padding: 6px 12px; font-size: 12px; font-weight: 700; color: ' + scoreColor + ';">' + q.score + '/100</td>' +
+        '<td style="padding: 6px 12px; font-size: 12px; color: #64748B;">' + q.verdict + '</td>' +
+        '</tr>';
+    }).join('');
+
+    // n8n workflows HTML
+    const workflowRows = (Array.isArray(n8nWorkflows) ? n8nWorkflows : []).map(w => {
+      const name = typeof w === 'string' ? w : (w.name || w.workflow_name || JSON.stringify(w).substring(0, 60));
+      return '<li style="margin-bottom: 4px;">' + name + '</li>';
+    }).join('') || '<li>See deployment package for details</li>';
+
+    // Tables HTML
+    const tableRows = (Array.isArray(tables) ? tables : []).map(t => {
+      const name = typeof t === 'string' ? t : (t.name || JSON.stringify(t).substring(0, 60));
+      return '<li style="margin-bottom: 4px;">' + name + '</li>';
+    }).join('') || '<li>See schema documentation for details</li>';
+
+    // Build the full HTML email
+    const html = `
+    <div style="font-family: 'Segoe UI', Montserrat, Arial, sans-serif; max-width: 720px; margin: 0 auto; background: #ffffff;">
+
+      <!-- Header -->
+      <div style="background: #1E3348; padding: 28px 36px;">
+        <h1 style="color: #ffffff; font-size: 24px; margin: 0; font-weight: 700;">ManageAI Factory Floor</h1>
+        <p style="color: #FF6B00; font-size: 14px; margin: 6px 0 0; font-weight: 500;">FRIDAY Build System &bull; Autonomous AI Teammate Deployment</p>
+      </div>
+
+      <!-- Intro -->
+      <div style="padding: 32px 36px 0;">
+        <p style="font-size: 15px; color: #1a1a2e; line-height: 1.7;">
+          In an effort to train and test FRIDAY, our autonomous build agent, we have deployed the following AI teammate on the ManageAI Factory Floor. Below is the complete technical report of what was built, how it works, and every component deployed.
+        </p>
+      </div>
+
+      <!-- Agent Identity Card -->
+      <div style="margin: 24px 36px; background: linear-gradient(135deg, #1E3348 0%, #2A4A6B 100%); border-radius: 12px; padding: 24px 28px; color: #fff;">
+        <h2 style="margin: 0 0 4px; font-size: 20px; font-weight: 700;">${project}</h2>
+        <p style="margin: 0 0 12px; font-size: 13px; color: #94A3B8;">Build ID: ${ticketId} &bull; Client: ${client} &bull; Platform: ${build?.platform || 'n8n'}</p>
+        <div style="display: flex; gap: 24px; margin-top: 12px;">
+          <div><span style="font-size: 22px; font-weight: 700; color: #FF6B00;">${progress}%</span><br/><span style="font-size: 11px; color: #94A3B8;">Progress</span></div>
+          <div><span style="font-size: 22px; font-weight: 700; color: #22C55E;">${agentRows.filter(a => a.status === 'complete').length}/${agentRows.length}</span><br/><span style="font-size: 11px; color: #94A3B8;">Agents Complete</span></div>
+          <div><span style="font-size: 22px; font-weight: 700; color: #3B82F6;">${compOutput.score || 'N/A'}%</span><br/><span style="font-size: 11px; color: #94A3B8;">Compliance</span></div>
+        </div>
+      </div>
+
+      <!-- What Was Built -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">What Was Built</h3>
+        <p style="font-size: 13px; color: #374151; line-height: 1.8;">${brief.request_description || build?.request_description || 'See build brief for details.'}</p>
+      </div>
+
+      <!-- Agent Scorecard -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Agent Scorecard (${agentRows.length} Agents)</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead><tr style="background: #F8FAFC; border-bottom: 2px solid #E5E7EB;">
+            <th style="padding: 8px 12px; text-align: left; color: #64748B; font-weight: 600;">Agent</th>
+            <th style="padding: 8px 12px; text-align: left; color: #64748B; font-weight: 600;">Status</th>
+            <th style="padding: 8px 12px; text-align: left; color: #64748B; font-weight: 600;">Time</th>
+            <th style="padding: 8px 12px; text-align: left; color: #64748B; font-weight: 600;">Detail</th>
+          </tr></thead>
+          <tbody>${agentScorecard}</tbody>
+        </table>
+      </div>
+
+      <!-- Quality Gate Scores -->
+      ${qaRows ? '<div style="padding: 0 36px;"><h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Quality Gate Scores (BUILD-008)</h3><table style="width: 100%; border-collapse: collapse;"><thead><tr style="background: #F8FAFC; border-bottom: 2px solid #E5E7EB;"><th style="padding: 6px 12px; text-align: left; font-size: 12px; color: #64748B;">Agent Reviewed</th><th style="padding: 6px 12px; text-align: left; font-size: 12px; color: #64748B;">Score</th><th style="padding: 6px 12px; text-align: left; font-size: 12px; color: #64748B;">Verdict</th></tr></thead><tbody>' + qaRows + '</tbody></table></div>' : ''}
+
+      <!-- Infrastructure: Supabase Tables -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Supabase Tables Deployed</h3>
+        <ul style="font-size: 13px; color: #374151; line-height: 2; padding-left: 20px;">${tableRows}</ul>
+      </div>
+
+      <!-- Infrastructure: n8n Workflows -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">n8n Workflows Deployed</h3>
+        <ul style="font-size: 13px; color: #374151; line-height: 2; padding-left: 20px;">${workflowRows}</ul>
+      </div>
+
+      <!-- AI Integration -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">AI Integration (BUILD-004)</h3>
+        <p style="font-size: 13px; color: #374151; line-height: 1.7;">
+          <strong>Models:</strong> Claude Sonnet (generation, synthesis, analysis) + Claude Haiku (scoring, classification, drift detection)<br/>
+          <strong>Prompt Library:</strong> ${llmOutput.files || llmOutput.prompts || 'Custom system prompts and routing logic'}<br/>
+          <strong>Test Pairs:</strong> ${Array.isArray(testPairs) ? testPairs.length : (llmOutput.test_pair_count || 'N/A')} gold standard input/output pairs for QA validation
+        </p>
+      </div>
+
+      <!-- Security -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Security Assessment (BUILD-009)</h3>
+        <p style="font-size: 13px; color: #374151;">
+          Critical Findings: <strong style="color: ${(secOutput.critical || 0) > 0 ? '#EF4444' : '#22C55E'};">${secOutput.critical || 0}</strong> &bull;
+          High: <strong>${secOutput.high || 0}</strong> &bull;
+          Result: <strong style="color: ${secOutput.passed ? '#22C55E' : '#EF4444'};">${secOutput.passed ? 'PASSED' : 'REVIEW NEEDED'}</strong>
+        </p>
+      </div>
+
+      <!-- Red Team -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Red Team Analysis (BUILD-019)</h3>
+        <p style="font-size: 13px; color: #374151;">
+          Total Findings: <strong>${redTeamOutput.total_findings || redTeamOutput.findings || 'N/A'}</strong> &bull;
+          Critical: <strong style="color: #EF4444;">${redTeamOutput.critical || 0}</strong> &bull;
+          Warnings: <strong style="color: #F59E0B;">${redTeamOutput.warnings || 0}</strong> &bull;
+          Hardened: <strong style="color: #22C55E;">${redTeamOutput.hardened || 0}</strong>
+        </p>
+      </div>
+
+      <!-- GitHub -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Code Repository (BUILD-005)</h3>
+        <p style="font-size: 13px; color: #374151;">
+          Repository: <a href="${deployOutput.repo_url || '#'}" style="color: #3B82F6; font-weight: 600;">${deployOutput.repo_url || 'Pending'}</a><br/>
+          Files Pushed: <strong>${deployOutput.files_pushed || 0}</strong> &bull;
+          Private: Yes
+        </p>
+      </div>
+
+      <!-- Decision Authority -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Decision Authority</h3>
+        <p style="font-size: 13px; color: #374151; line-height: 1.8;">${brief.decision_authority || build?.decision_authority || 'See build brief.'}</p>
+      </div>
+
+      <!-- Guardrails -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Guardrails</h3>
+        <p style="font-size: 13px; color: #374151; line-height: 1.8;">${brief.guardrails || build?.guardrails || 'See build brief.'}</p>
+      </div>
+
+      <!-- Edge Cases -->
+      <div style="padding: 0 36px;">
+        <h3 style="color: #0f172a; font-size: 16px; margin: 28px 0 12px; border-bottom: 2px solid #FF6B00; padding-bottom: 8px;">Edge Cases Handled</h3>
+        <p style="font-size: 13px; color: #374151; line-height: 1.8;">${brief.edge_cases || build?.edge_cases || 'See build brief.'}</p>
+      </div>
+
+      <!-- CTA -->
+      <div style="padding: 28px 36px; text-align: center;">
+        <a href="https://fridayvoice.manageai.io/friday.html" style="background: #FF6B00; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; display: inline-block;">View in FRIDAY Dashboard</a>
+      </div>
+
+      <!-- Footer -->
+      <div style="background: #F8FAFC; padding: 20px 36px; border-top: 1px solid #E5E7EB;">
+        <p style="font-size: 12px; color: #94A3B8; text-align: center; margin: 0; line-height: 1.7;">
+          This agent was built autonomously by FRIDAY (BUILD-001) using the ManageAI Factory Floor.<br/>
+          ${agentRows.length} agents collaborated over ${agentRows.reduce((s,a) => s + a.duration, 0)} seconds to produce this deployment.<br/>
+          <strong style="color: #64748B;">ManageAI</strong> &bull; AI Workforce Management &bull; Built by FRIDAY
+        </p>
+      </div>
+    </div>`;
+
+    // Get Graph token and send
+    const tokenRes = await fetch(
+      'https://login.microsoftonline.com/' + process.env.AZURE_TENANT_ID + '/oauth2/v2.0/token',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: process.env.AZURE_CLIENT_ID,
+          client_secret: process.env.AZURE_CLIENT_SECRET,
+          scope: 'https://graph.microsoft.com/.default'
+        })
+      }
+    );
+    const { access_token } = await tokenRes.json();
+
+    const recipients = [{ emailAddress: { address: to } }];
+    if (to !== 'brian@manageai.io') {
+      recipients.push({ emailAddress: { address: 'brian@manageai.io' } });
+    }
+
+    const sendRes = await fetch(
+      'https://graph.microsoft.com/v1.0/users/' + (process.env.GRAPH_USER_EMAIL || 'brian@manageai.io') + '/sendMail',
+      {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + access_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: {
+            subject: 'FRIDAY Build Report: ' + project + ' [' + ticketId + ']',
+            body: { contentType: 'HTML', content: html },
+            toRecipients: [{ emailAddress: { address: to } }],
+            ccRecipients: to !== 'brian@manageai.io' ? [{ emailAddress: { address: 'brian@manageai.io' } }] : []
+          }
+        })
+      }
+    );
+
+    console.log('[FRIDAY EMAIL] Comprehensive build report sent to ' + to + ' (cc: brian@manageai.io) | Status: ' + sendRes.status);
+    return sendRes.ok;
+  } catch (err) {
+    console.error('[FRIDAY EMAIL] Build report email failed:', err.message);
+    return false;
+  }
+}
+
+
+// ── FRIDAY Skillsets API ─────────────────────────────────────────────────────
+app.get('/api/friday/skillsets', async (req, res) => {
+  try {
+    const { data: skillsets, error } = await supabase.from('friday_skillsets').select('*').order('created_at', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(skillsets || []);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/friday/skillsets/:id', async (req, res) => {
+  try {
+    const { data: skill, error } = await supabase.from('friday_skillsets').select('*').eq('id', req.params.id).single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(skill);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── FRIDAY ElevenLabs TTS ────────────────────────────────────────────────────
@@ -3725,6 +3895,31 @@ app.post('/api/build/brief', async (req, res) => {
       }
     } catch (_) { /* system_config table may not exist yet — allow builds */ }
 
+    // SPRINT-1: Single-flight build lock — only one build at a time
+    try {
+      const { data: activeBuilds } = await supabase
+        .from('friday_builds')
+        .select('ticket_id, status, updated_at')
+        .in('status', ['building', 'queued'])
+        .limit(1);
+
+      if (activeBuilds && activeBuilds.length > 0) {
+        const active = activeBuilds[0];
+        const ageHours = (Date.now() - new Date(active.updated_at).getTime()) / (1000 * 60 * 60);
+        if (ageHours < 2) {
+          return res.status(429).json({
+            error: 'Build already in progress',
+            active_build: active.ticket_id,
+            status: active.status,
+            message: 'Wait for the current build to complete or cancel it first.'
+          });
+        }
+        // Auto-fail stale builds
+        await supabase.from('friday_builds').update({ status: 'failed' }).eq('ticket_id', active.ticket_id);
+        console.log('[FRIDAY] Auto-failed stale build:', active.ticket_id);
+      }
+    } catch (lockErr) { console.warn('[FRIDAY] Build lock check failed (non-blocking):', lockErr.message); }
+
     const validation = BriefSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
@@ -3748,12 +3943,23 @@ app.post('/api/build/brief', async (req, res) => {
       supabaseBuildId = buildRecord?.id || null;
     } catch(e) { console.warn('[FRIDAY] Supabase insert failed:', e.message); }
 
+    // If brief not provided but section_a exists, compile a brief object from section_a + must-never-ask fields
+    const compiledBrief = brief || (section_a ? {
+      client_profile: section_a.client_profile,
+      current_state: section_a.current_state,
+      prototype_scope: section_a.prototype_scope,
+      success_metrics_section: section_a.success_metrics,
+      workforce_vision: section_a.workforce_vision,
+      technical_constraints: section_a.technical_constraints,
+      opportunity_assessment: section_a.opportunity_assessment
+    } : null);
+
     const jobData = {
       job_id: 'brief_' + Date.now(), ticket_id: tid, client, project_name: project_name || 'Build',
       platform: platform || 'n8n',
       request_description: brief?.executive_summary?.content || section_a?.client_profile?.content || '',
       priority: priority || 'medium', submitter, submitter_email,
-      supabaseBuildId, buildVersion: version || 'v1.0', brief,
+      supabaseBuildId, buildVersion: version || 'v1.0', brief: compiledBrief,
       ...(section_a ? { section_a } : {}),
       ...(customer_id ? { customer_id } : {}),
       ...(workflow_steps ? { workflow_steps } : {}),
@@ -3764,6 +3970,34 @@ app.post('/api/build/brief', async (req, res) => {
       ...(edge_cases ? { edge_cases } : {}),
       ...(acceptance_criteria ? { acceptance_criteria } : {})
     };
+
+    // Write baseline build_briefs record so BUILD-008 has data even if BUILD-000 fails
+    try {
+      const baselineCriteria = [];
+      if (success_metrics) baselineCriteria.push({ criterion: success_metrics, responsible_agent: 'all', source: 'brief' });
+      if (acceptance_criteria) baselineCriteria.push({ criterion: acceptance_criteria, responsible_agent: 'all', source: 'brief' });
+      await supabase.from('build_briefs').upsert({
+        ticket_id: tid,
+        customer_id: customer_id || null,
+        client_name: client,
+        brief_analysis: {
+          required_integrations: data_sources ? [{ name: data_sources, notes: 'From brief' }] : [],
+          workflow_requirements: workflow_steps ? [{ workflow: workflow_steps, trigger: 'webhook', complexity: 'medium' }] : [],
+          success_metrics: success_metrics ? [{ metric: success_metrics, measurable: true }] : [],
+          source: 'baseline-from-submission',
+          agent_owner_email: req.body.agent_owner_email || req.body.owner_email || null,
+          agent_id: req.body.agent_id || null,
+          agent_name: req.body.agent_name || null
+        },
+        brief_scoring: { scores: { overall: 70 }, build_ready: true, confidence: 0.7 },
+        success_criteria: baselineCriteria,
+        blocking_issues: [],
+        overall_score: 70,
+        build_ready: true,
+        confidence: 0.7,
+        analyzed_at: new Date().toISOString()
+      }, { onConflict: 'ticket_id' });
+    } catch(briefErr) { console.warn('[FRIDAY] build_briefs baseline insert failed:', briefErr.message); }
 
     // Attach agent configs
     const briefAgents = getManageAIAgents(jobData);
@@ -6452,6 +6686,61 @@ app.post('/api/prompt-quality/run', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// SPRINT-1: Auto-fail builds stuck in "building" for more than 2 hours
+setInterval(async () => {
+  try {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from('friday_builds')
+      .update({ status: 'failed', progress_pct: 0 })
+      .eq('status', 'building')
+      .lt('updated_at', twoHoursAgo)
+      .select('ticket_id');
+    if (data?.length) console.log('[CLEANUP] Auto-failed', data.length, 'stuck builds:', data.map(b => b.ticket_id));
+  } catch (e) { console.warn('[CLEANUP] Auto-fail check error:', e.message); }
+}, 30 * 60 * 1000);
+console.log('[CLEANUP] Stuck build auto-fail cron started (30m interval)');
+
+// SPRINT-3: Weekly intelligence summary — runs Sunday 10 PM UTC
+setInterval(async () => {
+  const now = new Date();
+  if (now.getUTCDay() === 0 && now.getUTCHours() === 22 && now.getUTCMinutes() < 30) {
+    console.log('[INTELLIGENCE] Running weekly summary...');
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: insights } = await supabase.from('build_intelligence')
+        .select('*').gte('created_at', sevenDaysAgo).order('severity', { ascending: true });
+      if (insights && insights.length > 0) {
+        const critical = insights.filter(i => i.severity === 'critical');
+        const warnings = insights.filter(i => i.severity === 'warning');
+        await supabase.from('build_intelligence').insert({
+          insight_type: 'recommendation',
+          title: 'Weekly Intelligence Summary — ' + now.toISOString().split('T')[0],
+          description: insights.length + ' insights this week. ' + critical.length + ' critical, ' + warnings.length + ' warnings.',
+          evidence: { total: insights.length, critical: critical.length, warnings: warnings.length },
+          severity: critical.length > 0 ? 'critical' : 'info'
+        });
+        console.log('[INTELLIGENCE] Weekly summary stored: ' + insights.length + ' insights');
+      }
+    } catch (e) { console.warn('[INTELLIGENCE] Weekly summary failed:', e.message); }
+  }
+}, 30 * 60 * 1000);
+console.log('[INTELLIGENCE] Weekly summary check enabled (Sunday 10 PM UTC)');
+
+// SPRINT-1: Build cost tracking
+async function trackBuildCost(ticketId, agentId, inputTokens, outputTokens) {
+  try {
+    const cost = (inputTokens / 1000000 * 3) + (outputTokens / 1000000 * 15);
+    await supabase.from('build_quality_signals').insert({
+      ticket_id: ticketId,
+      from_agent: agentId,
+      signal_type: 'api_cost',
+      confidence: cost,
+      payload: { input_tokens: inputTokens, output_tokens: outputTokens, cost_usd: cost }
+    });
+  } catch (_) {}
+}
 
 app.listen(PORT, () => {
   console.log('FRIDAY Parallel Swarm API v3.5 on port ' + PORT);

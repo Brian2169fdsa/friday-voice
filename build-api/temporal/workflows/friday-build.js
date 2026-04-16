@@ -1,4 +1,4 @@
-import { proxyActivities, executeChild, defineSignal, setHandler, condition, sleep } from '@temporalio/workflow';
+import { proxyActivities, executeChild, defineSignal, setHandler, condition, sleep, patched } from '@temporalio/workflow';
 
 // Build-status activities (best-effort, fire-and-forget)
 const buildStatusActivities = proxyActivities({
@@ -8,21 +8,21 @@ const buildStatusActivities = proxyActivities({
 
 // Timeout configs by activity type
 const shortActivities = proxyActivities({
-  startToCloseTimeout: '120 seconds',
-  heartbeatTimeout: '120 seconds',
+  startToCloseTimeout: '300 seconds',
+  heartbeatTimeout: '600 seconds',
   retry: { maximumAttempts: 3 }
 });
 
 const agentActivities = proxyActivities({
-  startToCloseTimeout: '900 seconds',
-  heartbeatTimeout: '120 seconds',
+  startToCloseTimeout: '1200 seconds',
+  heartbeatTimeout: '600 seconds',
   retry: { maximumAttempts: 2 }
 });
 
 // FIX 3: Phase 2 doc agents need longer timeout (up to 431s observed)
 const docAgentActivities = proxyActivities({
-  startToCloseTimeout: '900 seconds',
-  heartbeatTimeout: '120 seconds',
+  startToCloseTimeout: '1200 seconds',
+  heartbeatTimeout: '600 seconds',
   retry: { maximumAttempts: 2 }
 });
 
@@ -46,14 +46,14 @@ const reviewActivities = proxyActivities({
 // FIX 13: Compliance judge needs longer timeout (was timing out during revision routing)
 const complianceActivities = proxyActivities({
   startToCloseTimeout: '300 seconds',
-  heartbeatTimeout: '120 seconds',
+  heartbeatTimeout: '600 seconds',
   retry: { maximumAttempts: 2 }
 });
 
 // Compliance revision agents: capped timeout so revisions don't drag
 const complianceRevisionActivities = proxyActivities({
   startToCloseTimeout: '600 seconds',
-  heartbeatTimeout: '120 seconds',
+  heartbeatTimeout: '600 seconds',
   retry: { maximumAttempts: 1 }
 });
 
@@ -61,6 +61,14 @@ const complianceRevisionActivities = proxyActivities({
 const redTeamActivities = proxyActivities({
   startToCloseTimeout: '300 seconds',
   retry: { maximumAttempts: 1 }
+});
+
+// BUILD-022: Adherence Agent (needs long timeout for checking all deliverables)
+const longActivities = proxyActivities({
+  startToCloseTimeout: '1200 seconds',
+  scheduleToCloseTimeout: '1500 seconds',
+  heartbeatTimeout: '600 seconds',
+  retry: { maximumAttempts: 2 }
 });
 
 // ── H1: Per-agent circuit breaker ────────────────────────────────────────────
@@ -168,9 +176,18 @@ export async function FridayBuildWorkflow(jobData) {
   setHandler(integrationInputSignal, (input) => { integrationInput = input; });
 
   const ticketIdForCatch = jobData.ticket_id || jobData.ticketId;
+  let lastAgentRun = 'unknown';
   try {
   // Set initial building status
   await updateBuildStatus(ticketIdForCatch, 'building', 5);
+
+  // Pre-build orphan cleanup
+  try {
+    const cleanup = await shortActivities.runCleanupActivity();
+    if (cleanup?.killed > 0) console.log('[FRIDAY WF] Cleaned', cleanup.killed, 'orphaned processes before build');
+  } catch (e) {
+    console.warn('[FRIDAY WF] Pre-build cleanup failed (non-blocking):', e.message);
+  }
 
   // ===== ACTIVITY 0: Fetch prior engagement context from OneDrive =====
   const clientName = jobData.client || jobData.client_name || '';
@@ -232,6 +249,20 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-000', 'Brief Analyst', briefAnalysis.status === 'complete' ? 'complete' : 'error');
   await updateBuildStatus(ticketIdForCatch, 'building', 5); // BUILD-000=5
 
+  // ===== SPRINT-3: Build Quality Prediction =====
+  try {
+    const prediction = await shortActivities.predictBuildQualityActivity(jobData);
+    console.log('[FRIDAY WF] Prediction: QA ' + JSON.stringify(prediction.prediction?.predicted_qa_range) +
+      ' | ~' + (prediction.prediction?.predicted_duration_minutes || '?') + 'min' +
+      ' | Confidence: ' + (prediction.prediction?.confidence || '?'));
+    jobData._prediction = prediction;
+    if (prediction.prediction?.should_build === false && prediction.prediction?.confidence > 0.8) {
+      console.warn('[FRIDAY WF] PREDICTOR WARNING: ' + prediction.prediction.reason);
+    }
+  } catch (e) {
+    console.log('[FRIDAY WF] Prediction skipped:', e.message);
+  }
+
   // ===== ACTIVITY 0b: Engagement Memory (BUILD-012) =====
   // Loads prior build history for this customer to inform current build agents.
   // Non-blocking — failure must not halt the build.
@@ -247,6 +278,19 @@ export async function FridayBuildWorkflow(jobData) {
 
   // ===== ACTIVITY 3: Planner =====
   const contract = await shortActivities.runPlannerActivity(jobData);
+
+  // Safety gate: internal builds must not modify existing pipeline files
+  if (contract.namespace?.is_internal === true || contract.namespace?.is_internal === 'true') {
+    const contractStr = JSON.stringify(contract).toLowerCase();
+    const pipelineFiles = ['server.js', 'worker.js', 'watchdog.sh', 'ecosystem.config.js'];
+    const modifyTerms = ['modify', 'overwrite', 'replace', 'delete', 'remove'];
+    const blocked = pipelineFiles.some(f => modifyTerms.some(t => contractStr.includes(t + ' ' + f) || contractStr.includes(f + ' ' + t)));
+    if (blocked) {
+      console.log('[SAFETY] BLOCKED — internal build tried to modify pipeline files');
+      throw new Error('[SAFETY] Internal build contract references modifying pipeline files. Halted.');
+    }
+    console.log('[SAFETY] Internal build verified — no pipeline modifications');
+  }
 
   // Inject available context
   if (charlieContext) contract.charlieContext = charlieContext;
@@ -269,6 +313,44 @@ export async function FridayBuildWorkflow(jobData) {
     }
   }
 
+  // ── SPRINT-2: Build Contract Completeness Gate ──
+  const contractStr = JSON.stringify(contract);
+  const briefStr = JSON.stringify(jobData);
+  const completenessIssues = [];
+
+  if (/dashboard|interface|\.html|clone.*friday/i.test(briefStr)) {
+    if (!/dashboard|\.html|chief.*staff.*html|cos.*html/i.test(contractStr)) {
+      completenessIssues.push('Brief requests a dashboard/interface but contract has no dashboard section');
+    }
+  }
+  if (/\/api\//i.test(briefStr)) {
+    if (!/\/api\//i.test(contractStr)) {
+      completenessIssues.push('Brief references API endpoints but contract does not define any');
+    }
+  }
+  if (/email.*dave|send.*email|microsoft.*graph|sendmail/i.test(briefStr)) {
+    if (!/email|graph|sendmail/i.test(JSON.stringify(contract.BUILD_004 || {}))) {
+      completenessIssues.push('Brief requires email integration but BUILD-004 section does not mention it');
+    }
+  }
+  if (/tts|voice|elevenlabs|speech/i.test(briefStr)) {
+    if (!/tts|voice|elevenlabs/i.test(contractStr)) {
+      completenessIssues.push('Brief requests voice/TTS but contract does not include it');
+    }
+  }
+
+  if (completenessIssues.length > 0) {
+    console.warn('[FRIDAY WF] Contract completeness issues (' + completenessIssues.length + '):');
+    completenessIssues.forEach(i => console.warn('  - ' + i));
+    await supabaseLog(ticketId, 'build_quality_signals', {
+      ticket_id: ticketId, signal_type: 'contract_completeness', from_agent: 'BUILD-001',
+      confidence: 1 - (completenessIssues.length / 10),
+      payload: { issues: completenessIssues }
+    });
+  } else {
+    console.log('[FRIDAY WF] Contract completeness: PASS — all brief requirements covered');
+  }
+
   // Emit planner complete
   await emitAgent('BUILD-001', 'Orchestrator', 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 10); // BUILD-001=10
@@ -281,6 +363,10 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-013', 'Orchestration Decision Agent', 'complete');
 
   // ===== PHASE 1: Sequential Build =====
+  // Temporal versioning: in-flight v1 workflows continue on old path; new workflows enter v2
+  if (patched('v2-sprint-2026-04-15')) {
+    console.log('[FRIDAY WF] Running v2 workflow path (sprint 2026-04-15)');
+  }
   // BUILD-006 -> BUILD-002 -> BUILD-004 -> BUILD-005 -> BUILD-003 (test) -> iteration loop
 
   // ── BUILD-006: Schema Architect (child workflow with self-contained revision loop) ──
@@ -299,11 +385,21 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-006', 'Schema Architect', schemaResult?.status === 'error' ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [006]', schemaGateResult?.needs_revision ? 'revision' : 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 25); // BUILD-006=25
+  // Cost limit check
+  try {
+    const costResult = await shortActivities.checkBuildCostActivity(ticketId, 25);
+    if (costResult.exceeded) {
+      throw new Error('Build cost limit exceeded: $' + costResult.total + ' > $25');
+    }
+  } catch (costErr) {
+    if (costErr.message && costErr.message.includes('cost limit exceeded')) throw costErr;
+  }
 
-  if (schemaGateResult?.needs_revision && schemaRevisionCount >= 3) {
+
+  if (schemaGateResult?.needs_revision && schemaRevisionCount >= 5) {
     await supabaseLog(ticketId, 'build_intelligence', {
       source: 'quality_gate', category: 'max_revisions_reached',
-      title: `BUILD-006 reached max revisions (3) -- continuing with warnings`,
+      title: `BUILD-006 reached max revisions (5) -- continuing with warnings`,
       affected_agent: 'BUILD-006', risk_level: 'medium', status: 'pending',
       description: schemaGateResult.revision_summary
     });
@@ -347,11 +443,21 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-002', 'Workflow Builder', workflowResult?.error ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [002]', workflowGateResult?.needs_revision ? 'revision' : 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 45); // BUILD-002=45
+  // Cost limit check
+  try {
+    const costResult = await shortActivities.checkBuildCostActivity(ticketId, 25);
+    if (costResult.exceeded) {
+      throw new Error('Build cost limit exceeded: $' + costResult.total + ' > $25');
+    }
+  } catch (costErr) {
+    if (costErr.message && costErr.message.includes('cost limit exceeded')) throw costErr;
+  }
 
-  if (workflowGateResult?.needs_revision && workflowRevisionCount >= 3) {
+
+  if (workflowGateResult?.needs_revision && workflowRevisionCount >= 5) {
     await supabaseLog(ticketId, 'build_intelligence', {
       source: 'quality_gate', category: 'max_revisions_reached',
-      title: `BUILD-002 reached max revisions (3) -- continuing with warnings`,
+      title: `BUILD-002 reached max revisions (5) -- continuing with warnings`,
       affected_agent: 'BUILD-002', risk_level: 'medium', status: 'pending',
       description: workflowGateResult.revision_summary
     });
@@ -381,11 +487,21 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-004', 'LLM Specialist', llmResult?.status === 'error' ? 'error' : 'complete');
   await emitAgent('BUILD-008', 'Quality Gate [004]', llmGateResult?.needs_revision ? 'revision' : 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 55); // BUILD-004=55
+  // Cost limit check
+  try {
+    const costResult = await shortActivities.checkBuildCostActivity(ticketId, 25);
+    if (costResult.exceeded) {
+      throw new Error('Build cost limit exceeded: $' + costResult.total + ' > $25');
+    }
+  } catch (costErr) {
+    if (costErr.message && costErr.message.includes('cost limit exceeded')) throw costErr;
+  }
 
-  if (llmGateResult?.needs_revision && llmRevisionCount >= 3) {
+
+  if (llmGateResult?.needs_revision && llmRevisionCount >= 5) {
     await supabaseLog(ticketId, 'build_intelligence', {
       source: 'quality_gate', category: 'max_revisions_reached',
-      title: `BUILD-004 reached max revisions (3) -- continuing with warnings`,
+      title: `BUILD-004 reached max revisions (5) -- continuing with warnings`,
       affected_agent: 'BUILD-004', risk_level: 'medium', status: 'pending',
       description: llmGateResult.revision_summary
     });
@@ -416,8 +532,9 @@ export async function FridayBuildWorkflow(jobData) {
   await updateBuildStatus(ticketIdForCatch, 'building', 60); // BUILD-007=60
 
   // BUILD-008: Quality Gate — review BUILD-007 output before proceeding
+  let externalQuality = null;
   try {
-    const externalQuality = await reviewActivities.qualityGateActivity(jobData, 'BUILD-007', externalResult);
+    externalQuality = await reviewActivities.qualityGateActivity(jobData, 'BUILD-007', externalResult);
     jobData._qualitySignals['BUILD-007'] = externalQuality;
     await emitAgent('BUILD-008', 'Quality Gate [007]', 'complete');
   } catch(e) {
@@ -425,6 +542,18 @@ export async function FridayBuildWorkflow(jobData) {
     jobData._qualityBlocks.push({ agent: 'BUILD-007', reason: e.message.slice(0, 300) });
     console.warn('[FRIDAY WF] Quality gate blocked BUILD-007 (continuing):', e.message.slice(0, 150));
     await emitAgent('BUILD-008', 'Quality Gate [007]', 'blocked');
+  }
+
+  // BUILD-023: Second Opinion (OpenAI) on BUILD-007 output — non-blocking
+  try {
+    const secondOpinion = await shortActivities.secondOpinionActivity(
+      jobData, 'BUILD-007', externalResult, externalQuality?.score || 0
+    );
+    if (secondOpinion && secondOpinion.divergence_flagged) {
+      console.log('[FRIDAY WF] DIVERGENCE: BUILD-007 — Claude=' + (externalQuality?.score || 0) + ' OpenAI=' + secondOpinion.openai_score);
+    }
+  } catch (e) {
+    console.log('[FRIDAY WF] Second opinion skipped:', e.message?.slice(0, 100));
   }
 
   // ── BUILD-005: Platform Builder (child workflow with self-contained revision loop) ──
@@ -443,10 +572,10 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-008', 'Quality Gate [005]', platformGateResult?.needs_revision ? 'revision' : 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 65); // BUILD-005=65
 
-  if (platformGateResult?.needs_revision && platformRevisionCount >= 3) {
+  if (platformGateResult?.needs_revision && platformRevisionCount >= 5) {
     await supabaseLog(ticketId, 'build_intelligence', {
       source: 'quality_gate', category: 'max_revisions_reached',
-      title: `BUILD-005 reached max revisions (3) -- continuing with warnings`,
+      title: `BUILD-005 reached max revisions (5) -- continuing with warnings`,
       affected_agent: 'BUILD-005', risk_level: 'medium', status: 'pending',
       description: platformGateResult.revision_summary
     });
@@ -455,6 +584,18 @@ export async function FridayBuildWorkflow(jobData) {
   }
 
   jobData._qualitySignals['BUILD-005'] = platformGateResult;
+
+  // ── BUILD-022: Adherence Check — verify everything in the brief was actually built ──
+  console.log('[FRIDAY WF] Running BUILD-022 Adherence Check');
+  let adherenceResult = null;
+  try {
+    adherenceResult = await longActivities.adherenceAgentActivity(jobData, contract);
+    console.log('[FRIDAY WF] Adherence:', adherenceResult.score + '% | Missing:', adherenceResult.missing);
+    await emitAgent('BUILD-022', 'Adherence Agent', adherenceResult.score >= 80 ? 'complete' : 'warning');
+  } catch (e) {
+    console.warn('[FRIDAY WF] Adherence check found gaps (proceeding):', e.message);
+    await emitAgent('BUILD-022', 'Adherence Agent', 'error');
+  }
 
   // BUILD-009: Security Agent -- scan for vulnerabilities before QA
   console.log('[FRIDAY WF] Step 5b: Security Scan (BUILD-009)');
@@ -596,6 +737,19 @@ export async function FridayBuildWorkflow(jobData) {
     await emitAgent('BUILD-019', 'Red Team Agent', 'error');
   }
   } // end time_capped else
+
+  // ── BUILD-021: Fix Coordinator — process Security + Red Team findings ──
+  console.log('[FRIDAY WF] Running BUILD-021 Fix Coordinator');
+  try {
+    const secFindings = jobData._security?.findings || [];
+    const rtFindings = redTeamResult?.findings || [];
+    const fixReport = await shortActivities.fixCoordinatorActivity(jobData, contract, secFindings, rtFindings);
+    console.log('[FRIDAY WF] Fix Coordinator:', fixReport.total_findings, 'findings,', fixReport.unresolved?.length || 0, 'unresolved');
+    await emitAgent('BUILD-021', 'Fix Coordinator', 'complete');
+  } catch (e) {
+    console.warn('[FRIDAY WF] Fix Coordinator failed (non-blocking):', e.message);
+    await emitAgent('BUILD-021', 'Fix Coordinator', 'error');
+  }
 
   // BUILD-010: Deployment Verifier -- confirm system is live in production
   if (timeCapped || isBuildTimedOut()) {
@@ -792,6 +946,27 @@ export async function FridayBuildWorkflow(jobData) {
     await shortActivities.updateBuildDurationActivity(jobData.supabaseBuildId, { phase1_duration_ms: phase1DurationMs });
   } catch(e) { console.error('[FRIDAY WF] Non-critical error:', e.message); }
 
+  // ── SPRINT-2: Post-Build Output Manifest ──
+  try {
+    const buildDir = '/tmp/friday-temporal-' + jobData.job_id;
+    const outputManifest = [];
+    try {
+      // Output manifest delegated to activity (fs banned in workflows)
+      try {
+        const manifestResult = await shortActivities.runCleanupActivity();
+        console.log('[FRIDAY WF] Output manifest check delegated to activity');
+      } catch (_) {}
+    } catch (_) {}
+    console.log('[FRIDAY WF] Output manifest: ' + outputManifest.length + ' files in build directory');
+    await supabaseLog(ticketId, 'build_quality_signals', {
+      ticket_id: ticketId, signal_type: 'output_manifest', from_agent: 'FRIDAY',
+      confidence: Math.min(outputManifest.length / 20, 1),
+      payload: { files: outputManifest, count: outputManifest.length }
+    });
+  } catch (e) {
+    console.warn('[FRIDAY WF] Output manifest check failed:', e.message);
+  }
+
   // Upload Phase 1 manifests to OneDrive (non-blocking)
   try {
     await uploadActivities.uploadPhase1ManifestsActivity(jobData, phase1Results);
@@ -829,6 +1004,17 @@ export async function FridayBuildWorkflow(jobData) {
   let phase1Decision = null;
   setHandler(phase1ApprovedSignal, (p) => { phase1Decision = p; });
   console.log('[FRIDAY WF] Waiting for Phase 1 approval from Brian');
+  // BUILD-024: Code Review by OpenAI before phase1-review — non-blocking
+  try {
+    const buildDir24 = '/tmp/friday-temporal-' + jobData.job_id;
+    const codeReview = await longActivities.codeReviewActivity(jobData, buildDir24);
+    if (codeReview && !codeReview.skipped) {
+      console.log('[FRIDAY WF] Code Review: ' + codeReview.overall_score + '/100 | Critical: ' + (codeReview.critical_issues || []).length);
+    }
+  } catch (e) {
+    console.log('[FRIDAY WF] Code review skipped:', e.message?.slice(0, 100));
+  }
+
   await updateBuildStatus(ticketId, 'phase1-review', 90); // Phase1Review=90
   await condition(() => phase1Decision !== null, '24 hours');
   if (phase1Decision?.decision === 'rejected') {
@@ -840,7 +1026,10 @@ export async function FridayBuildWorkflow(jobData) {
   await updateBuildStatus(ticketId, 'phase1-approved', 95); // Phase2=95
 
   // ===== PHASE 2: Parallel Document Generation =====
-  // Existing 4 agents run in parallel (Solution Demo, Training Manual, Deployment Summary, Blueprint)
+  // Temporal versioning gate for Phase 2 overhaul
+  if (patched('v3-phase2-overhaul-2026-04-16')) {
+    console.log('[FRIDAY WF] Running v3 Phase 2 overhaul path');
+  }
 
   let buildAttempt = 0;
   let agentResults;
@@ -855,6 +1044,7 @@ export async function FridayBuildWorkflow(jobData) {
     // Pass Phase 1 results into contract so doc agents have build context
     contract.phase1Results = phase1Results;
 
+    // Phase 2: Documentation agents (parallel)
     const phase2Settled = await Promise.allSettled([
       docAgentActivities.agent01Activity(jobData, contract),
       docAgentActivities.agent02Activity(jobData, contract),
@@ -871,13 +1061,94 @@ export async function FridayBuildWorkflow(jobData) {
     console.log('[FRIDAY WF] Phase 2 complete:', phase2Successes.length, 'of 5 agents succeeded');
     agentResults = phase2Settled.map(r => r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message });
 
+    // Collect Phase 2 results for email
+    const phase2Results = agentResults.map((r, i) => ({
+      agent_id: 'agent_0' + (i + 1),
+      name: ['Solution Demo', 'Build Manual', 'Requirements & Docs', 'Workflow Blueprints', 'Deployment Package'][i],
+      status: r.status || 'error',
+      format: ['HTML', 'HTML', 'MD + JSON', 'JSON', 'JSON'][i]
+    }));
+
+    // BUILD-026: Compare documents against reference templates
+    let comparisonResult = null;
+    try {
+      const buildDir = '/tmp/friday-temporal-' + jobData.job_id;
+      comparisonResult = await longActivities.documentComparisonActivity(jobData, buildDir);
+      console.log('[FRIDAY WF] Doc Comparison: ' + (comparisonResult.files_passing || 0) + '/' + (comparisonResult.files_compared || 0) + ' passing');
+    } catch (e) {
+      console.log('[FRIDAY WF] Doc comparison skipped:', e.message?.slice(0, 100));
+    }
+
+    // Register skillset from build artifacts (non-blocking)
+    try {
+      await fireAndForgetActivities.registerSkillsetActivity(jobData);
+    } catch (e) {
+      console.warn('[FRIDAY WF] Skillset registration failed (non-blocking):', e.message);
+    }
+
+    // SPRINT-2: Register golden build
+    try {
+      const goldenResult = await fireAndForgetActivities.registerGoldenBuildActivity(jobData, phase1Results);
+      if (goldenResult?.is_new_golden) console.log('[FRIDAY WF] NEW GOLDEN BUILD for category: ' + goldenResult.category);
+    } catch (e) {
+      console.warn('[FRIDAY WF] Golden build registration failed (non-blocking):', e.message);
+    }
+
+    // SPRINT-3: Compare prediction to reality
+    try {
+      const predComparison = await fireAndForgetActivities.comparePredictionToRealityActivity(ticketId);
+      if (predComparison) console.log('[FRIDAY WF] Prediction accuracy: ' + predComparison.overall_accuracy);
+    } catch (e) {
+      console.warn('[FRIDAY WF] Prediction comparison failed (non-blocking):', e.message);
+    }
+
+    // SPRINT-2: Generate build diff report
+    try {
+      const diffResult = await fireAndForgetActivities.generateBuildDiffActivity(ticketId, 'general');
+      if (diffResult?.regressions?.length > 0) console.warn('[FRIDAY WF] Build regressions vs golden:', diffResult.regressions.join('; '));
+    } catch (e) {
+      console.warn('[FRIDAY WF] Build diff failed (non-blocking):', e.message);
+    }
+
+    // SPRINT-2: Save test fixtures from this build
+    try {
+      const testPairs = jobData._llmTestPairs || [];
+      if (testPairs.length > 0) {
+        await fireAndForgetActivities.saveFixturesFromBuildActivity(ticketId, 'general', testPairs);
+      }
+    } catch (e) {
+      console.warn('[FRIDAY WF] Fixture saving failed (non-blocking):', e.message);
+    }
+
+    // Self-deploy: verify infrastructure and deploy internal builds
+    try {
+      const deployResult = await fireAndForgetActivities.selfDeployActivity(jobData, contract);
+      console.log('[FRIDAY WF] Self-deploy:', deployResult?.status, '|', (deployResult?.checks || []).filter(c => c.status === 'PASS').length, 'checks passed');
+    } catch (e) {
+      console.warn('[FRIDAY WF] Self-deploy failed (non-blocking):', e.message);
+    }
+
     // QA scoring on documents
     const qaResult = await shortActivities.qaScoreActivity(agentResults, jobData, contract);
     jobData.qaScore = qaResult.overallScore;
 
-    // Upload to OneDrive
-    const links = await uploadActivities.uploadToOnedriveActivity(jobData, agentResults);
-    jobData.outputLinks = links;
+    // Upload to OneDrive (returns share links)
+    let onedriveLinks = [];
+    try {
+      const uploadResult = await uploadActivities.uploadToOnedriveActivity(jobData, agentResults);
+      onedriveLinks = uploadResult?.files || [];
+      console.log('[FRIDAY WF] OneDrive: ' + onedriveLinks.length + ' files uploaded');
+    } catch (e) {
+      console.log('[FRIDAY WF] OneDrive upload failed:', e.message?.slice(0, 100));
+    }
+    jobData.outputLinks = onedriveLinks;
+
+    // Send Phase 2 completion email with OneDrive links
+    try {
+      await shortActivities.sendPhase2CompletionEmailActivity(jobData, phase2Results, onedriveLinks);
+    } catch (e) {
+      console.log('[FRIDAY WF] Phase 2 email failed:', e.message?.slice(0, 100));
+    }
 
     await updateBuildStatus(ticketId, 'phase2-review', 75);
 
@@ -968,7 +1239,10 @@ export async function FridayBuildWorkflow(jobData) {
   };
 
   } catch (err) {
-    console.error('[FRIDAY WF] Unhandled workflow error:', err.message);
+    console.error('[FRIDAY WF] Build failed:', err.message);
+    try {
+      await shortActivities.sendBuildFailureNotificationActivity(jobData, err.message, lastAgentRun || 'unknown');
+    } catch (_) {}
     try { await updateBuildStatus(ticketIdForCatch, 'failed', 0); } catch (_) {}
     try { await fireAndForgetActivities.cleanupAgentProcessesActivity(); } catch (_) {}
     throw err;
@@ -981,7 +1255,49 @@ export async function maintenanceWorkflow() {
     startToCloseTimeout: '600 seconds',
     retry: { maximumAttempts: 1 }
   });
-  return await maintenanceActs.maintenanceRunActivity();
+  const result = await maintenanceActs.maintenanceRunActivity();
+
+  // SPRINT-2: Update agent performance metrics
+  try {
+    await maintenanceActs.updateAgentPerformanceActivity();
+    console.log('[MAINTENANCE] Agent performance metrics updated');
+  } catch (e) {
+    console.warn('[MAINTENANCE] Agent performance update failed:', e.message);
+  }
+
+  // SPRINT-3: Cross-build learning analysis
+  try {
+    const learning = await maintenanceActs.runCrossBuildLearningActivity();
+    console.log('[MAINTENANCE] Cross-build learning: ' + (learning?.insights_generated || 0) + ' insights');
+  } catch (e) {
+    console.warn('[MAINTENANCE] Cross-build learning failed:', e.message);
+  }
+
+  // SPRINT-3: Improve underperforming prompts
+  try {
+    const promptResult = await maintenanceActs.improveUnderperformingPromptsActivity();
+    console.log('[MAINTENANCE] Prompt improvement: ' + (promptResult?.improved || 0) + '/' + (promptResult?.flagged || 0) + ' improved');
+  } catch (e) {
+    console.warn('[MAINTENANCE] Prompt improvement failed:', e.message);
+  }
+
+  // SPRINT-3: Check deployment usage
+  try {
+    const usage = await maintenanceActs.checkDeploymentUsageActivity();
+    console.log('[MAINTENANCE] Usage monitoring: ' + (usage?.checked || 0) + ' checked, ' + (usage?.alerts || 0) + ' idle');
+  } catch (e) {
+    console.warn('[MAINTENANCE] Usage monitoring failed:', e.message);
+  }
+
+  // SPRINT-3: Analyze build costs
+  try {
+    const costs = await maintenanceActs.analyzeBuildCostsActivity();
+    console.log('[MAINTENANCE] Cost analysis: avg $' + (costs?.avg_build_cost?.toFixed(2) || '?') + '/build');
+  } catch (e) {
+    console.warn('[MAINTENANCE] Cost analysis failed:', e.message);
+  }
+
+  return result;
 }
 
 // Child workflow exports

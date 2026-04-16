@@ -52,6 +52,18 @@ async function sbPatch(p, body) {
   } catch(e) { console.error('[SB PATCH]', e.message); return false; }
 }
 
+function inferCategory(contract) {
+  const summary = ((contract.system_summary || '') + ' ' + (contract.BUILD_002?.workflow_name || '')).toLowerCase();
+  if (summary.includes('intake') || summary.includes('ingest')) return 'intake';
+  if (summary.includes('classif') || summary.includes('routing') || summary.includes('triage')) return 'classification';
+  if (summary.includes('extract')) return 'extraction';
+  if (summary.includes('notif') || summary.includes('alert')) return 'notification';
+  if (summary.includes('route') || summary.includes('dispatch')) return 'routing';
+  if (summary.includes('report') || summary.includes('dashboard')) return 'reporting';
+  if (summary.includes('monitor') || summary.includes('watch')) return 'monitoring';
+  return 'integration';
+}
+
 function classifyOutputFile(fileName) {
   const n = (fileName || '').toLowerCase();
   if (n.includes('solution demo')) return 'solution_demo';
@@ -316,6 +328,33 @@ export async function postBuildPipelineActivity(jobData) {
     }
     buildLog.push({ step: 10, action: 'finalize_build', detail: finalizeOk ? 'ok' : 'patch failed', ts: new Date().toISOString() });
     console.log('[TEMPORAL PIPELINE] Step 10: Build finalized');
+
+    // Step 10a: Register skillset templates for future reuse
+    if (skillsetId) {
+      try {
+        const contract = jobData._contract || {};
+        const briefData = jobData.brief || jobData.section_a || {};
+        const p1 = jobData.phase1Results || {};
+        const qaScore = jobData.qaScore || p1.qa?.overall_score || null;
+        const compScore = jobData.complianceScore || p1.compliance?.score || null;
+        const testPairs = p1.llm?.test_pairs || null;
+
+        await supabase.from('friday_skillsets').update({
+          brief_template: briefData,
+          schema_template: contract.BUILD_006 || null,
+          workflow_template: contract.BUILD_002 || null,
+          prompt_template: contract.BUILD_004 || null,
+          test_pairs: testPairs,
+          created_from_build_id: ticketId,
+          avg_qa_score: qaScore,
+          avg_compliance_score: compScore,
+          description: contract.system_summary || projectName,
+          category: inferCategory(contract),
+          updated_at: new Date().toISOString()
+        }).eq('id', skillsetId);
+        console.log('[TEMPORAL PIPELINE] Step 10a: Skillset templates registered for', skillsetName);
+      } catch(e) { console.warn('[TEMPORAL PIPELINE] Skillset template registration failed:', e.message); }
+    }
 
     const sanitize = s => (s || '').replace(/[<>:"\/|?*]/g, '-').trim();
     const buildFolderName = sanitize(ticketId + ' - ' + clientName);
@@ -732,5 +771,103 @@ export async function postBuildPipelineActivity(jobData) {
     // Try to mark build as failed
     try { await sbPatch('friday_builds?id=eq.' + buildId, { status: 'failed', build_log: 'Pipeline failed: ' + e.message, updated_at: new Date().toISOString() }); } catch(fe) {}
     throw e;
+  }
+}
+
+export async function sendPhase2CompletionEmailActivity(jobData, phase2Results, onedriveLinks) {
+  const GRAPH_USER_EMAIL = process.env.GRAPH_USER_EMAIL || 'brian@manageai.io';
+  const agentOwnerEmail = jobData.agent_owner_email || jobData.owner_email || '';
+  const ccEmail = 'brian@manageai.io';
+  const toEmails = [agentOwnerEmail, ccEmail].filter(Boolean);
+  if (toEmails.length === 0) {
+    console.warn('[FRIDAY] No emails for Phase 2 completion, skipping');
+    return { sent: false, reason: 'no_recipients' };
+  }
+
+  const clientName = jobData.client || jobData.client_name || 'Client';
+  const projectName = jobData.project_name || 'Build';
+  const ticketId = jobData.ticket_id || '';
+  const reviewUrl = (process.env.FRIDAY_PUBLIC_URL || 'http://5.223.79.255:3000') + '/build-review/' + ticketId + '/final';
+
+  const docRows = (phase2Results || []).map(r => {
+    const statusColor = r.status === 'complete' ? '#16a34a' : '#dc2626';
+    const statusLabel = r.status === 'complete' ? 'Complete' : 'Error';
+    return '<tr><td style="padding:10px 14px;border-bottom:1px solid #E2E6EC;font-size:13px;color:#1E293B">' + (r.name || r.agent_id) +
+      '</td><td style="padding:10px 14px;border-bottom:1px solid #E2E6EC"><span style="color:' + statusColor + ';font-weight:600;font-size:12px">' + statusLabel +
+      '</span></td><td style="padding:10px 14px;border-bottom:1px solid #E2E6EC;font-size:12px;color:#475569">' + (r.format || 'HTML') + '</td></tr>';
+  }).join('');
+
+  const linkRows = (onedriveLinks || []).map(l => {
+    return '<tr><td style="padding:8px 14px;border-bottom:1px solid #E2E6EC;font-size:13px;color:#1E293B">' + (l.name || 'File') +
+      '</td><td style="padding:8px 14px;border-bottom:1px solid #E2E6EC"><a href="' + (l.url || '#') +
+      '" style="color:#4A8FD6;text-decoration:none;font-size:12px;font-weight:600">Open in OneDrive</a></td></tr>';
+  }).join('');
+
+  const htmlBody = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f5f6f8;font-family:Montserrat,Helvetica,Arial,sans-serif">' +
+    '<div style="max-width:640px;margin:0 auto;padding:24px">' +
+    // Header
+    '<div style="background:#1E3348;border-radius:12px 12px 0 0;padding:28px 32px;text-align:center">' +
+    '<div style="font-size:22px;font-weight:700;color:#FFFFFF;letter-spacing:-0.02em">Phase 2 Complete</div>' +
+    '<div style="font-size:14px;color:#CBD5E1;margin-top:6px">' + clientName + ' — ' + projectName + '</div>' +
+    '<div style="font-size:12px;color:#7A8B9A;margin-top:4px">' + ticketId + '</div>' +
+    '</div>' +
+    // Body
+    '<div style="background:#FFFFFF;padding:28px 32px;border:1px solid #E2E6EC;border-top:none">' +
+    // Document table
+    '<div style="font-size:12px;font-weight:700;color:#7A8B9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px">DOCUMENTS GENERATED</div>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:24px">' +
+    '<thead><tr style="border-bottom:2px solid #E2E6EC"><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:#7A8B9A;letter-spacing:0.05em">DOCUMENT</th><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:#7A8B9A">STATUS</th><th style="padding:8px 14px;text-align:left;font-size:11px;font-weight:700;color:#7A8B9A">FORMAT</th></tr></thead>' +
+    '<tbody>' + docRows + '</tbody></table>' +
+    // OneDrive links
+    (linkRows ? '<div style="font-size:12px;font-weight:700;color:#7A8B9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px">ONEDRIVE FILES</div>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:24px">' +
+    '<tbody>' + linkRows + '</tbody></table>' : '') +
+    // What Was Built
+    '<div style="font-size:12px;font-weight:700;color:#7A8B9A;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px">WHAT WAS BUILT</div>' +
+    '<div style="font-size:13px;color:#475569;line-height:1.7;margin-bottom:24px">' +
+    '<strong>Solution Demo</strong> — Interactive React SPA showcasing the agent\'s capabilities, flow diagrams, and architecture.<br>' +
+    '<strong>Build Manual</strong> — Complete implementation guide with scenarios, requirements, Claude config, and timeline.<br>' +
+    '<strong>Requirements & Docs</strong> — PRD with FR-001+ numbering, architecture assessment, deployment summary, and regression suite.<br>' +
+    '<strong>Workflow Blueprints</strong> — Platform-specific workflow JSON files ready for import.<br>' +
+    '<strong>Deployment Package</strong> — 9-subpackage validated deployment bundle.' +
+    '</div>' +
+    // CTA button
+    '<div style="text-align:center;margin:24px 0">' +
+    '<a href="' + reviewUrl + '" style="display:inline-block;background:#4A8FD6;color:#FFFFFF;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">View Build</a>' +
+    '</div>' +
+    '</div>' +
+    // Footer
+    '<div style="background:#1E3348;border-radius:0 0 12px 12px;padding:16px 32px;text-align:center">' +
+    '<div style="font-size:12px;color:#7A8B9A">ManageAI Factory Floor — FRIDAY Build System</div>' +
+    '</div>' +
+    '</div></body></html>';
+
+  try {
+    const { getGraphToken } = await import('./onedrive.js');
+    const token = await getGraphToken();
+    const url = 'https://graph.microsoft.com/v1.0/users/' + GRAPH_USER_EMAIL + '/sendMail';
+    const payload = {
+      message: {
+        subject: 'Phase 2 Complete: ' + projectName + ' (' + ticketId + ') — All Documents Ready',
+        body: { contentType: 'HTML', content: htmlBody },
+        toRecipients: toEmails.map(email => ({ emailAddress: { address: email } }))
+      },
+      saveToSentItems: false
+    };
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('[FRIDAY] Phase 2 email failed:', res.status, text.slice(0, 200));
+      return { sent: false, error: text.slice(0, 200) };
+    }
+    console.log('[FRIDAY] Phase 2 completion email sent to:', toEmails.join(', '));
+    return { sent: true, recipients: toEmails };
+  } catch (e) {
+    console.error('[FRIDAY] Phase 2 email error:', e.message);
+    return { sent: false, error: e.message };
   }
 }

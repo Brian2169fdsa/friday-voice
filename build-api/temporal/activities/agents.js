@@ -114,19 +114,35 @@ async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
         '── QA Results (BUILD-003 output) ──\n' + qaBlock;
     } catch(e) { phase1Context = ''; }
   }
+  // FULL BRIEF — all section_a fields + guardrails + success metrics + acceptance criteria
+  const fullBriefContext = '\n\n=== CLIENT BRIEF (section_a) ===\n' + JSON.stringify(jobData.section_a || {}, null, 2) +
+    '\n\n=== QUALITY CRITERIA ===\n' + (jobData._buildContract?.qualityCriteria || jobData.acceptance_criteria || 'None specified') +
+    '\n\n=== GUARDRAILS ===\n' + (jobData.guardrails || 'None specified') +
+    '\n\n=== SUCCESS METRICS ===\n' + (jobData.success_metrics || 'None specified');
+
+  // Reference template instruction for Phase 2 document agents
+  const referenceInstruction = '\n\n=== REFERENCE TEMPLATES ===\n' +
+    'CRITICAL: Before generating your output, read the appropriate reference template file:\n' +
+    '- For Solution Demo: read /opt/manageai/build-api/templates/solution-demo-reference.html\n' +
+    '- For Build Manual: read /opt/manageai/build-api/templates/build-manual-reference.html\n' +
+    'Match the design system, component patterns, fonts, colors, and structure EXACTLY.\n' +
+    'Replace all content with this build\'s data but keep the visual design identical to the reference.\n' +
+    'Output must be a single-file HTML React 18 SPA using React.createElement (NOT JSX).';
+
   const prompt = agentConfig.task + '\n\nOUTPUT DIRECTORY: ' + agentDir +
-    '\n\nWrite ALL files directly to ' + agentDir + '. Use exact filenames specified. Work autonomously. Do not ask questions.' + contractFocus + phase1Context;
+    '\n\nWrite ALL files directly to ' + agentDir + '. Use exact filenames specified. Work autonomously. Do not ask questions.' + contractFocus + phase1Context + fullBriefContext + referenceInstruction;
   const promptFile = '/tmp/friday-temporal-' + jobData.job_id + '-' + agentConfig.agent_id + '.txt';
   await fs.writeFile(promptFile, prompt);
   console.log('[TEMPORAL][' + agentConfig.agent_id + '] Starting: ' + agentConfig.specialist);
   // H6: Blocked paths — check after agent exits
   const blockedPaths = ['/root/.ssh', '/root/.aws', '/etc/shadow', '/opt/manageai/build-api/.env'];
 
-  const t = Date.now();
+  const startTime = Date.now();
+  let result;
   try {
     const timeoutMs = agentConfig.agent_id === 'agent_01' ? AGENT_01_TIMEOUT : AGENT_TIMEOUT;
     await runClaudeAgent(promptFile, agentDir, timeoutMs);
-    const dur = Math.round((Date.now() - t) / 1000);
+    const dur = Math.round((Date.now() - startTime) / 1000);
     console.log('[TEMPORAL][' + agentConfig.agent_id + '] Done in ' + dur + 's');
     await fs.rm(promptFile, { force: true });
 
@@ -135,19 +151,37 @@ async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
       try {
         const stat = await fs.stat(p);
         const mtime = stat.mtimeMs;
-        if (mtime > t) {
+        if (mtime > startTime) {
           console.warn(`[SECURITY] Agent ${agentConfig.agent_id} modified blocked path: ${p}`);
         }
       } catch (_) { /* path doesn't exist — fine */ }
     }
 
-    return { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'complete', duration: dur, output_subdir: agentConfig.output_subdir };
+    result = { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'complete', duration: dur, output_subdir: agentConfig.output_subdir };
   } catch (err) {
-    const dur = Math.round((Date.now() - t) / 1000);
+    const dur = Math.round((Date.now() - startTime) / 1000);
     console.error('[TEMPORAL][' + agentConfig.agent_id + '] Error:', err.message.slice(0, 300));
     await fs.rm(promptFile, { force: true });
-    return { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'error', error: err.message.slice(0, 200), duration: dur, output_subdir: agentConfig.output_subdir };
+    result = { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'error', error: err.message.slice(0, 200), duration: dur, output_subdir: agentConfig.output_subdir };
   }
+
+  // Persist agent run to build_agent_runs
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    await sb.from('build_agent_runs').insert({
+      ticket_id: jobData.ticket_id || jobData.job_id,
+      agent_id: agentConfig.agent_id,
+      agent_name: agentConfig.specialist,
+      status: result.status === 'complete' ? 'complete' : 'error',
+      started_at: new Date(startTime).toISOString(),
+      completed_at: new Date().toISOString(),
+      duration_seconds: Math.round((Date.now() - startTime) / 1000),
+      output: { files: result.files || [], status: result.status }
+    });
+  } catch (_) {}
+
+  return result;
 }
 
 export async function agent01Activity(jobData, contract) {

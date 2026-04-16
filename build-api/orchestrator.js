@@ -9,7 +9,8 @@ const AGENT_CONTRACT_MAP = {
   agent_01: 'solutionDemo',
   agent_02: 'skillsetManual',
   agent_03: 'requirementsDoc',
-  agent_04: 'blueprint'
+  agent_04: 'blueprint',
+  agent_05: 'deploymentPackage'
 };
 
 // ── Fallback contract (always works) ────────────────────────────────────────

@@ -123,8 +123,8 @@ export async function uploadToOnedriveActivity(jobData, agentResults) {
   const clientDisplay = jobData.client || jobData.client_name || '';
   const buildFolderName = sanitize(ticketId + ' - ' + clientDisplay);
   const basePath = 'FRIDAY Builds/' + buildFolderName;
-  const versionPath = basePath + '/Phase 2';
-  const currentPath = basePath + '/Phase 2';
+  const versionPath = basePath + '/Phase 2/v' + buildVersion;
+  const currentPath = basePath + '/Phase 2/current';
 
   const token = await getGraphToken();
   await ensureFolder(token, versionPath);
@@ -134,7 +134,7 @@ export async function uploadToOnedriveActivity(jobData, agentResults) {
     '.html': 'text/html', '.pdf': 'application/pdf', '.json': 'application/json',
     '.md': 'text/markdown', '.txt': 'text/plain', '.js': 'text/javascript', '.css': 'text/css'
   };
-  const uploaded = [];
+  const uploadedLinks = [];
 
   async function scan(dir, rel, depth) {
     rel = rel || '';
@@ -154,7 +154,7 @@ export async function uploadToOnedriveActivity(jobData, agentResults) {
           const fileContent = await fs.readFile(path.join(dir, e.name));
           const ext = path.extname(e.name).toLowerCase();
           const url = await uploadFile(token, versionPath, rel + e.name, fileContent, mimes[ext]);
-          uploaded.push({ name: rel + e.name, url });
+          uploadedLinks.push({ name: rel + e.name, path: versionPath + '/' + rel + e.name, url });
           try {
             await uploadFile(token, currentPath, rel + e.name, fileContent, mimes[ext]);
           } catch (copyErr) {
@@ -168,8 +168,8 @@ export async function uploadToOnedriveActivity(jobData, agentResults) {
   }
 
   await scan(outputDir);
-  console.log('[TEMPORAL] Uploaded', uploaded.length, 'files to OneDrive');
-  return uploaded.filter(u => u.url);
+  console.log('[TEMPORAL] Uploaded', uploadedLinks.length, 'files to OneDrive');
+  return { success: true, files: uploadedLinks.filter(u => u.url), count: uploadedLinks.filter(u => u.url).length };
 }
 
 // Upload Phase 1 build manifests to OneDrive
