@@ -21,6 +21,7 @@ import * as pythonDev from './activities/deep/python-dev.js';
 import * as frontendDev from './activities/deep/frontend-dev.js';
 import * as browserAutomationDev from './activities/deep/browser-automation-dev.js';
 import * as voiceAgentDev from './activities/deep/voice-agent-dev.js';
+import * as integrationSpecialistDev from './activities/deep/integration-specialist-dev.js';
 import * as deepShared from './activities/deep/deep-shared.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,6 +43,7 @@ async function run() {
       ...frontendDev,
       ...browserAutomationDev,
       ...voiceAgentDev,
+      ...integrationSpecialistDev,
       ...deepShared
     },
     maxConcurrentActivityTaskExecutions: 4,

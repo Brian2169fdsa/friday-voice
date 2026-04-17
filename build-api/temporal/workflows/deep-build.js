@@ -50,6 +50,15 @@ export async function DeepBuildWorkflow(jobData) {
     case 'voice-agent':
       result = await longActivities.buildVoiceAgentActivity(jobData);
       break;
+    case 'integration_salesforce':
+    case 'integration_hubspot':
+    case 'integration_slack':
+    case 'integration_teams':
+    case 'integration_shopify':
+    case 'integration_zendesk':
+    case 'integration_gworkspace':
+      result = await longActivities.buildIntegrationActivity(jobData);
+      break;
     default:
       throw new Error(`Unknown deep build type: ${language}`);
   }

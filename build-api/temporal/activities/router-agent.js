@@ -95,7 +95,9 @@ export async function deepRouterActivity(jobData) {
     'data_pipeline', 'python',
     'frontend_app', 'frontend',
     'browser_automation', 'browser-automation',
-    'voice_agent', 'voice-agent'
+    'voice_agent', 'voice-agent',
+    'integration_salesforce', 'integration_hubspot', 'integration_slack',
+    'integration_teams', 'integration_shopify', 'integration_zendesk', 'integration_gworkspace'
   ];
   const validRequests = deepBuildTypes.filter(t => validTypes.includes(t));
   const invalidRequests = deepBuildTypes.filter(t => !validTypes.includes(t));
@@ -216,7 +218,14 @@ function typeToBuilder(type) {
     'browser_automation': 'BUILD-020',
     'browser-automation': 'BUILD-020',
     'voice_agent': 'BUILD-021',
-    'voice-agent': 'BUILD-021'
+    'voice-agent': 'BUILD-021',
+    'integration_salesforce': 'BUILD-022',
+    'integration_hubspot': 'BUILD-022',
+    'integration_slack': 'BUILD-022',
+    'integration_teams': 'BUILD-022',
+    'integration_shopify': 'BUILD-022',
+    'integration_zendesk': 'BUILD-022',
+    'integration_gworkspace': 'BUILD-022'
   };
   return map[type] || 'BUILD-017';
 }

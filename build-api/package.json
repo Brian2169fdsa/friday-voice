@@ -19,6 +19,7 @@
     "@temporalio/worker": "^1.15.0",
     "@temporalio/workflow": "^1.15.0",
     "bullmq": "^5.71.0",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "node-cron": "^4.2.1",
     "uuid": "^13.0.0",

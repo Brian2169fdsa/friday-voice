@@ -28,7 +28,14 @@ export function typeToBuilder(type) {
     'browser_automation': 'BUILD-020',
     'browser-automation': 'BUILD-020',
     'voice_agent': 'BUILD-021',
-    'voice-agent': 'BUILD-021'
+    'voice-agent': 'BUILD-021',
+    'integration_salesforce': 'BUILD-022',
+    'integration_hubspot': 'BUILD-022',
+    'integration_slack': 'BUILD-022',
+    'integration_teams': 'BUILD-022',
+    'integration_shopify': 'BUILD-022',
+    'integration_zendesk': 'BUILD-022',
+    'integration_gworkspace': 'BUILD-022'
   };
   return map[type] || 'BUILD-017';
 }
@@ -142,6 +149,15 @@ BROWSER + DATA PATTERNS:
 
 SERVICE + FRONTEND PATTERNS:
 - custom_service + frontend_app: Service is the backend API. Frontend calls it. Shared auth.
+
+INTEGRATION + OTHER PATTERNS:
+- integration_salesforce + custom_service: Service handles webhook callbacks from Salesforce. Integration writes Apex triggers that call service endpoints.
+- integration_hubspot + frontend_app: Frontend embeds HubSpot timeline cards and contact widgets. Integration exposes Custom Card API endpoints.
+- integration_slack + custom_service: Slack Bolt app receives events, calls service for business logic. Shared auth via signing secret.
+- integration_teams + frontend_app: Teams tab embeds frontend. SSO via MSAL. Shared user identity.
+- integration_shopify + data_pipeline: Shopify webhooks feed order/product events into pipeline for analytics.
+- integration_zendesk + custom_service: Zendesk app sidebar calls service for enrichment data. Service owns the data layer.
+- integration_gworkspace + data_pipeline: Apps Script pushes Sheets/Drive data into pipeline for processing.
 
 Write your contract to CONTRACT.json:
 

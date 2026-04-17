@@ -91,7 +91,14 @@ function mapTypeToDeepBuildType(routerType) {
     'browser_automation': 'browser_automation',
     'browser-automation': 'browser_automation',
     'voice_agent': 'voice_agent',
-    'voice-agent': 'voice_agent'
+    'voice-agent': 'voice_agent',
+    'integration_salesforce': 'integration_salesforce',
+    'integration_hubspot': 'integration_hubspot',
+    'integration_slack': 'integration_slack',
+    'integration_teams': 'integration_teams',
+    'integration_shopify': 'integration_shopify',
+    'integration_zendesk': 'integration_zendesk',
+    'integration_gworkspace': 'integration_gworkspace'
   };
   return map[routerType] || 'node-service';
 }

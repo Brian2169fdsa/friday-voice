@@ -3942,7 +3942,7 @@ app.post('/api/build/brief', async (req, res) => {
       if (!Array.isArray(req.body.deep_builds) || req.body.deep_builds.length === 0) {
         return res.status(400).json({ success: false, error: 'When enable_deep_builds is true, deep_builds must be a non-empty array' });
       }
-      const validDeepTypes = ['custom_service', 'data_pipeline', 'frontend_app', 'node-service', 'python', 'frontend'];
+      const validDeepTypes = ['custom_service', 'data_pipeline', 'frontend_app', 'node-service', 'python', 'frontend', 'browser_automation', 'browser-automation', 'voice_agent', 'voice-agent', 'integration_salesforce', 'integration_hubspot', 'integration_slack', 'integration_teams', 'integration_shopify', 'integration_zendesk', 'integration_gworkspace'];
       const invalidDeepTypes = req.body.deep_builds.filter(t => !validDeepTypes.includes(t));
       if (invalidDeepTypes.length > 0) {
         return res.status(400).json({ success: false, error: `Invalid deep_builds types: ${invalidDeepTypes.join(', ')}`, valid_types: validDeepTypes });
@@ -4041,7 +4041,7 @@ app.post('/api/build/deep', async (req, res) => {
 
   const { deep_build_type, project_name, client, brief, agent_owner_email } = req.body;
 
-  const validDeepTypes = ['node-service', 'python', 'frontend', 'browser_automation', 'browser-automation', 'voice_agent', 'voice-agent'];
+  const validDeepTypes = ['node-service', 'python', 'frontend', 'browser_automation', 'browser-automation', 'voice_agent', 'voice-agent', 'integration_salesforce', 'integration_hubspot', 'integration_slack', 'integration_teams', 'integration_shopify', 'integration_zendesk', 'integration_gworkspace'];
   if (!deep_build_type || !validDeepTypes.includes(deep_build_type)) {
     return res.status(400).json({
       success: false,
