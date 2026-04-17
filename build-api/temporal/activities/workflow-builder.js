@@ -40,6 +40,65 @@ function runClaudeAgent(promptFile, agentDir, timeoutMs) {
   });
 }
 
+async function importWorkflowsToN8n(workflowDir, n8nUrl, n8nKey) {
+  let imported = 0, activated = 0, failed = 0;
+  const importedIds = [];
+  try {
+    const files = await fs.readdir(workflowDir);
+    const jsonFiles = files.filter(f => f.endsWith('.json') && !f.includes('manifest') && !f.startsWith('.'));
+    for (const file of jsonFiles) {
+      try {
+        const filePath = path.join(workflowDir, file);
+        const content = JSON.parse(await fs.readFile(filePath, 'utf8'));
+        const payload = {
+          name: content.name || file.replace('.json', ''),
+          nodes: content.nodes || [],
+          connections: content.connections || {},
+          settings: content.settings || { executionOrder: 'v1' },
+          staticData: content.staticData || null
+        };
+        const headers = { 'Content-Type': 'application/json', 'X-N8N-API-KEY': n8nKey };
+        const createResp = await fetch(`${n8nUrl}/api/v1/workflows`, {
+          method: 'POST', headers, body: JSON.stringify(payload)
+        });
+        if (!createResp.ok) {
+          console.warn(`[BUILD-002] n8n import failed for ${file}: HTTP ${createResp.status}`);
+          failed++;
+          continue;
+        }
+        const created = await createResp.json();
+        const workflowId = created.id || created.data?.id;
+        importedIds.push({ file, id: workflowId, name: payload.name });
+        imported++;
+        if (workflowId) {
+          try {
+            const activateResp = await fetch(`${n8nUrl}/api/v1/workflows/${workflowId}/activate`,
+              { method: 'POST', headers }
+            );
+            if (activateResp.ok) {
+              activated++;
+            } else {
+              const patchResp = await fetch(`${n8nUrl}/api/v1/workflows/${workflowId}`,
+                { method: 'PATCH', headers, body: JSON.stringify({ active: true }) }
+              );
+              if (patchResp.ok) activated++;
+            }
+          } catch (e) {
+            console.warn(`[BUILD-002] Activate failed for ${workflowId}:`, e.message);
+          }
+        }
+      } catch (e) {
+        console.warn(`[BUILD-002] Error importing ${file}:`, e.message);
+        failed++;
+      }
+    }
+  } catch (e) {
+    console.warn('[BUILD-002] importWorkflowsToN8n failed:', e.message);
+  }
+  console.log(`[BUILD-002] n8n import: ${imported} imported, ${activated} activated, ${failed} failed`);
+  return { imported, activated, failed, workflows: importedIds };
+}
+
 export async function workflowBuilderActivity(jobData, contract) {
   const startTime = Date.now();
   const outputDir = '/tmp/friday-temporal-' + jobData.job_id;
@@ -232,8 +291,23 @@ OUTPUT DIRECTORY: ${agentDir}`;
       manifest = JSON.parse(raw);
     } catch(e) { console.warn('[BUILD-002] Could not read workflow-manifest.json:', e.message); }
 
-    const wfCount = manifest?.workflows?.length || 0;
-    const active = manifest?.workflows?.filter(w => w.active)?.length || 0;
+    // Node-side n8n import: ensure workflows are imported and activated even if agent curl failed
+    const n8nImportResult = await importWorkflowsToN8n(agentDir, n8nUrl, n8nKey || '');
+    if (n8nImportResult.imported > 0) {
+      // Update manifest with actual n8n IDs
+      if (manifest && manifest.workflows) {
+        for (let i = 0; i < Math.min(n8nImportResult.workflows.length, manifest.workflows.length); i++) {
+          if (n8nImportResult.workflows[i]?.id) {
+            manifest.workflows[i].n8n_id = n8nImportResult.workflows[i].id;
+            manifest.workflows[i].active = i < n8nImportResult.activated;
+          }
+        }
+        try { await fs.writeFile(path.join(agentDir, 'workflow-manifest.json'), JSON.stringify(manifest, null, 2)); } catch(_) {}
+      }
+    }
+
+    const wfCount = manifest?.workflows?.length || n8nImportResult.imported || 0;
+    const active = n8nImportResult.activated || manifest?.workflows?.filter(w => w.active)?.length || 0;
     console.log('[BUILD-002] Done in ' + dur + 's | Workflows: ' + active + '/' + wfCount + ' active');
 
     // Flag zero-workflow builds as a QA concern

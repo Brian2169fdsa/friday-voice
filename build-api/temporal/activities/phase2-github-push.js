@@ -49,6 +49,26 @@ export async function pushPhase2ToGitHubActivity(jobData, buildDir) {
     return { success: false, reason: 'No token' };
   }
 
+  // Remove scratch files before pushing to GitHub
+  const scratchPatterns = ['prompt.txt', '.prompt.txt', 'agent-prompt.txt', '.scratch', '.DS_Store'];
+  async function cleanupBeforePush(dir, depth) {
+    depth = depth || 0;
+    if (depth > 5) return;
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory() && !entry.name.startsWith('.')) {
+          await cleanupBeforePush(fullPath, depth + 1);
+        } else if (!entry.isDirectory()) {
+          const shouldRemove = scratchPatterns.some(p => entry.name === p || entry.name.endsWith(p));
+          if (shouldRemove) { try { await fs.unlink(fullPath); } catch (_) {} }
+        }
+      }
+    } catch (_) {}
+  }
+  await cleanupBeforePush(buildDir);
+
   // Collect Phase 2 files to push
   const phase2Dirs = ['build-docs', 'deployment-package', 'workflow', 'deliverables', 'comparison'];
   const filesToPush = [];

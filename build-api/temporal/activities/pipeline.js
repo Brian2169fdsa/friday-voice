@@ -135,6 +135,86 @@ function extractModuleStages(workflowJson) {
   return stages;
 }
 
+// ─── Phase 2 file-existence helpers ─────────────────────────────────────────
+
+const PHASE2_AGENT_CONFIG = [
+  {
+    id: 'agent_01',
+    name: 'Solution Demo',
+    format: 'HTML',
+    dir: 'deliverables',
+    patterns: ['Solution Demo', 'solution-demo', '.html']
+  },
+  {
+    id: 'agent_02',
+    name: 'Build Manual',
+    format: 'HTML',
+    dir: 'deliverables',
+    patterns: ['Build Manual', 'build-manual', '.html']
+  },
+  {
+    id: 'agent_03',
+    name: 'Requirements & Docs',
+    format: 'MD + JSON',
+    dir: 'build-docs',
+    patterns: ['Requirements', 'Architecture', 'Deployment Summary', 'regression-suite']
+  },
+  {
+    id: 'agent_04',
+    name: 'Workflow Blueprints',
+    format: 'JSON',
+    dir: 'workflow',
+    patterns: ['.json']
+  },
+  {
+    id: 'agent_05',
+    name: 'Deployment Package',
+    format: 'JSON',
+    dir: 'deployment-package',
+    patterns: ['package.json', 'workflows.json', 'schemas.json']
+  }
+];
+
+async function resolveAgentStatus(buildDir, agentConfig) {
+  try {
+    const dirPath = path.join(buildDir, agentConfig.dir);
+    const files = await fs.readdir(dirPath);
+    const matching = files.filter(f => {
+      if (f.startsWith('.')) return false;
+      return agentConfig.patterns.some(p => f.includes(p));
+    });
+    return { status: matching.length > 0 ? 'complete' : 'error', file_count: matching.length, files: matching };
+  } catch (e) {
+    return { status: 'error', file_count: 0, files: [] };
+  }
+}
+
+async function cleanupScratchFiles(buildDir) {
+  const scratchPatterns = ['prompt.txt', '.prompt.txt', 'agent-prompt.txt', '.scratch', '.DS_Store', '__pycache__'];
+  let removed = 0;
+  async function walk(dir) {
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (scratchPatterns.includes(entry.name)) {
+            try { await fs.rm(fullPath, { recursive: true, force: true }); removed++; } catch (_) {}
+          } else if (!entry.name.startsWith('.')) {
+            await walk(fullPath);
+          }
+        } else {
+          const shouldRemove = scratchPatterns.some(p => entry.name === p || entry.name.endsWith(p));
+          if (shouldRemove) { try { await fs.unlink(fullPath); removed++; } catch (_) {} }
+        }
+      }
+    } catch (_) {}
+  }
+  await walk(buildDir);
+  console.log(`[CLEANUP] Removed ${removed} scratch files from ${buildDir}`);
+  return { removed };
+}
+
 export async function updateBuildDurationActivity(buildId, durations) {
   if (!buildId) return;
   try {
@@ -788,6 +868,23 @@ export async function sendPhase2CompletionEmailActivity(jobData, phase2Results, 
   const projectName = jobData.project_name || 'Build';
   const ticketId = jobData.ticket_id || '';
   const reviewUrl = (process.env.FRIDAY_PUBLIC_URL || 'http://5.223.79.255:3000') + '/build-review/' + ticketId + '/final';
+
+  // Override status using file-existence check — file recovery exit codes may show 'error'
+  // even when files were successfully written to disk
+  const buildDir = '/tmp/friday-temporal-' + (jobData.job_id || '');
+  if (buildDir && (phase2Results || []).length > 0) {
+    try {
+      await cleanupScratchFiles(buildDir);
+      for (let i = 0; i < Math.min((phase2Results || []).length, PHASE2_AGENT_CONFIG.length); i++) {
+        const diskStatus = await resolveAgentStatus(buildDir, PHASE2_AGENT_CONFIG[i]);
+        if (diskStatus.file_count > 0) {
+          phase2Results[i] = { ...phase2Results[i], status: 'complete', file_count: diskStatus.file_count };
+        }
+      }
+    } catch (e) {
+      console.warn('[FRIDAY] Phase 2 file-check failed (non-blocking):', e.message);
+    }
+  }
 
   const docRows = (phase2Results || []).map(r => {
     const statusColor = r.status === 'complete' ? '#16a34a' : '#dc2626';

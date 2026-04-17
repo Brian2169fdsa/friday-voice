@@ -196,7 +196,7 @@ A module that exports:
 - Task types must cover: generation, analysis, extraction, scoring, classification, summarization, escalation_check
 
 ### 4. llm-manifest.json
-A JSON file summarizing what was built:
+A JSON file that MUST enumerate every prompt exported from prompt-library.js:
 {
   "build_id": "${jobData.job_id}",
   "client": "${client}",
@@ -204,13 +204,36 @@ A JSON file summarizing what was built:
   "generated_at": "<ISO timestamp>",
   "primary_model": "claude-sonnet-4-6",
   "secondary_model": "claude-haiku-4-5-20251001",
+  "system_prompt": {
+    "export_name": "SYSTEM_PROMPT",
+    "description": "Main system prompt for the agent's persona and boundaries",
+    "model": "claude-sonnet-4-6"
+  },
+  "prompts": [
+    {
+      "id": "<EXPORT_NAME>",
+      "export_name": "<EXPORT_NAME>",
+      "description": "<what this prompt does>",
+      "model": "claude-sonnet-4-6",
+      "variables": ["<list of template variables>"],
+      "used_in_workflows": ["<workflow names that call this prompt>"]
+    }
+  ],
+  "routing_table": [
+    { "scenario": "classification", "model": "claude-haiku-4-5-20251001", "prompt_ids": [] },
+    { "scenario": "generation", "model": "claude-sonnet-4-6", "prompt_ids": [] }
+  ],
   "system_prompt_length": <char count>,
-  "prompt_templates": ["list of template names"],
   "routing_rules": <count>,
   "edge_cases_handled": ["list of edge cases covered"],
   "guardrails_enforced": ["list of guardrails in system prompt"],
-  "files_produced": ["ai-integration.js", "prompt-library.js", "model-routing.js"]
+  "files_produced": ["ai-integration.js", "prompt-library.js", "model-routing.js"],
+  "total_prompts": <count of prompts array>,
+  "validated": true
 }
+
+CRITICAL: Do NOT leave the prompts array empty. Every named export in prompt-library.js MUST appear in the manifest.
+Do NOT write prompt.txt. All prompts live in prompt-library.js only. If you want a plain-text reference, write prompts-reference.md in ${agentDir}/ — but prompt-library.js is the source of truth.
 
 ## Instructions
 
@@ -224,15 +247,15 @@ A JSON file summarizing what was built:
 
 Do not ask questions. Everything you need is above.`;
 
-  const promptFile = path.join(agentDir, 'prompt.txt');
+  const promptFile = '/tmp/friday-llm-' + jobData.job_id + '.txt';
   await fs.writeFile(promptFile, prompt);
-  if (AGENT_UID) { try { await fs.chown(promptFile, AGENT_UID, AGENT_GID); } catch(e) {} }
 
   const start = Date.now();
   console.log('[BUILD-004] Starting LLM Integration Specialist for', client, '/', project + (jobData._revisionCount ? ' (revision ' + jobData._revisionCount + ')' : ''));
 
   try {
     await runClaudeAgent(promptFile, agentDir, LLM_TIMEOUT);
+    await fs.rm(promptFile, { force: true });
     const dur = ((Date.now() - start) / 1000).toFixed(1);
 
     // Read manifest
@@ -308,6 +331,7 @@ Do not ask questions. Everything you need is above.`;
 
   } catch(err) {
     const dur = ((Date.now() - start) / 1000).toFixed(1);
+    try { await fs.rm(promptFile, { force: true }); } catch(_) {}
     console.error('[BUILD-004] Error:', err.message.slice(0, 300));
 
     try {

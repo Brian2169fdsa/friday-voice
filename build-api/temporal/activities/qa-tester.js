@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { execSync } from 'child_process';
 import { mkdtempSync, rmSync } from 'fs';
+import fsPromises from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { heartbeat, ApplicationFailure } from '@temporalio/activity';
@@ -502,6 +503,8 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
   const customerId = jobData.customerId || jobData.customer_id;
   const clientName = jobData.client || jobData.client_name || jobData.clientName || 'Unknown';
   const buildContract = jobData.buildContract || contract || {};
+  const buildDir = '/tmp/friday-temporal-' + (jobData.job_id || ticketId || 'unknown');
+  try { await fsPromises.mkdir(buildDir + '/qa', { recursive: true }); } catch(_) {}
 
   console.log(`[BUILD-003] Starting real functional QA for ${clientName} / ${ticketId}`);
   const startTime = Date.now();
@@ -614,6 +617,20 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
 
       console.log(`[BUILD-003] QA PASSED in ${iterationCount} iterations | Overall: ${scores.overall}/100 | ${testsPassed}/${allTests.length} tests | ${Math.round(duration / 1000)}s`);
 
+      const qaResult = {
+        suite: 'QA Test Suite for ' + clientName,
+        total_tests: allTests.length,
+        passed: testsPassed,
+        failed: allTests.length - testsPassed,
+        overall_score: scores.overall,
+        scores,
+        iterations: iterationCount,
+        tests: allTests,
+        summary: { total: allTests.length, passed: testsPassed, failed: allTests.length - testsPassed, skipped: 0 },
+        generated_at: new Date().toISOString()
+      };
+      try { await fsPromises.writeFile(buildDir + '/qa/test-results.json', JSON.stringify(qaResult, null, 2)); } catch(_) {}
+
       return {
         agent_id: 'qa_tester',
         specialist: 'BUILD-003 QA Tester',
@@ -716,6 +733,27 @@ export async function qaTesterActivity(jobData, contract, buildResults) {
     errors: [{ message: `QA failed after ${MAX_ITERATIONS} iterations` }],
     completed_at: new Date().toISOString()
   }).eq('ticket_id', ticketId).eq('agent_id', 'BUILD-003');
+
+  // Write partial results artifact before throwing so downstream has something to inspect
+  try {
+    const finalSignals = await supabase.from('build_quality_signals')
+      .select('payload').eq('ticket_id', ticketId).eq('from_agent', 'BUILD-003')
+      .eq('signal_type', 'qa_results').order('created_at', { ascending: false }).limit(1).single();
+    const lastPayload = finalSignals.data?.payload || {};
+    await fsPromises.writeFile(buildDir + '/qa/test-results.json', JSON.stringify({
+      suite: 'QA Test Suite for ' + clientName,
+      total_tests: lastPayload.all_tests?.length || 0,
+      passed: (lastPayload.all_tests || []).filter(t => t.passed).length,
+      failed: (lastPayload.all_tests || []).filter(t => !t.passed).length,
+      overall_score: lastPayload.scores?.overall || 0,
+      scores: lastPayload.scores || {},
+      iterations: MAX_ITERATIONS,
+      tests: lastPayload.all_tests || [],
+      summary: { total: lastPayload.all_tests?.length || 0, passed: (lastPayload.all_tests || []).filter(t => t.passed).length, failed: (lastPayload.all_tests || []).filter(t => !t.passed).length, skipped: 0 },
+      status: 'failed_max_iterations',
+      generated_at: new Date().toISOString()
+    }, null, 2));
+  } catch(_) {}
 
   throw ApplicationFailure.create({
     message: `[BUILD-003] QA FAILED after ${MAX_ITERATIONS} iterations. Manual review required for ticket ${ticketId}.`,
