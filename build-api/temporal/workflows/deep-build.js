@@ -42,6 +42,10 @@ export async function DeepBuildWorkflow(jobData) {
     case 'frontend':
       result = await longActivities.buildFrontendActivity(jobData);
       break;
+    case 'browser_automation':
+    case 'browser-automation':
+      result = await longActivities.buildBrowserAutomationActivity(jobData);
+      break;
     default:
       throw new Error(`Unknown deep build type: ${language}`);
   }

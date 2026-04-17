@@ -19,6 +19,7 @@ if (process.env.NODE_ENV !== 'production') {
 import * as nodeServiceDev from './activities/deep/node-service-dev.js';
 import * as pythonDev from './activities/deep/python-dev.js';
 import * as frontendDev from './activities/deep/frontend-dev.js';
+import * as browserAutomationDev from './activities/deep/browser-automation-dev.js';
 import * as deepShared from './activities/deep/deep-shared.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +39,7 @@ async function run() {
       ...nodeServiceDev,
       ...pythonDev,
       ...frontendDev,
+      ...browserAutomationDev,
       ...deepShared
     },
     maxConcurrentActivityTaskExecutions: 4,

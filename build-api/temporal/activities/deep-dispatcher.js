@@ -87,7 +87,9 @@ function mapTypeToDeepBuildType(routerType) {
   const map = {
     'custom_service': 'node-service',
     'data_pipeline': 'python',
-    'frontend_app': 'frontend'
+    'frontend_app': 'frontend',
+    'browser_automation': 'browser_automation',
+    'browser-automation': 'browser_automation'
   };
   return map[routerType] || 'node-service';
 }

@@ -32,23 +32,140 @@ export async function deepRouterActivity(jobData) {
 
   console.log(`[BUILD-013-ROUTER] Starting deep router for ${ticketId}`);
 
-  // 1. Load prior similar builds for pattern matching
-  const similarBuilds = await loadSimilarBuilds(supabase, jobData);
-  console.log(`[BUILD-013-ROUTER] Found ${similarBuilds.length} similar prior builds`);
+  // ===== OPT-IN GATE =====
+  const optInEnabled = jobData.enable_deep_builds === true;
+  const deepBuildTypes = jobData.deep_builds;
+  const hasValidOptIn = optInEnabled &&
+    Array.isArray(deepBuildTypes) &&
+    deepBuildTypes.length > 0;
 
-  // 2. Agentic routing via Claude Code
-  let plan = await runClaudeRouterAgent(jobData, similarBuilds, ticketId);
-  console.log(`[BUILD-013-ROUTER] Claude routing: ${plan.primary_type} | confidence=${plan.confidence}`);
+  if (!hasValidOptIn) {
+    const reason = !optInEnabled
+      ? 'Brief missing enable_deep_builds: true'
+      : 'Brief missing or invalid deep_builds array';
 
-  // 3. If confidence below threshold, Codex adversarial review
-  if (plan.confidence < CONFIDENCE_THRESHOLD) {
-    console.log(`[BUILD-013-ROUTER] Low confidence — requesting Codex second opinion`);
-    const codexReview = await runCodexRouterReview(jobData, plan, similarBuilds);
-    plan = mergeRoutingPlans(plan, codexReview);
-    console.log(`[BUILD-013-ROUTER] After Codex merge: ${plan.primary_type} | confidence=${plan.confidence}`);
+    console.log(`[BUILD-013-ROUTER] Opt-in NOT active — ${reason}`);
+
+    const fastOnlyPlan = {
+      primary_type: 'n8n_agent',
+      dispatches: [{
+        queue: 'friday-builds',
+        type: 'n8n_agent',
+        role: 'primary',
+        reason: 'Default — no deep build opt-in flags'
+      }],
+      confidence: 1.0,
+      reasoning: `Brief did not opt in to deep builds (${reason}).`,
+      opt_in_mode: 'disabled',
+      deep_builds_requested: false,
+      router_version: 'opt-in-v1'
+    };
+
+    try {
+      await supabase.from('build_agent_runs').insert({
+        ticket_id: ticketId,
+        agent_id: 'BUILD-013-ROUTER',
+        agent_name: 'Deep Dispatch Router',
+        status: 'complete',
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date().toISOString(),
+        duration_seconds: Math.round((Date.now() - startTime) / 1000),
+        output: fastOnlyPlan
+      });
+    } catch (_) {}
+
+    try {
+      await supabase.from('build_quality_signals').insert({
+        ticket_id: ticketId,
+        agent_id: 'BUILD-013-ROUTER',
+        signal_type: 'routing_decision',
+        confidence: 1.0,
+        payload: fastOnlyPlan
+      });
+    } catch (_) {}
+
+    return fastOnlyPlan;
   }
 
-  // 4. Persist the routing decision
+  // ===== OPT-IN ACTIVE =====
+  console.log(`[BUILD-013-ROUTER] Opt-in ACTIVE — requested: ${deepBuildTypes.join(', ')}`);
+
+  const validTypes = [
+    'custom_service', 'node-service', 'node_service',
+    'data_pipeline', 'python',
+    'frontend_app', 'frontend',
+    'browser_automation', 'browser-automation'
+  ];
+  const validRequests = deepBuildTypes.filter(t => validTypes.includes(t));
+  const invalidRequests = deepBuildTypes.filter(t => !validTypes.includes(t));
+
+  if (invalidRequests.length > 0) {
+    console.warn(`[BUILD-013-ROUTER] Ignoring invalid types: ${invalidRequests.join(', ')}`);
+  }
+
+  if (validRequests.length === 0) {
+    const fastOnlyPlan = {
+      primary_type: 'n8n_agent',
+      dispatches: [{
+        queue: 'friday-builds',
+        type: 'n8n_agent',
+        role: 'primary',
+        reason: 'All requested deep build types were invalid'
+      }],
+      confidence: 1.0,
+      reasoning: `Opt-in set but no valid types. Invalid: ${invalidRequests.join(', ')}.`,
+      opt_in_mode: 'invalid_types',
+      deep_builds_requested: false,
+      rejected_types: invalidRequests,
+      router_version: 'opt-in-v1'
+    };
+
+    try {
+      await supabase.from('build_agent_runs').insert({
+        ticket_id: ticketId,
+        agent_id: 'BUILD-013-ROUTER',
+        agent_name: 'Deep Dispatch Router',
+        status: 'complete',
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date().toISOString(),
+        duration_seconds: Math.round((Date.now() - startTime) / 1000),
+        output: fastOnlyPlan
+      });
+    } catch (_) {}
+
+    return fastOnlyPlan;
+  }
+
+  // Build dispatch plan from explicit request
+  const dispatches = [
+    {
+      queue: 'friday-builds',
+      type: 'n8n_agent',
+      role: 'primary',
+      reason: 'Core workflow automation (always fast queue)'
+    },
+    ...validRequests.map(type => ({
+      queue: 'friday-deep-builds',
+      type: type,
+      role: 'sub-build',
+      reason: `Explicitly requested in brief deep_builds: ${type}`,
+      builder: typeToBuilder(type)
+    }))
+  ];
+
+  const explicitPlan = {
+    primary_type: 'hybrid',
+    dispatches,
+    confidence: 1.0,
+    reasoning: `Brief opted in with enable_deep_builds: true and deep_builds: [${validRequests.join(', ')}].`,
+    pattern_match: 'brief-directed',
+    opt_in_mode: 'active',
+    deep_builds_requested: true,
+    requested_types: validRequests,
+    rejected_types: invalidRequests.length > 0 ? invalidRequests : undefined,
+    router_version: 'opt-in-v1'
+  };
+
   try {
     await supabase.from('build_agent_runs').insert({
       ticket_id: ticketId,
@@ -58,34 +175,47 @@ export async function deepRouterActivity(jobData) {
       started_at: new Date(startTime).toISOString(),
       completed_at: new Date().toISOString(),
       duration_seconds: Math.round((Date.now() - startTime) / 1000),
-      output: plan
+      output: explicitPlan
     });
   } catch (_) {}
 
-  // 5. Persist routing signal for downstream agents
   try {
     await supabase.from('build_quality_signals').insert({
       ticket_id: ticketId,
       agent_id: 'BUILD-013-ROUTER',
       signal_type: 'routing_decision',
-      confidence: plan.confidence,
-      payload: plan
+      confidence: 1.0,
+      payload: explicitPlan
     });
   } catch (_) {}
 
-  // 6. Emit inter-agent message so planner knows the plan
   try {
     await supabase.from('build_agent_messages').insert({
       ticket_id: ticketId,
       from_agent: 'BUILD-013-ROUTER',
       to_agent: 'BUILD-001',
       message_type: 'routing_plan',
-      content: plan
+      content: explicitPlan
     });
   } catch (_) {}
 
-  console.log(`[BUILD-013-ROUTER] Complete in ${Math.round((Date.now() - startTime) / 1000)}s`);
-  return plan;
+  console.log(`[BUILD-013-ROUTER] Complete in ${Math.round((Date.now() - startTime) / 1000)}s | ${dispatches.length} dispatches`);
+  return explicitPlan;
+}
+
+function typeToBuilder(type) {
+  const map = {
+    'custom_service': 'BUILD-017',
+    'node-service': 'BUILD-017',
+    'node_service': 'BUILD-017',
+    'data_pipeline': 'BUILD-018',
+    'python': 'BUILD-018',
+    'frontend_app': 'BUILD-019',
+    'frontend': 'BUILD-019',
+    'browser_automation': 'BUILD-020',
+    'browser-automation': 'BUILD-020'
+  };
+  return map[type] || 'BUILD-017';
 }
 
 /**

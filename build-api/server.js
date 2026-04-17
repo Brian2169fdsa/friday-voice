@@ -3932,6 +3932,23 @@ app.post('/api/build/brief', async (req, res) => {
     const { ticket_id, project_name, platform, priority, submitter, submitter_email, version, section_a, customer_id, workflow_steps, decision_authority, success_metrics, data_sources, guardrails, edge_cases, acceptance_criteria } = req.body;
     if ((!brief && !section_a) || !client) return res.status(400).json({ error: 'brief (or section_a) and client required' });
 
+    // Deep build opt-in validation
+    if (req.body.enable_deep_builds !== undefined) {
+      if (typeof req.body.enable_deep_builds !== 'boolean') {
+        return res.status(400).json({ success: false, error: 'enable_deep_builds must be boolean' });
+      }
+    }
+    if (req.body.enable_deep_builds === true) {
+      if (!Array.isArray(req.body.deep_builds) || req.body.deep_builds.length === 0) {
+        return res.status(400).json({ success: false, error: 'When enable_deep_builds is true, deep_builds must be a non-empty array' });
+      }
+      const validDeepTypes = ['custom_service', 'data_pipeline', 'frontend_app', 'node-service', 'python', 'frontend'];
+      const invalidDeepTypes = req.body.deep_builds.filter(t => !validDeepTypes.includes(t));
+      if (invalidDeepTypes.length > 0) {
+        return res.status(400).json({ success: false, error: `Invalid deep_builds types: ${invalidDeepTypes.join(', ')}`, valid_types: validDeepTypes });
+      }
+    }
+
     const tid = ticket_id || ('MAI-' + Date.now());
     let supabaseBuildId = null;
     try {
@@ -4024,10 +4041,11 @@ app.post('/api/build/deep', async (req, res) => {
 
   const { deep_build_type, project_name, client, brief, agent_owner_email } = req.body;
 
-  if (!deep_build_type || !['node-service', 'python', 'frontend'].includes(deep_build_type)) {
+  const validDeepTypes = ['node-service', 'python', 'frontend', 'browser_automation', 'browser-automation'];
+  if (!deep_build_type || !validDeepTypes.includes(deep_build_type)) {
     return res.status(400).json({
       success: false,
-      error: 'deep_build_type must be one of: node-service, python, frontend'
+      error: 'deep_build_type must be one of: ' + validDeepTypes.join(', ')
     });
   }
 
