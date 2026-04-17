@@ -4094,6 +4094,41 @@ app.post('/api/build/deep', async (req, res) => {
   }
 });
 
+// GET /api/build/:ticketId/routing — view routing decision + spawned children
+app.get('/api/build/:ticketId/routing', async (req, res) => {
+  const authKey = req.headers['x-cockpit-key'];
+  if (authKey !== 'friday-cockpit-2026') {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+    // Get routing decision from build_quality_signals
+    const { data: signal } = await supabase
+      .from('build_quality_signals')
+      .select('*')
+      .eq('ticket_id', req.params.ticketId)
+      .eq('signal_type', 'routing_decision')
+      .single();
+
+    // Get spawned deep builds
+    const { data: children } = await supabase
+      .from('friday_deep_builds')
+      .select('ticket_id, deep_build_type, status, repo_url, file_count, duration_seconds')
+      .eq('parent_ticket_id', req.params.ticketId);
+
+    res.json({
+      success: true,
+      routing: signal?.payload || null,
+      deep_builds: children || []
+    });
+  } catch (e) {
+    res.status(404).json({ success: false, error: 'Not found' });
+  }
+});
+
 // GET /api/build/deep/:ticketId — check deep build status
 app.get('/api/build/deep/:ticketId', async (req, res) => {
   const authKey = req.headers['x-cockpit-key'];

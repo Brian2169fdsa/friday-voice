@@ -64,6 +64,8 @@ async function run() {
       ...(await import('./activities/failure-notify.js')),
       ...(await import('./activities/doc-comparison.js')),
       ...(await import('./activities/phase2-github-push.js')),
+      ...(await import('./activities/router-agent.js')),
+      ...(await import('./activities/deep-dispatcher.js')),
     },
     taskQueue: 'friday-builds',
     maxConcurrentActivityTaskExecutions: 10,

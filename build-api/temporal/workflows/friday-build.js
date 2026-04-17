@@ -355,6 +355,24 @@ export async function FridayBuildWorkflow(jobData) {
   await emitAgent('BUILD-001', 'Orchestrator', 'complete');
   await updateBuildStatus(ticketIdForCatch, 'building', 10); // BUILD-001=10
 
+  // ===== BUILD-013 Deep Router — dispatch to fast and/or deep queue =====
+  let routingPlan = null;
+  let deepSpawned = [];
+  try {
+    console.log('[FRIDAY WF] Running BUILD-013 Deep Router');
+    routingPlan = await shortActivities.deepRouterActivity(jobData);
+    console.log(`[FRIDAY WF] Router: ${routingPlan.primary_type} | confidence=${routingPlan.confidence}`);
+
+    // Dispatch deep builds (non-blocking — they run on separate worker in parallel)
+    const dispatchResult = await shortActivities.dispatchDeepBuildsActivity(jobData, routingPlan);
+    deepSpawned = dispatchResult.spawned || [];
+    if (deepSpawned.length > 0) {
+      console.log(`[FRIDAY WF] Spawned ${deepSpawned.length} deep build(s) in parallel`);
+    }
+  } catch (e) {
+    console.warn('[FRIDAY WF] Deep router failed (continuing with n8n-only path):', e.message?.slice(0, 200));
+  }
+
   // ===== BUILD-013: Orchestration Decision Agent =====
   // Decides whether automation needs n8n, Temporal, or both before build agents run.
   console.log('[FRIDAY WF] Running BUILD-013 Orchestration Decision Agent');
@@ -1236,6 +1254,17 @@ export async function FridayBuildWorkflow(jobData) {
     console.warn('[FRIDAY WF] BUILD-016 observer failed (non-blocking):', e.message?.slice(0, 150));
   }
 
+  // Check status of any spawned deep builds
+  let deepBuildsReport = null;
+  if (deepSpawned && deepSpawned.length > 0) {
+    try {
+      deepBuildsReport = await shortActivities.checkDeepBuildsStatusActivity(deepSpawned);
+      console.log(`[FRIDAY WF] Deep builds: ${deepBuildsReport.statuses.filter(s => s.status === 'complete').length}/${deepBuildsReport.statuses.length} complete`);
+    } catch (e) {
+      console.warn('[FRIDAY WF] Deep builds status check failed:', e.message);
+    }
+  }
+
   return {
     success: true,
     qaScore: jobData.qaScore,
@@ -1249,7 +1278,9 @@ export async function FridayBuildWorkflow(jobData) {
       platform_status: platformResult?.status || 'skipped',
       qa_pass_rate: qaTestResult?.pass_rate || 0,
       iteration_cycles: iterationCycle
-    }
+    },
+    deep_builds: deepBuildsReport?.statuses || [],
+    routing_plan: routingPlan ? { primary_type: routingPlan.primary_type, confidence: routingPlan.confidence } : null
   };
 
   } catch (err) {
