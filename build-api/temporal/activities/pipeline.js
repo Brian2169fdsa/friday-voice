@@ -774,7 +774,7 @@ export async function postBuildPipelineActivity(jobData) {
   }
 }
 
-export async function sendPhase2CompletionEmailActivity(jobData, phase2Results, onedriveLinks) {
+export async function sendPhase2CompletionEmailActivity(jobData, phase2Results, onedriveLinks, phase2GithubResult) {
   const GRAPH_USER_EMAIL = process.env.GRAPH_USER_EMAIL || 'brian@manageai.io';
   const agentOwnerEmail = jobData.agent_owner_email || jobData.owner_email || '';
   const ccEmail = 'brian@manageai.io';
@@ -831,6 +831,14 @@ export async function sendPhase2CompletionEmailActivity(jobData, phase2Results, 
     '<strong>Workflow Blueprints</strong> — Platform-specific workflow JSON files ready for import.<br>' +
     '<strong>Deployment Package</strong> — 9-subpackage validated deployment bundle.' +
     '</div>' +
+    // GitHub section
+    (phase2GithubResult && phase2GithubResult.repo_url ?
+    '<h3 style="color:#1E3348;font-size:15px;margin-bottom:12px;margin-top:24px">GitHub Repository</h3>' +
+    '<div style="background:#F5F6F8;border-radius:8px;padding:16px;margin-bottom:24px">' +
+    '<p style="margin:0 0 8px;font-size:13px;color:#475569">All code and Phase 2 documentation pushed to:</p>' +
+    '<a href="' + phase2GithubResult.repo_url + '" style="color:#4A8FD6;text-decoration:none;font-size:14px;font-weight:600">' + phase2GithubResult.repo_url + '</a>' +
+    '<p style="margin:8px 0 0;font-size:12px;color:#7A8B9A">' + (phase2GithubResult.pushed || 0) + ' Phase 2 files + Phase 1 code</p>' +
+    '</div>' : '') +
     // CTA button
     '<div style="text-align:center;margin:24px 0">' +
     '<a href="' + reviewUrl + '" style="display:inline-block;background:#4A8FD6;color:#FFFFFF;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">View Build</a>' +

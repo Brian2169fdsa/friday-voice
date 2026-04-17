@@ -4,8 +4,8 @@ import { spawn, execSync } from 'child_process';
 import { getContractFocus } from '../../orchestrator.js';
 
 const CLAUDE = '/usr/bin/claude';
-const AGENT_TIMEOUT = 600000;
-const AGENT_01_TIMEOUT = 600000;
+const AGENT_TIMEOUT = 1100000;
+const AGENT_01_TIMEOUT = 1100000;
 
 let AGENT_UID, AGENT_GID;
 try {
@@ -129,8 +129,20 @@ async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
     'Replace all content with this build\'s data but keep the visual design identical to the reference.\n' +
     'Output must be a single-file HTML React 18 SPA using React.createElement (NOT JSX).';
 
+  // Inject repo URL if available (for Solution Demo and Build Manual)
+  let repoContext = '';
+  try {
+    const manifestPath = path.join(outputDir, 'platform', 'deployment-manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+    if (manifest.repo_url) {
+      repoContext = '\n\n=== GITHUB REPO ===\n' +
+        'This agent code lives at: ' + manifest.repo_url + '\n' +
+        'Reference this URL in the Solution Demo (Build Spec tab) and Build Manual (Overview section) so users can find the source code.';
+    }
+  } catch (_) {}
+
   const prompt = agentConfig.task + '\n\nOUTPUT DIRECTORY: ' + agentDir +
-    '\n\nWrite ALL files directly to ' + agentDir + '. Use exact filenames specified. Work autonomously. Do not ask questions.' + contractFocus + phase1Context + fullBriefContext + referenceInstruction;
+    '\n\nWrite ALL files directly to ' + agentDir + '. Use exact filenames specified. Work autonomously. Do not ask questions.' + contractFocus + phase1Context + fullBriefContext + referenceInstruction + repoContext;
   const promptFile = '/tmp/friday-temporal-' + jobData.job_id + '-' + agentConfig.agent_id + '.txt';
   await fs.writeFile(promptFile, prompt);
   console.log('[TEMPORAL][' + agentConfig.agent_id + '] Starting: ' + agentConfig.specialist);
@@ -162,7 +174,19 @@ async function runSingleAgent(agentConfig, jobData, contract, outputDir) {
     const dur = Math.round((Date.now() - startTime) / 1000);
     console.error('[TEMPORAL][' + agentConfig.agent_id + '] Error:', err.message.slice(0, 300));
     await fs.rm(promptFile, { force: true });
-    result = { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'error', error: err.message.slice(0, 200), duration: dur, output_subdir: agentConfig.output_subdir };
+    // File recovery: check if agent wrote files despite non-zero exit
+    try {
+      const files = await fs.readdir(agentDir);
+      const outputFiles = files.filter(f => !f.startsWith('.') && f !== 'prompt.txt');
+      if (outputFiles.length > 0) {
+        console.log('[TEMPORAL][' + agentConfig.agent_id + '] Command failed but ' + outputFiles.length + ' files written — recovering');
+        result = { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'complete', files: outputFiles, recovered: true, duration: dur, output_subdir: agentConfig.output_subdir };
+      } else {
+        result = { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'error', error: err.message.slice(0, 200), duration: dur, output_subdir: agentConfig.output_subdir };
+      }
+    } catch (recoveryErr) {
+      result = { agent_id: agentConfig.agent_id, specialist: agentConfig.specialist, status: 'error', error: err.message.slice(0, 200), duration: dur, output_subdir: agentConfig.output_subdir };
+    }
   }
 
   // Persist agent run to build_agent_runs

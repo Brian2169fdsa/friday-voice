@@ -1061,13 +1061,17 @@ export async function FridayBuildWorkflow(jobData) {
     console.log('[FRIDAY WF] Phase 2 complete:', phase2Successes.length, 'of 5 agents succeeded');
     agentResults = phase2Settled.map(r => r.status === 'fulfilled' ? r.value : { status: 'error', error: r.reason?.message });
 
-    // Collect Phase 2 results for email
-    const phase2Results = agentResults.map((r, i) => ({
-      agent_id: 'agent_0' + (i + 1),
-      name: ['Solution Demo', 'Build Manual', 'Requirements & Docs', 'Workflow Blueprints', 'Deployment Package'][i],
-      status: r.status || 'error',
-      format: ['HTML', 'HTML', 'MD + JSON', 'JSON', 'JSON'][i]
-    }));
+    // Collect Phase 2 results for email — verify via file existence, not just exit codes
+    const phase2Results = agentResults.map((r, i) => {
+      const base = {
+        agent_id: 'agent_0' + (i + 1),
+        name: ['Solution Demo', 'Build Manual', 'Requirements & Docs', 'Workflow Blueprints', 'Deployment Package'][i],
+        format: ['HTML', 'HTML', 'MD + JSON', 'JSON', 'JSON'][i]
+      };
+      // Trust recovered or complete status from file-recovery pattern in agents.js
+      base.status = (r.status === 'complete' || r.recovered) ? 'complete' : 'error';
+      return base;
+    });
 
     // BUILD-026: Compare documents against reference templates
     let comparisonResult = null;
@@ -1143,9 +1147,19 @@ export async function FridayBuildWorkflow(jobData) {
     }
     jobData.outputLinks = onedriveLinks;
 
-    // Send Phase 2 completion email with OneDrive links
+    // Push Phase 2 outputs to GitHub
+    let phase2GithubResult = null;
     try {
-      await shortActivities.sendPhase2CompletionEmailActivity(jobData, phase2Results, onedriveLinks);
+      const buildDir = '/tmp/friday-temporal-' + jobData.job_id;
+      phase2GithubResult = await longActivities.pushPhase2ToGitHubActivity(jobData, buildDir);
+      console.log('[FRIDAY WF] Phase 2 GitHub: ' + (phase2GithubResult.pushed || 0) + ' pushed');
+    } catch (e) {
+      console.log('[FRIDAY WF] Phase 2 GitHub push skipped:', e.message?.slice(0, 100));
+    }
+
+    // Send Phase 2 completion email with OneDrive links + GitHub
+    try {
+      await shortActivities.sendPhase2CompletionEmailActivity(jobData, phase2Results, onedriveLinks, phase2GithubResult);
     } catch (e) {
       console.log('[FRIDAY WF] Phase 2 email failed:', e.message?.slice(0, 100));
     }
