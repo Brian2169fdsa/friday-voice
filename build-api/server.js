@@ -4015,6 +4015,107 @@ app.post('/api/build/brief', async (req, res) => {
   }
 });
 
+// POST /api/build/deep — trigger a deep build (Node service, Python, or Frontend)
+app.post('/api/build/deep', async (req, res) => {
+  const authKey = req.headers['x-cockpit-key'];
+  if (authKey !== 'friday-cockpit-2026') {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  const { deep_build_type, project_name, client, brief, agent_owner_email } = req.body;
+
+  if (!deep_build_type || !['node-service', 'python', 'frontend'].includes(deep_build_type)) {
+    return res.status(400).json({
+      success: false,
+      error: 'deep_build_type must be one of: node-service, python, frontend'
+    });
+  }
+
+  if (!brief || !project_name) {
+    return res.status(400).json({
+      success: false,
+      error: 'brief and project_name required'
+    });
+  }
+
+  const ticketId = 'MAI-DEEP-' + Date.now();
+  const jobData = {
+    ticket_id: ticketId,
+    deep_build_type,
+    project_name,
+    client: client || 'Internal',
+    agent_owner_email: agent_owner_email || 'brian@manageai.io',
+    ...brief
+  };
+
+  // Insert into tracking table
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    await supabase.from('friday_deep_builds').insert({
+      ticket_id: ticketId,
+      deep_build_type,
+      project_name,
+      client: client || 'Internal',
+      agent_owner_email: agent_owner_email || 'brian@manageai.io',
+      brief: jobData,
+      status: 'queued'
+    });
+  } catch (e) {
+    console.error('[DEEP-API] Failed to log build:', e.message);
+  }
+
+  // Start Temporal workflow on deep queue
+  try {
+    const { Client, Connection } = await import('@temporalio/client');
+    const connection = await Connection.connect({
+      address: process.env.TEMPORAL_ADDRESS || 'localhost:7233'
+    });
+    const temporalDeepClient = new Client({ connection });
+
+    await temporalDeepClient.workflow.start('DeepBuildWorkflow', {
+      taskQueue: 'friday-deep-builds',
+      workflowId: ticketId,
+      args: [jobData]
+    });
+
+    res.json({
+      success: true,
+      ticket_id: ticketId,
+      status: 'queued',
+      mode: 'deep_build',
+      type: deep_build_type
+    });
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start deep build: ' + e.message
+    });
+  }
+});
+
+// GET /api/build/deep/:ticketId — check deep build status
+app.get('/api/build/deep/:ticketId', async (req, res) => {
+  const authKey = req.headers['x-cockpit-key'];
+  if (authKey !== 'friday-cockpit-2026') {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    const { data } = await supabase
+      .from('friday_deep_builds')
+      .select('*')
+      .eq('ticket_id', req.params.ticketId)
+      .single();
+
+    res.json({ success: true, build: data });
+  } catch (e) {
+    res.status(404).json({ success: false, error: 'Build not found' });
+  }
+});
+
 app.post('/api/build/:id/approve', async (req, res) => {
   const cockpitKey = req.headers['x-cockpit-key'];
   if (cockpitKey !== process.env.COCKPIT_KEY) {
