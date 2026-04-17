@@ -94,7 +94,8 @@ export async function deepRouterActivity(jobData) {
     'custom_service', 'node-service', 'node_service',
     'data_pipeline', 'python',
     'frontend_app', 'frontend',
-    'browser_automation', 'browser-automation'
+    'browser_automation', 'browser-automation',
+    'voice_agent', 'voice-agent'
   ];
   const validRequests = deepBuildTypes.filter(t => validTypes.includes(t));
   const invalidRequests = deepBuildTypes.filter(t => !validTypes.includes(t));
@@ -213,7 +214,9 @@ function typeToBuilder(type) {
     'frontend_app': 'BUILD-019',
     'frontend': 'BUILD-019',
     'browser_automation': 'BUILD-020',
-    'browser-automation': 'BUILD-020'
+    'browser-automation': 'BUILD-020',
+    'voice_agent': 'BUILD-021',
+    'voice-agent': 'BUILD-021'
   };
   return map[type] || 'BUILD-017';
 }

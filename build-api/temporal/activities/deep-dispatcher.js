@@ -89,7 +89,9 @@ function mapTypeToDeepBuildType(routerType) {
     'data_pipeline': 'python',
     'frontend_app': 'frontend',
     'browser_automation': 'browser_automation',
-    'browser-automation': 'browser_automation'
+    'browser-automation': 'browser_automation',
+    'voice_agent': 'voice_agent',
+    'voice-agent': 'voice_agent'
   };
   return map[routerType] || 'node-service';
 }

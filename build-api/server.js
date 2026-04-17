@@ -4041,7 +4041,7 @@ app.post('/api/build/deep', async (req, res) => {
 
   const { deep_build_type, project_name, client, brief, agent_owner_email } = req.body;
 
-  const validDeepTypes = ['node-service', 'python', 'frontend', 'browser_automation', 'browser-automation'];
+  const validDeepTypes = ['node-service', 'python', 'frontend', 'browser_automation', 'browser-automation', 'voice_agent', 'voice-agent'];
   if (!deep_build_type || !validDeepTypes.includes(deep_build_type)) {
     return res.status(400).json({
       success: false,
